@@ -41,7 +41,7 @@
     const params = new URLSearchParams(location.search);
     const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
     const scenario = params.get('scenario') || 'calibrated';
-    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'leak'].includes(scenario)) throw new Error('Unknown scenario');
+    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'uncalibrated', 'leak'].includes(scenario)) throw new Error('Unknown scenario');
     const requestedWidth = Number(params.get('width') || 520);
     const width = Number.isInteger(requestedWidth) && requestedWidth >= 280 && requestedWidth <= 1600
       ? requestedWidth : 520;
@@ -84,6 +84,7 @@
         total_litres: cumulative * factor, meter_reading: 1234567 + cumulative * factor,
         calibration_status: scenario === 'disagreement' ? 'Readings disagree — check the last one: check the dial unit or digits'
           : scenario === 'pending' ? 'Waiting for next transmission to line up your reading'
+          : scenario === 'uncalibrated' ? 'Need a second reading — use water normally and enter another tomorrow'
           : calibrated ? 'Calibrated: 2.5 L per pulse — standard value, fits your readings'
           : 'Needs 2 readings — enter your dial reading to show litres',
       };
@@ -98,8 +99,16 @@
           attributes: {...attributes, friendly_name: `${name} ${key}`, unit_of_measurement: unit,
             ...(calibrated ? {litres_per_count: factor} : {}),
             ...(key === 'calibration_status' ? {chosen_k:calibrated ? factor : null,
-              next_transmission:'2026-01-03T19:15:00+10:00'} : {})},
+              next_transmission:'2026-01-03T19:15:00+10:00', dial_unit:'m³',
+              readings:scenario === 'uncalibrated' ? [{id:1, time:'2026-01-03T07:17:00Z',
+                value:1597.765, unit:'m³', litres:1597765, used:true,
+                base_interval:[46218,46228], count_interval:[46218,46228]}] : []} : {})},
         };
+      }
+      for (const [key, domain, value] of [['dial_unit', 'select', 'm³'], ['enter_reading', 'number', 'unknown'],
+        ['reading_time', 'text', '']]) {
+        entities[key] = `${domain}.taggle_${id}_${key}`;
+        states[entities[key]] = {state:value, attributes:{}};
       }
       if (scenario === 'leak') {
         entities.possible_leak = `binary_sensor.taggle_${id}_possible_leak`;
@@ -108,7 +117,7 @@
       return {name, entities};
     }
 
-    const meters = [meter(123456, 'House', !['raw', 'pending'].includes(scenario), 1, 12.4, -43.2)];
+    const meters = [meter(123456, 'House', !['raw', 'pending', 'uncalibrated'].includes(scenario), 1, 12.4, -43.2)];
     if (scenario === 'multi') meters.push(meter(234567, 'Granny flat', true, 0.45, 9.8, -49.1));
     // Fictional aggregate only: no neighbour IDs or individual readings.
     const neighbourhood = {average_today: 410, median_today: 350, meters_counted: 14,
@@ -116,14 +125,14 @@
     for (const [key, value] of Object.entries(neighbourhood)) {
       states[`sensor.taggle_neighbourhood_${key}`] = {
         state: String(value), attributes: {unit_of_measurement: key.startsWith('meters_')
-          ? 'meters' : scenario === 'raw' ? 'pulses' : 'L'},
+          ? 'meters' : ['raw', 'pending', 'uncalibrated'].includes(scenario) ? 'pulses' : 'L'},
       };
     }
     const card = document.createElement('taggle-card');
     card.setConfig({type: 'custom:taggle-card', title: 'Water usage', meters});
     card.hass = {states, entities: {}, locale: {language: 'en-AU'}, config: {time_zone: zone}};
     container.append(card);
-    card.shadowRoot.querySelectorAll('details').forEach(details => { details.open = true; });
+    card.shadowRoot.querySelectorAll('details[data-disclosure^="history-"]').forEach(details => { details.open = true; });
     await document.fonts.ready;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     // scripts/screenshots.py measures first, then captures with the same width.

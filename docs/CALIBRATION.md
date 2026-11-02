@@ -7,12 +7,18 @@
 
 ## Guided calibration (recommended)
 
-Open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Fictional transmitter ID **123456** is used throughout; substitute your own ID and check actual entity IDs, since existing renames are preserved.
+Use the dashboard card’s **Read your dial** panel: its mechanical register picture and expandable **Other meters** help explain which digits and unit to enter. The panel stays visible until calibrated, reopens for warnings, and otherwise collapses to **Add a check reading**. Fictional transmitter ID **123456** is used throughout; substitute your own ID and check actual entity IDs, since existing renames are preserved.
+
+![Read your dial panel with one fictional entered reading](images/card-calibration.png)
 
 1. Read or photograph the dial **now**, with units and multipliers visible. Once a frame arrives, **Calibration status** and the card estimate **“Next transmission expected ≈ HH:MM”** locally. Read within a few minutes after it, ideally with nobody using water, to narrow the uncertainty. The time is an estimate; messages can be missed. Other reading times can work too.
 2. Set **Dial unit** to **m³** (default), **kL** or **L**, matching the dial. **1 m³ = 1 kL = 1,000 L**. Use the example below before entering digits; two consistently wrong-unit initial readings may not be detected as mistakes.
-3. Type the complete reading into **Enter meter reading** and submit it with Enter. Use a decimal point without thousands separators or unit letters. Blank **Reading time** means submission time: take a fresh reading and submit promptly. For an older photo, [set its original time first](#older-photos-and-reading-time). Check **Calibration status** after submission; the entry may wait for the next hourly frame.
+3. Type the complete **Meter reading** and press **Save reading** (or Enter). Use a decimal point without thousands separators or unit letters. Leave optional **Photo taken at** blank for a fresh reading and submit promptly; a time uses **the receiver’s timezone** (today, or yesterday if the clock time is ahead of now). For an older photo, [set its original time](#older-photos-and-reading-time). The card sends the photo time and unit before submitting the reading, and clears a previously set time when the field is blank. It checks for missing, negative, invalid or implausibly large readings, including a 1000× unit difference from a known previous reading.
 4. Use water normally and enter another fresh reading, for example tomorrow. Do not waste water to reach a target. Follow the status: it may need more use or another reading. Once calibrated, litre sensors appear automatically, without a configuration edit or receiver restart. **Meter reading** appears when the absolute counter and offset are resolved. Later dial readings check the result.
+
+Below the form, follow **Calibration status** and **“Next transmission expected ≈ HH:MM — best read within a few minutes after it”**. The last ten entered readings show their time, original value/unit and whether they are used, excluded or still pending, with the receiver’s reason when available. **Reading sent** means the command was sent; check the status and list for the receiver’s result.
+
+**Without the custom card:** open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ / kL / L)**, set **Photo time (optional, HH:MM)** before submitting if needed, then type **Meter reading (from dial)** and press Enter. Clear the photo time before a fresh reading if it remains populated. The device page cannot display help or pictures; use the dial guide below.
 
 | Calibration status says | Next action |
 | --- | --- |
@@ -36,12 +42,14 @@ Black wheels commonly show whole m³ or kL; red digits or pointer dials show fra
 
 For illustrated black `01234` and red `567`, enter **1234.567** with **m³ or kL** selected, or **1234567** with **L** selected. These are the same volume. Photograph the full face with units and decimal positions visible; do not assume your own dial uses this layout.
 
+The card’s compact illustration uses a different fictional reading: black `01597` and red `765` mean **1597.765 m³** (or kL), equal to **1597765 L**. For black digits with separate pointer dials, add their values: **1597 + 0.7 + 0.06 + 0.005 = 1597.765 m³**. All-one-colour digits marked L/litres need every digit with **L** selected. For digital/LCD displays, enter the displayed reading and choose the unit printed beside it. Ignore the small star/triangle flow spinner. Always check the unit printed on the face: **m³ and kL are the same; L is 1000× smaller**.
+
 ### Older photos and Reading time
 
-A plain number with blank **Reading time** is timestamped when submitted. Do not enter an older photo as a current reading.
+A plain number with blank **Photo time (optional, HH:MM)** (the `reading_time` entity) is timestamped when submitted. Do not enter an older photo as a current reading. In the card, **Photo taken at** accepts only a clock time in the receiver’s timezone: today, or yesterday when that time is ahead of now. Use the device control or timestamped MQTT entry below to specify an exact date.
 
-1. On the same MQTT device, set **Reading time** before entering the photo's dial reading. `18:00` means **today at 18:00 in the receiver's configured timezone**. For another date, use an offset-aware timestamp such as `2026-11-02T18:00:00+10:00`.
-2. Enter the reading in **Enter meter reading** using the matching Dial unit, submit, then check Calibration status. Reading time clears after the next accepted entry; an input rejected before storage leaves it set. Clear it yourself before a fresh reading if it remains populated.
+1. On the same MQTT device, set **Photo time (optional, HH:MM)** before entering the photo's dial reading. `18:00` means **today at 18:00 in the receiver's configured timezone**, or yesterday if it is not yet 18:00 (for example, last night’s photo submitted after midnight). To specify an exact date, use an offset-aware timestamp such as `2026-11-02T18:00:00+10:00`.
+2. Enter the reading in **Meter reading (from dial)** using the matching Dial unit, submit, then check Calibration status. Photo time clears after the next accepted entry; an input rejected before storage leaves it set. Clear it yourself before a fresh reading if it remains populated.
 3. If history cannot bracket the photo time, follow the status or take a fresh reading. The receiver retains counter checkpoints for 90 days; it does not invent history from before reception. Ambiguous/nonexistent daylight-saving clock times require ISO time with the actual UTC offset at the photo's time.
 
 Advanced timestamped MQTT entry: under **Developer tools → Actions**, choose **MQTT: Publish** (`mqtt.publish`), use topic `taggle/123456/reading/set`, leave **retain off**, and send this complete fictional payload, replacing ID, reading and actual photo time:
@@ -74,14 +82,26 @@ The manual-factor-only route can use `sensor.taggle_123456_total_litres` for Ene
 
 | Control/sensor | Default entity ID for fictional 123456 | MQTT command topic |
 | --- | --- | --- |
-| Dial unit | `select.taggle_123456_dial_unit` | `taggle/123456/dial_unit/set` (`m³`, `kL`, `L`) |
-| Enter meter reading | `number.taggle_123456_enter_reading` | `taggle/123456/reading/set` (plain number in selected unit, or JSON above) |
-| Reading time | `text.taggle_123456_reading_time` | `taggle/123456/reading_time/set` (blank, HH:MM or ISO time) |
+| Dial unit (m³ / kL / L) | `select.taggle_123456_dial_unit` | `taggle/123456/dial_unit/set` (`m³`, `kL`, `L`) |
+| Meter reading (from dial) | `number.taggle_123456_enter_reading` | `taggle/123456/reading/set` (plain number in selected unit, or JSON above) |
+| Photo time (optional, HH:MM) | `text.taggle_123456_reading_time` | `taggle/123456/reading_time/set` (blank, HH:MM or ISO time) |
 | Reset calibration | `button.taggle_123456_reset_calibration` | `taggle/123456/reset/set` (`RESET`) |
 | Calibration status | `sensor.taggle_123456_calibration_status` | No command; attributes on `taggle/123456/calibration`. |
 | Meter reading | `sensor.taggle_123456_meter_reading` | No command; value on `taggle/123456/state`. |
 
 Controls and Calibration status require receiver availability, so you can enter readings before usable counts arrive. Usage and Meter reading additionally require recent decoded counts; no valid frame for three hours makes them unavailable. Meter reading discovery appears only when the absolute estimate exists and is removed when it is withheld. A calibrated factor can expose usage litres before an absolute reading is possible.
+
+The card resolves these controls through the same device/entity registry as Calibration status, including renamed entities and existing pulse mappings. If lookup is unavailable, add explicit keys to the meter’s existing `entities:` mapping (use actual entity IDs):
+
+```yaml
+entities:
+  calibration_status: sensor.taggle_123456_calibration_status
+  dial_unit: select.taggle_123456_dial_unit
+  enter_reading: number.taggle_123456_enter_reading
+  reading_time: text.taggle_123456_reading_time
+```
+
+Each meter has its own form. The card preserves unsent entries and keyboard focus through Home Assistant state updates. If controls are missing or unavailable, it shows an explanation and disables saving.
 
 Up to **200 readings** are stored. To inspect them, open **Developer tools → States**, select your actual Calibration status entity and inspect its `readings` attribute. Each row includes an `id`, time, original value/unit, litres, source, counter interval, `used` flag, reason and residual when available. Attributes also report bounds, chosen factor, method, offset, uncertainty and next expected transmission. Delete an older reading before adding another at the limit.
 

@@ -62,6 +62,21 @@ def test_unscaled_discovery_removes_litre_entities():
     assert len(removals) == 4
 
 
+@pytest.mark.parametrize('prefix', ['taggle', 'house/taggle'])
+def test_calibration_control_names_keep_stable_ids(prefix):
+    publisher = Publisher(Config.from_dict({'meter_ids': [123456], 'mqtt': {'topic_prefix': prefix}}), Mock())
+    for key, domain, name in (
+        ('dial_unit', 'select', 'Dial unit (m³ / kL / L)'),
+        ('enter_reading', 'number', 'Meter reading (from dial)'),
+        ('reading_time', 'text', 'Photo time (optional, HH:MM)'),
+    ):
+        payload = publisher.control_discovery(123456, key, domain)
+        assert payload['name'] == name
+        assert payload['unique_id'] == f'{prefix}_123456_{key}'
+        assert payload['default_entity_id'] == f'{domain}.taggle_123456_{key}'
+        assert payload['retain'] is False
+
+
 def test_two_readings_and_csv_fit(tmp_path, capsys):
     path = tmp_path / 'readings.csv'
     path.write_text('time,register_reading,meter_count\n2026-01-01T00:00:00Z,10,100\n2026-01-02T00:00:00Z,10.25,200\n')

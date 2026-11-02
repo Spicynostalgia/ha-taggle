@@ -137,8 +137,8 @@ class Publisher:
         self.discovery_signature[identifier] = (factor, 'meter_reading' in state)
 
     def control_discovery(self, identifier, key, domain):
-        names = {'dial_unit': 'Dial unit', 'enter_reading': 'Enter meter reading',
-                 'reading_time': 'Reading time', 'reset_calibration': 'Reset calibration'}
+        names = {'dial_unit': 'Dial unit (m³ / kL / L)', 'enter_reading': 'Meter reading (from dial)',
+                 'reading_time': 'Photo time (optional, HH:MM)', 'reset_calibration': 'Reset calibration'}
         action = {'enter_reading': 'reading', 'reset_calibration': 'reset'}.get(key, key)
         result = self.discovery(identifier, key, (names[key], None, None, None))
         result['default_entity_id'] = f'{domain}.taggle_{identifier}_{key}'

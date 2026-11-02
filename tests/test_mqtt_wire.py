@@ -193,6 +193,9 @@ def test_guided_commands_over_real_mqtt_reconnect_birth_and_reset(tmp_path, monk
         number = configs['homeassistant/number/taggle_123456/enter_reading/config']
         assert number['mode'] == 'box' and number['step'] == .001 and not number['retain']
         assert number['default_entity_id'] == 'number.taggle_123456_enter_reading'
+        assert number['name'] == 'Meter reading (from dial)'
+        assert configs['homeassistant/select/taggle_123456/dial_unit/config']['name'] == 'Dial unit (m³ / kL / L)'
+        assert configs['homeassistant/text/taggle_123456/reading_time/config']['name'] == 'Photo time (optional, HH:MM)'
         absolute = configs['homeassistant/sensor/taggle_123456/meter_reading/config']
         assert absolute['device_class'] == 'water' and absolute['state_class'] == 'total_increasing'
         assert absolute['suggested_display_precision'] == 0

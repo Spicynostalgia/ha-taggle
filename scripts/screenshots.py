@@ -28,6 +28,9 @@ SHOTS = (
     ('card-dark.png', 'dark', 520, 'calibrated'),
     ('card-mobile.png', 'light', 380, 'calibrated'),
     ('card-multi.png', 'light', 520, 'multi'),
+    ('card-calibration.png', 'light', 520, 'uncalibrated'),
+    ('card-calibration-dark.png', 'dark', 520, 'uncalibrated'),
+    ('card-calibration-mobile.png', 'light', 328, 'uncalibrated'),  # 360px viewport including gutters.
 )
 
 

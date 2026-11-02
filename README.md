@@ -275,14 +275,20 @@ This is evidence, not proof of ownership or litre calibration. With an unknown p
 
 **Guided calibration is available in 0.3.0. Manual dial readings are the main path; no utility account, maths, configuration edit or receiver restart is needed.**
 
+The dashboard card’s **Read your dial** panel has a dial picture, help for other meter types, and a form to save your unit, reading and optional photo time. It shows calibration progress and your last ten readings, then collapses to **Add a check reading** once calibrated; warnings reopen the guide.
+
+<img src="docs/images/card-calibration.png" alt="Read your dial panel with a fictional mechanical register, reading form and one entered reading" width="552">
+
 ![Illustration: mechanical meter dial with whole-kL digits, red fractions and pointer dials](docs/images/register-dial.svg)
 
 *In this illustration, black `01234` and red `567` mean **1234.567** with **m³ or kL** selected, or **1234567** with **L** selected. Your dial may differ: follow its printed units and multipliers. Do not add pointer fractions twice. The spinning star indicates flow, not the reading.*
 
 1. **Read the dial now.** Photograph the whole face and units. After reception, **Calibration status** and the card estimate **“Next transmission expected ≈ HH:MM”** locally. Reading just after it, ideally with nobody using water, narrows uncertainty. Readings at other times can work too.
-2. Open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit: m³, kL or L** to match the dial. **1 m³ = 1 kL = 1,000 L**. Type the complete reading into **Enter meter reading** and submit it (press Enter in the number box). Use a decimal point, without thousands separators or unit letters. Blank **Reading time** timestamps submission: use a fresh reading and submit promptly. For an older photo, [set its original time first](docs/CALIBRATION.md#older-photos-and-reading-time).
+2. In the card’s **Read your dial** panel, choose **m³, kL or L** to match the face, type the complete **Meter reading**, and press **Save reading**. **1 m³ = 1 kL = 1,000 L**. Use a decimal point, without thousands separators or unit letters. Leave **Photo taken at** blank for a fresh reading; for a photo taken earlier today, set its time before saving. For other dates, follow the [older-photo instructions](docs/CALIBRATION.md#older-photos-and-reading-time).
 3. Use water normally and enter another fresh reading, for example tomorrow. **Do not run water just to calibrate.** Time alone is not enough; follow **Calibration status** if it asks for more normal use, a closer reading or another transmission.
 4. Check **Calibration status**. A reading can stay pending until the next hourly frame. When calibration succeeds, litre sensors appear automatically. **Meter reading** appears when the absolute counter/offset is resolved. Compare it with later dial readings; continue entering readings to check the result.
+
+Without the custom card, open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Set **Photo time (optional, HH:MM)** first if needed, choose **Dial unit (m³ / kL / L)**, then enter **Meter reading (from dial)** and press Enter. Device pages cannot show the illustrated guide; keep [the dial instructions](docs/CALIBRATION.md#reading-your-dial) nearby.
 
 If a reading is wrong, follow [correction or reset instructions](docs/CALIBRATION.md#correct-or-reset-readings). **Reset calibration** removes entered readings and automatic calibration; check the consequences before pressing it. It is not a delete-one-reading control.
 

@@ -4,6 +4,7 @@
 
 Released 2026-11-03.
 
+- Add the card’s “Read your dial” panel with a theme-aware register picture, meter-type help, validated reading form and recent readings; collapse it after calibration, reopen for warnings, and clarify device control names without changing entity IDs.
 - Enter manual dial readings in Home Assistant to calibrate litres per pulse and the starting offset in 0.3.0. The guided route needs no maths or receiver restart and provides an estimated Meter reading for Energy.
 - Choose m³/kL/L, enter an older photo with its original time, and correct or reset stored readings; follow Calibration status when more normal use or another transmission is needed.
 - Align readings to persisted counter intervals, resolve unambiguous missing-slot wraps, validate units/typos and pinned factors, and report bounds, weighted residuals and exclusions.
