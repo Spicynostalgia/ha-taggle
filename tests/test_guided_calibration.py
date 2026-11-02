@@ -82,11 +82,26 @@ def exact_pair(tmp_path, k=5, **options):
     return store, cal
 
 
-@pytest.mark.parametrize('k,method', [(5, 'standard value'), (1.234, 'fit'), (100, 'standard value')])
+@pytest.mark.parametrize('k,method', [
+    (0.1, 'standard value'), (0.5, 'standard value'), (1, 'standard value'),
+    (2.5, 'standard value'), (5, 'standard value'), (10, 'standard value'),
+    (25, 'standard value'), (50, 'standard value'), (100, 'standard value'),
+    (1000, 'standard value'), (1.234, 'fit'),
+])
 def test_exact_standard_and_nonstandard_fit(tmp_path, k, method):
     _, cal = exact_pair(tmp_path, k)
     assert cal['solution']['factor'] == pytest.approx(k)
     assert cal['solution']['method'] == method
+
+
+def test_quarter_litre_needs_narrow_nonstandard_bounds(tmp_path):
+    store, cal = exact_pair(tmp_path, 0.25)
+    assert cal['solution'] is None  # No longer snaps to 0.25 with wide bounds.
+    assert 'uncertain' in cal['status']
+    radio(store, 2, (1100, 200, 100))
+    cal = add(store, 100250, START + timedelta(hours=2))
+    assert cal['solution']['factor'] == pytest.approx(0.25)
+    assert cal['solution']['method'] == 'fit'
 
 
 def test_weighted_fit_and_residuals(tmp_path):
@@ -261,7 +276,7 @@ def test_multiple_standard_sizes_need_more_usage(tmp_path):
     add(store, 10000, START)
     radio(store, 1, (200, 100, 100))
     cal = add(store, 10500, START + timedelta(minutes=30))
-    assert cal['solution'] is None  # [5, 1000]: 5, 10, 25, 50, 100 fit.
+    assert cal['solution'] is None  # [4.98, 1000]: 5, 10, 25, 50, 100, 1000 fit.
     assert 'fit' in cal['status']
 
 

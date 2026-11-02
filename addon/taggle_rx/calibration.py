@@ -7,7 +7,7 @@ import statistics
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-STANDARDS = (0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100)
+STANDARDS = (0.1, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 1000)
 UNITS = {'m3': 1000, 'm³': 1000, 'kL': 1000, 'kl': 1000, 'L': 1, 'litres': 1}
 LABELS = {'m3': 'm³', 'kl': 'kL', 'litres': 'L'}
 MODULUS = 65536

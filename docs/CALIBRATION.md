@@ -3,7 +3,9 @@
 **Guided calibration is available in 0.3.0. Manual dial readings are the recommended route.** No utility account or automation is needed.
 
 > [!IMPORTANT]
-> The transmitter sends a pulse counter, **not the reading on your dial**. Both its starting offset and litres per pulse are unknown. Two dial readings separated by enough normal water use let guided calibration establish both; more readings may be needed to resolve uncertainty. Until calibrated, usage is in pulses. Check the calibrated estimate against the dial; this is experimental, not billing-grade measurement.
+> The transmitter sends a pulse counter, **not the reading on your dial**. Both its starting offset and litres per pulse are unknown. Read just after a transmission, use 20–50 L (reuse it), then read after the next transmission, normally about one hour later, to establish both; more readings may be needed to resolve uncertainty. Until calibrated, usage is in pulses. Check the calibrated estimate against the dial; this is experimental, not billing-grade measurement.
+
+The tested meter is an **Elster (Honeywell) V100**, owner-confirmed. Elster’s [V100 PSM-T specification](https://cdn.shopify.com/s/files/1/0556/0283/9744/files/V100_PSM_T_SML001_SpecSheet.pdf) lists **5 L/pulse** for the **5 black + 3 red** counter and **0.5 L/pulse** for the **4×4** counter. The tested meter’s readings match **5 L/pulse**; **still calibrate yours**. The radio counter has an arbitrary starting offset, so multiplying it by 5 does not reconstruct your dial reading. See [meter types and pulse sizes](https://github.com/Spicynostalgia/ha-taggle/wiki/Meter-Types-and-Pulse-Sizes).
 
 ## Guided calibration (recommended)
 
@@ -19,7 +21,7 @@ The card’s friendly form combines **Meter reading** and optional **Photo taken
 
 **Without the card:** open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ = kL, or L)** and type `1597.765` or `1597.765 18:00` into **Dial reading (e.g. 1597.765 or 1597.765 18:00)**. Submit once with Enter. The reading and time travel together; there is no pending time for the next reading.
 
-Outside the read-now window, readings remain accepted but are **less precise; a third reading may be needed**. Take these fallback readings about a day apart. The read-now sensor is on for ten minutes after every configured-meter frame, off otherwise; its attributes give `since`, `until` and `next_transmission`.
+Outside the read-now window, readings remain accepted but are **less precise; a third reading may be needed**. For the next reading, return to the one-hour routine: read just after a transmission, use 20–50 L (reuse it), then read after the next transmission. The **Read your dial now** sensor (`binary_sensor.taggle_123456_read_dial_now`, displayed as **Good time to read the dial**) is on for ten minutes after every configured-meter frame, off otherwise; its attributes give `since`, `until` and `next_transmission`.
 
 | Calibration status says | Next action |
 | --- | --- |
@@ -34,6 +36,17 @@ Outside the read-now window, readings remain accepted but are **less precise; a 
 | Counter gap may hide wraps / resolve the absolute reading | Follow the request for a fresh reading; usage litres may be known while the absolute reading is withheld. |
 | Counter sequence changed | Back up state, reset calibration and take fresh readings as requested. |
 
+Optional phone reminder (replace fictional ID **123456** and the phone action):
+
+```yaml
+triggers:
+  - {trigger: state, entity_id: binary_sensor.taggle_123456_read_dial_now, to: "on"}
+actions:
+  - action: notify.mobile_app_your_phone
+    data:
+      message: "Read your dial now, before anyone uses water."
+```
+
 ### Reading your dial
 
 ![Illustration: black whole-kL wheels, red fractional digits and pointer dials, plus the star flow indicator](images/register-dial.svg)
@@ -46,7 +59,7 @@ For illustrated black `01234` and red `567`, enter **1234.567** with **m³ or kL
 
 The card’s compact illustration uses a different fictional reading: black `01597` and red `765` mean **1597.765 m³** (or kL), equal to **1597765 L**. For black digits with separate pointer dials, add their values: **1597 + 0.7 + 0.06 + 0.005 = 1597.765 m³**. All-one-colour digits marked L/litres need every digit with **L** selected. For digital/LCD displays, enter the displayed reading and choose the unit printed beside it. Ignore the small star/triangle flow spinner. Always check the unit printed on the face: **m³ and kL are the same; L is 1000× smaller**.
 
-### Older photos and Reading time
+### Older photos and reading times
 
 Use one reading box (default `text.taggle_123456_dial_reading`) or publish to `taggle/123456/reading/set`, with **retain off**:
 
@@ -122,11 +135,13 @@ The receiver retains 90 days of counter checkpoints using the same sequence and 
 
 There is no minimum-usage gate. Each typed reading `R` carries a litres interval `[R−resolution, R+resolution]`. Resolution follows the number of decimals typed: `1597.765` m³/kL is ±1 L, `1597.76` is ±10 L, and `1597` is ±1000 L; whole L readings are ±1 L. Additional decimal places narrow the resolution (for example four m³ decimals give ±0.1 L). JSON decimal precision is preserved too. Old stored readings default to ±1 L.
 
-For two readings, combine both resolution intervals with counter intervals `[a,b]`, `[c,d]`: the lower factor bound is `(ΔR−res1−res2)/(d−a)`, and when `c>b` the upper is `(ΔR+res1+res2)/(c−b)`. Bounds intersect across all usable readings. Plausible factors are **0.05–1000 L/pulse**. Standard sizes are **0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100 L**. Exactly one standard inside the bounds applies automatically. If several fit, status names the candidates and suggests the next transmission. With none inside, a nonstandard fit applies only when full relative bounds width is at most **2%** (`calibration_max_uncertainty`). For example, one pulse and a dial change of 4 L with ±1 L per reading allows both 2.5 L and 5 L; another reading is needed. Offset fitting also uses reading-resolution intervals; residual checks include resolution rather than a fixed rounding allowance.
+For two readings, combine both resolution intervals with counter intervals `[a,b]`, `[c,d]`: the lower factor bound is `(ΔR−res1−res2)/(d−a)`, and when `c>b` the upper is `(ΔR+res1+res2)/(c−b)`. Bounds intersect across all usable readings. Plausible factors are **0.05–1000 L/pulse**. Standard sizes are **0.1, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 1000 L**. Exactly one standard inside the bounds applies automatically. If several fit, status names the candidates and suggests the next transmission. With none inside, a nonstandard fit applies only when full relative bounds width is at most **2%** (`calibration_max_uncertainty`). For example, one pulse and a dial change of 4 L with ±1 L per reading allows both 2.5 L and 5 L; another reading is needed. Offset fitting also uses reading-resolution intervals; residual checks include resolution rather than a fixed rounding allowance.
 
 Missing-slot gaps may conceal extra 65,536-count wraps. The solver checks wrap counts against the register changes and plausible factor bounds. A uniquely supported standard factor applies even when the exact wrap placement is unresolved; the absolute reading is withheld if its counter/offset is still ambiguous. Ambiguous factors ask for more evidence. Each wrap search is limited to 4,096 combinations; standard factors are also checked separately to narrow that search. Searches that remain too large stay ambiguous rather than guessing. If a new gap after calibration could conceal wraps, the receiver withholds the absolute reading and asks for a fresh dial reading to resolve it. Observed `meter_count` and historical `total_litres` keep their original accounting.
 
 The fictionalised **2 November 2026** hardware example uses ID `123456`: **1,597,361 L at 02:43 +10:00**, counter static at **46,218**; then **1,597,765 L at 18:00 +10:00**, bracketed by **17:41 / 46,283** and **18:41 / 46,318**. The bounds are **4.02–6.25 L/pulse** (including ±1 L per reading). Only **5 L** fits, and the exact first reading fixes the offset to **1,366,271 L**. The counter did not match the dial modulo 65,536 at any common pulse size: its start is arbitrary.
+
+The [davidjb cloud-MQTT example](https://gist.github.com/davidjb/faffe4a8ce14dea58b9b9b3cee862aae) also converts its payload’s pulses ×5 to litres; this is supporting evidence for that installation, not a universal factor.
 
 ### Correct or reset readings
 
@@ -163,7 +178,7 @@ The CLI is part of the Python package (Python **3.11–3.13**). See [Python inst
 
 1. Confirm the transmitter ID from your own label and record reliable reception.
 2. Wait for a **fresh transmission** (`last_seen` just updated). Note that timestamp and the receiver's cumulative **`meter_count`**. Go straight to the meter box and photograph the register; retain the phone photo timestamp as the actual physical reading time. Avoid all water use between the radio endpoint and the photo so they represent the same reading. If the frame was delayed/old or water was used in between, take another aligned pair.
-3. Use water normally for **a day or more**, aiming for **at least 1,000 L of normal use** so register rounding matters less. Wait longer if necessary; do not run water just to reach the target. Repeat the fresh-transmission/photo procedure.
+3. Use **20–50 L during the hour** (reuse it), then repeat the aligned reading **just after the next transmission**, normally about one hour later. With coarse register digits or a large pulse size, collect more aligned readings during normal use until the scale is clear; do not run extra water to force a result. Guided calibration above accounts for reading uncertainty automatically.
 4. Check there are **no missing recovered usage intervals or counter resets** across the whole period. A utility export can supply equivalent register readings if its timestamps and units are known. Radio intervals need not end on a clock hour; do not align an export by rounding its time to a nearby radio endpoint.
 
 Keep both original timestamps. Only assign the register reading to the radio endpoint in the calibration CSV when no intervening use means the readings really align; the helper cannot correct a delay or estimate water used between them.
@@ -176,15 +191,15 @@ For two aligned readings, first convert the physical register values to litres:
 litres_per_count = (reading2_L - reading1_L) / (meter_count2 - meter_count1)
 ```
 
-Fictional worked example: **1234.567 → 1235.892 m³** gives **1,325 L**. Receiver `meter_count` **10,000 → 10,530** gives **530 pulses**. The factor is **1,325 / 530 = 2.5 L/pulse**. This is an example, not a default for your meter.
+Fictional worked example: **1234.567 → 1234.587 m³** gives **20 L**. Receiver `meter_count` **10,000 → 10,008** gives **8 pulses**. The factor is **20 / 8 = 2.5 L/pulse**. This is an example, not a default for your meter.
 
 For **three or more aligned readings**, prepare a CSV with offset-aware ISO timestamps and decimal register units:
 
 ```csv
 time,register_reading,meter_count
 2026-01-01T12:15:00Z,1234.567,10000
-2026-01-02T12:15:00Z,1235.892,10530
-2026-01-03T12:15:00Z,1237.217,11060
+2026-01-01T13:15:00Z,1234.587,10008
+2026-01-01T14:15:00Z,1234.617,10020
 ```
 
 ```sh

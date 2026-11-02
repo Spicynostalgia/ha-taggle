@@ -5,11 +5,11 @@ Receive hourly pulse updates from a supported Taggle transmitter in Home Assista
 **Only one transmitter has been verified:** Gladstone, QLD, with an RTL-SDR Blog V4. Other models and areas are unverified. This add-on supports amd64/aarch64 and includes the Blog driver for V4 support. The historical Docker hardware test used receiver 0.2.1; these instructions describe **0.3.0**.
 
 > [!IMPORTANT]
-> The transmitter sends a pulse counter, not your dial reading. Its starting offset and litres per pulse are both unknown. Guided calibration in **0.3.0** uses two manual dial readings, separated by enough normal water use, to establish both; follow Calibration status if another reading is needed. Check the estimate against your physical dial. This is experimental, not billing-grade measurement.
+> The transmitter sends a pulse counter, not your dial reading. Its starting offset and litres per pulse are both unknown. Guided calibration in **0.3.0** uses a one-hour routine: read just after a transmission, use 20–50 L (reuse it), then read after the next transmission to establish both; follow Calibration status if another reading is needed. Check the estimate against your physical dial. This is experimental, not billing-grade measurement.
 
 ## Install
 
-Use **Home Assistant OS** with an administrator account. An add-on is a program managed by HA OS; newer menus call it an app. Existing Supervised installations may also run it, but [upstream support ended after 2025.12](https://www.home-assistant.io/blog/2025/05/22/deprecating-core-and-supervised-installation-methods-and-32-bit-systems/). Container users should follow [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker).
+Use **Home Assistant OS** with an administrator account. Open `http://homeassistant.local:8123` (some new installs serve on port 80: omit `:8123`). An add-on is a program managed by HA OS; newer menus call it an app. Existing Supervised installations may also run it, but [upstream support ended after 2025.12](https://www.home-assistant.io/blog/2025/05/22/deprecating-core-and-supervised-installation-methods-and-32-bit-systems/). Container users should follow [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker).
 
 [![Open Mosquitto broker](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
 
@@ -27,7 +27,9 @@ The custom card is optional; standard HA sensor cards work too. For a browser-on
 
 The one verified setup used **18-byte clear frames**, **hourly** updates and **922.2 MHz SDR centre**. Automated tests use generated signals; they do not field-verify other deployments.
 
-The transmitter is a white cable-connected cylinder on a V100-style mechanical meter. Its exact model is unconfirmed; appearance alone does not establish compatibility. **NB-IoT/cellular models cannot be received.** Other Taggle generations may use other channels or encryption. See the [tested setup and identification guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware).
+The tested meter is an **Elster (Honeywell) V100**, owner-confirmed. Elster’s [V100 PSM-T specification](https://cdn.shopify.com/s/files/1/0556/0283/9744/files/V100_PSM_T_SML001_SpecSheet.pdf) lists **5 L/pulse** for the **5 black + 3 red** counter and **0.5 L/pulse** for the **4×4** counter. The tested meter’s readings match **5 L/pulse**; **still calibrate yours**. The radio counter has an arbitrary starting offset, so multiplying it by 5 does not reconstruct your dial reading.
+
+The transmitter is a white cable-connected cylinder. Its exact model is unconfirmed; appearance alone does not establish compatibility. **NB-IoT/cellular models cannot be received.** Other Taggle generations may use other channels or encryption. See the [tested setup and identification guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware).
 
 Working or stuck? [Report your result](https://github.com/Spicynostalgia/ha-taggle/issues/new/choose) with the version, installation method, council/utility, receiver model and whether usage, ID only, or nothing was heard. Frame length and SNR are optional; **unknown is fine**. Normal logs and scans do not show exact frame length. Replace IDs with fictional **123456**, cover IDs/barcodes in photos, and omit private configuration, credentials and recordings.
 
@@ -57,11 +59,13 @@ Manual dial readings are the main route in **0.3.0**. No utility account, maths 
 
 On the MQTT device page use **Dial unit (m³ = kL, or L)**, then the single **Dial reading (e.g. 1597.765 or 1597.765 18:00)** box. Fresh: `1597.765` or `1597,765`. Photo: `1597.765 18:00`, `1597.765 1800`, `1597.765 at 6:00`, `1597.765@18:00`, or `1597.765 2026-11-02T18:00:00+10:00`. The reading and time are submitted together to `taggle/<id>/reading/set`; there is no pending photo-time setting. Clock times use the receiver’s timezone and mean yesterday if ahead of now. JSON entries remain supported.
 
-Outside the window is less precise; take fallback readings about a day apart; a third reading may be needed. **Good time to read the dial** is on for ten minutes after each configured-meter frame; attributes give `since`, `until`, and `next_transmission`. Status readings expose `exact` only when the window and a no-pulse bracket agree. **Delete all dial readings** is under **Configuration**; it clears entered readings and automatic calibration, keeping units, usage totals and pins. Old unknown saved options are ignored with a warning.
+Outside the window is less precise; a third reading may be needed. Return to the one-hour routine above for the next reading. **Read your dial now** (`binary_sensor.taggle_123456_read_dial_now`, displayed as **Good time to read the dial**) is on for ten minutes after each configured-meter frame; attributes give `since`, `until`, and `next_transmission`. Status readings expose `exact` only when the window and a no-pulse bracket agree. **Delete all dial readings** is under **Configuration**; it clears entered readings and automatic calibration, keeping units, usage totals and pins. Old unknown saved options are ignored with a warning.
 
 Check later dial readings against the estimate. If an entry is wrong, [delete that reading or review reset consequences](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/CALIBRATION.md#correct-or-reset-readings) before using **Delete all dial readings** under **Configuration**. Reset clears readings and automatic calibration, preserving observed usage totals and configuration pins.
 
 Already configured a manual `litres_per_count`? It pins litres per pulse: guided readings check it but cannot replace it. For automatic selection, clear `meter_reading_offset: []` if present, then `litres_per_count: []`, Save and restart **Taggle water meter** once. Guided reading submissions need no restart.
+
+For an example phone notification when **Read your dial now** turns on, see the calibration guide below.
 
 Photo times, statuses, options, correction and the advanced manual/utility routes: [Calibration guide](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/CALIBRATION.md).
 
