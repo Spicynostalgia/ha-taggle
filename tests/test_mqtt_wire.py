@@ -174,11 +174,11 @@ def test_guided_commands_over_real_mqtt_reconnect_birth_and_reset(tmp_path, monk
             broker.wait(lambda rows: any(topic == f'taggle/{ID}/state' and predicate(json.loads(value))
                                          for topic, value in rows[before:]))
 
-        expected = {f'taggle/{ID}/{a}/set' for a in ('reading', 'reading_time', 'dial_unit', 'reset')}
+        expected = {f'taggle/{ID}/{a}/set' for a in ('reading', 'dial_unit', 'reset')}
         assert expected <= set(broker.subscriptions)
+        assert f'taggle/{ID}/reading_time/set' not in broker.subscriptions
         command('dial_unit', 'L', lambda s: s['dial_unit'] == 'L')
-        command('reading_time', START.isoformat(), lambda s: bool(s['reading_time']))
-        command('reading', '100000', lambda s: s.get('enter_reading') == 100000 and s['reading_time'] == '')
+        command('reading', '100000 ' + START.isoformat(), lambda s: s.get('dial_reading') == '100000 ' + START.isoformat())
         command('reading', json.dumps({'litres': 100500, 'time': (START + timedelta(hours=1)).isoformat(),
                                        'source': 'phone photo'}), lambda s: s.get('litres_per_count') == 5)
         broker.wait(lambda rows: any(topic.endswith('/meter_reading/config') and value for topic, value in rows))
@@ -190,12 +190,13 @@ def test_guided_commands_over_real_mqtt_reconnect_birth_and_reset(tmp_path, monk
         assert attrs['next_transmission_expected'].startswith('Next transmission expected ≈ ')
         configs = {topic: json.loads(value) for topic, value in broker.records
                    if topic.endswith('/config') and value}
-        number = configs['homeassistant/number/taggle_123456/enter_reading/config']
-        assert number['mode'] == 'box' and number['step'] == .001 and not number['retain']
-        assert number['default_entity_id'] == 'number.taggle_123456_enter_reading'
-        assert number['name'] == 'Meter reading (from dial)'
-        assert configs['homeassistant/select/taggle_123456/dial_unit/config']['name'] == 'Dial unit (m³ / kL / L)'
-        assert configs['homeassistant/text/taggle_123456/reading_time/config']['name'] == 'Photo time (optional, HH:MM)'
+        text = configs['homeassistant/text/taggle_123456/dial_reading/config']
+        assert text['mode'] == 'text' and text['pattern'] and not text['retain']
+        assert text['default_entity_id'] == 'text.taggle_123456_dial_reading'
+        assert text['name'] == 'Dial reading (e.g. 1597.765 or 1597.765 18:00)'
+        assert configs['homeassistant/select/taggle_123456/dial_unit/config']['name'] == 'Dial unit (m³ = kL, or L)'
+        for legacy in ('number/taggle_123456/enter_reading', 'text/taggle_123456/reading_time'):
+            assert ('homeassistant/' + legacy + '/config', '') in broker.records
         absolute = configs['homeassistant/sensor/taggle_123456/meter_reading/config']
         assert absolute['device_class'] == 'water' and absolute['state_class'] == 'total_increasing'
         assert absolute['suggested_display_precision'] == 0

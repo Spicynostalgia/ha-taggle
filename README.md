@@ -283,14 +283,28 @@ The dashboard card’s **Read your dial** panel has a dial picture, help for oth
 
 *In this illustration, black `01234` and red `567` mean **1234.567** with **m³ or kL** selected, or **1234567** with **L** selected. Your dial may differ: follow its printed units and multipliers. Do not add pointer fractions twice. The spinning star indicates flow, not the reading.*
 
-1. **Read the dial now.** Photograph the whole face and units. After reception, **Calibration status** and the card estimate **“Next transmission expected ≈ HH:MM”** locally. Reading just after it, ideally with nobody using water, narrows uncertainty. Readings at other times can work too.
-2. In the card’s **Read your dial** panel, choose **m³, kL or L** to match the face, type the complete **Meter reading**, and press **Save reading**. **1 m³ = 1 kL = 1,000 L**. Use a decimal point, without thousands separators or unit letters. Leave **Photo taken at** blank for a fresh reading; for a photo taken earlier today, set its time before saving. For other dates, follow the [older-photo instructions](docs/CALIBRATION.md#older-photos-and-reading-time).
-3. Use water normally and enter another fresh reading, for example tomorrow. **Do not run water just to calibrate.** Time alone is not enough; follow **Calibration status** if it asks for more normal use, a closer reading or another transmission.
-4. Check **Calibration status**. A reading can stay pending until the next hourly frame. When calibration succeeds, litre sensors appear automatically. **Meter reading** appears when the absolute counter/offset is resolved. Compare it with later dial readings; continue entering readings to check the result.
+1. **Just after a transmission**, read the dial within **10 minutes**, before anyone uses water. The card shows **Read now** with minutes remaining; **Good time to read the dial** turns on. Choose **m³, kL or L** to match the face (1 m³ = 1 kL = 1,000 L), type the full reading, and save promptly.
+2. **Use some water during the hour**, for example fill buckets or run a shower, about **20–50 L**. Reuse the water. This is practical guidance, not a minimum-usage gate.
+3. **Just after the NEXT transmission** (normally about one hour later), read within 10 minutes again, before further water use. Save the second reading and follow **Calibration status**. When exactly one standard pulse size fits, calibration supplies litres automatically. If multiple sizes fit, status names them and asks for another reading.
 
-Without the custom card, open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Set **Photo time (optional, HH:MM)** first if needed, choose **Dial unit (m³ / kL / L)**, then enter **Meter reading (from dial)** and press Enter. Device pages cannot show the illustrated guide; keep [the dial instructions](docs/CALIBRATION.md#reading-your-dial) nearby.
+Outside the read-now window, readings are still accepted but are **less precise; a third reading may be needed**. For this fallback, take readings about a day apart. Readings may stay pending until a later frame supplies the counter bracket; `exact: true` requires a reading in the window with no pulses across its bracket. No pulses between two exact readings gives **“No water was used between your readings — use some water before the next transmission, then read again.”** Compare the estimated **Meter reading** against later dial readings.
 
-If a reading is wrong, follow [correction or reset instructions](docs/CALIBRATION.md#correct-or-reset-readings). **Reset calibration** removes entered readings and automatic calibration; check the consequences before pressing it. It is not a delete-one-reading control.
+Without the card, open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ = kL, or L)**, then use the single **Dial reading (e.g. 1597.765 or 1597.765 18:00)** box and press Enter. Enter `1597.765` for a fresh reading, or `1597.765 18:00` for a photo. Also accepted: `1597,765`, `1597.765 1800`, `1597.765 at 6:00`, `1597.765@18:00`, or `1597.765 2026-11-02T18:00:00+10:00`. Clock times use the receiver’s timezone; a clock time ahead of now means yesterday. The card combines its friendly reading and optional **Photo taken at** fields into that same command. There is no separate saved photo time to affect your next reading. See [dial instructions and older photos](docs/CALIBRATION.md#reading-your-dial).
+
+Optional phone reminder (fictional ID **123456**; replace the ID and phone action):
+
+```yaml
+triggers:
+  - {trigger: state, entity_id: binary_sensor.taggle_123456_read_dial_now, to: "on"}
+actions:
+  - action: notify.mobile_app_your_phone
+    data:
+      message: "Read your dial now, before anyone uses water."
+```
+
+The sensor is on for ten minutes after each configured-meter frame, with `since`, `until`, and `next_transmission` attributes.
+
+To correct a mistake, follow [correction instructions](docs/CALIBRATION.md#correct-or-reset-readings). **Delete all dial readings**, under the device’s **Configuration**, clears all entered readings and automatic calibration. It preserves the unit, observed usage totals and configuration pins.
 
 **Already set `litres_per_count`?** That manual value pins litres per pulse; guided calibration checks it and cannot replace it. To allow automatic selection, remove any `meter_reading_offset` pin and clear `litres_per_count` (`[]` in add-on options, `{}` in Docker JSON), Save, and restart **the receiver** once. Guided submissions themselves need no restart.
 

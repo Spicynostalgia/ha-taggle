@@ -41,7 +41,7 @@
     const params = new URLSearchParams(location.search);
     const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
     const scenario = params.get('scenario') || 'calibrated';
-    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'uncalibrated', 'leak'].includes(scenario)) throw new Error('Unknown scenario');
+    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'uncalibrated', 'read-now', 'leak'].includes(scenario)) throw new Error('Unknown scenario');
     const requestedWidth = Number(params.get('width') || 520);
     const width = Number.isInteger(requestedWidth) && requestedWidth >= 280 && requestedWidth <= 1600
       ? requestedWidth : 520;
@@ -84,7 +84,8 @@
         total_litres: cumulative * factor, meter_reading: 1234567 + cumulative * factor,
         calibration_status: scenario === 'disagreement' ? 'Readings disagree — check the last one: check the dial unit or digits'
           : scenario === 'pending' ? 'Waiting for next transmission to line up your reading'
-          : scenario === 'uncalibrated' ? 'Need a second reading — use water normally and enter another tomorrow'
+          : scenario === 'uncalibrated' ? 'Step 2 of 3 — use some water this hour (20–50 L; reuse it), then read just after the NEXT transmission.'
+          : scenario === 'read-now' ? 'Read your dial now — a transmission arrived 2 min ago. Step 1 of 3.'
           : calibrated ? 'Calibrated: 2.5 L per pulse — standard value, fits your readings'
           : 'Needs 2 readings — enter your dial reading to show litres',
       };
@@ -105,11 +106,15 @@
                 base_interval:[46218,46228], count_interval:[46218,46228]}] : []} : {})},
         };
       }
-      for (const [key, domain, value] of [['dial_unit', 'select', 'm³'], ['enter_reading', 'number', 'unknown'],
-        ['reading_time', 'text', '']]) {
+      for (const [key, domain, value] of [['dial_unit', 'select', 'm³'], ['dial_reading', 'text', '']]) {
         entities[key] = `${domain}.taggle_${id}_${key}`;
         states[entities[key]] = {state:value, attributes:{}};
       }
+      entities.read_dial_now = `binary_sensor.taggle_${id}_read_dial_now`;
+      states[entities.read_dial_now] = {state:scenario === 'read-now' ? 'on' : 'off', attributes:{
+        since:new Date(now - (scenario === 'read-now' ? 2 : 15) * 60000).toISOString(),
+        until:new Date(now + (scenario === 'read-now' ? 8 : -5) * 60000).toISOString(),
+        next_transmission:'2026-01-03T19:15:00+10:00'}};
       if (scenario === 'leak') {
         entities.possible_leak = `binary_sensor.taggle_${id}_possible_leak`;
         states[entities.possible_leak] = {state:'on', attributes:{reason:'continuous flow for 24 h'}};
@@ -117,7 +122,7 @@
       return {name, entities};
     }
 
-    const meters = [meter(123456, 'House', !['raw', 'pending', 'uncalibrated'].includes(scenario), 1, 12.4, -43.2)];
+    const meters = [meter(123456, 'House', !['raw', 'pending', 'uncalibrated', 'read-now'].includes(scenario), 1, 12.4, -43.2)];
     if (scenario === 'multi') meters.push(meter(234567, 'Granny flat', true, 0.45, 9.8, -49.1));
     // Fictional aggregate only: no neighbour IDs or individual readings.
     const neighbourhood = {average_today: 410, median_today: 350, meters_counted: 14,
@@ -125,7 +130,7 @@
     for (const [key, value] of Object.entries(neighbourhood)) {
       states[`sensor.taggle_neighbourhood_${key}`] = {
         state: String(value), attributes: {unit_of_measurement: key.startsWith('meters_')
-          ? 'meters' : ['raw', 'pending', 'uncalibrated'].includes(scenario) ? 'pulses' : 'L'},
+          ? 'meters' : ['raw', 'pending', 'uncalibrated', 'read-now'].includes(scenario) ? 'pulses' : 'L'},
       };
     }
     const card = document.createElement('taggle-card');

@@ -59,16 +59,16 @@ def test_unscaled_discovery_removes_litre_entities():
     client = Mock()
     Publisher(Config.from_dict({'meter_ids': [123456]}), client).announce()
     removals = [c for c in client.publish.call_args_list if c.args[1] == '']
-    assert len(removals) == 4
+    assert len(removals) == 7
 
 
 @pytest.mark.parametrize('prefix', ['taggle', 'house/taggle'])
 def test_calibration_control_names_keep_stable_ids(prefix):
     publisher = Publisher(Config.from_dict({'meter_ids': [123456], 'mqtt': {'topic_prefix': prefix}}), Mock())
     for key, domain, name in (
-        ('dial_unit', 'select', 'Dial unit (m³ / kL / L)'),
-        ('enter_reading', 'number', 'Meter reading (from dial)'),
-        ('reading_time', 'text', 'Photo time (optional, HH:MM)'),
+        ('dial_unit', 'select', 'Dial unit (m³ = kL, or L)'),
+        ('dial_reading', 'text', 'Dial reading (e.g. 1597.765 or 1597.765 18:00)'),
+        ('reset_calibration', 'button', 'Delete all dial readings'),
     ):
         payload = publisher.control_discovery(123456, key, domain)
         assert payload['name'] == name
@@ -330,3 +330,30 @@ def test_auto_calibrated_discovery_and_neighbour_units_survive_opaque_frames(tmp
                if c.args[0].endswith('/config') and c.args[1]}
     assert configs['homeassistant/sensor/taggle_123456/total_litres/config']['unit_of_measurement'] == 'L'
     assert configs['homeassistant/sensor/taggle_neighbourhood/average_today/config']['unit_of_measurement'] == 'L'
+
+
+@pytest.mark.parametrize('prefix', ['taggle', 'house/taggle'])
+def test_legacy_control_tombstones_reset_configuration_and_read_window_discovery(prefix):
+    import json
+    import re
+
+    client = Mock()
+    publisher = Publisher(Config.from_dict({'meter_ids': [123456], 'mqtt': {'topic_prefix': prefix}}), client)
+    publisher.announce()
+    published = {c.args[0]: c.args[1] for c in client.publish.call_args_list}
+    node = prefix.replace('/', '_') + '_123456'
+    for key, domain in (('reading_time', 'text'), ('enter_reading', 'number')):
+        assert published[f'homeassistant/{domain}/{node}/{key}/config'] == ''
+    assert published[f'{prefix}/123456/reading_time'] == ''
+    reset = json.loads(published[f'homeassistant/button/{node}/reset_calibration/config'])
+    assert reset['name'] == 'Delete all dial readings'
+    assert reset['entity_category'] == 'config' and reset['icon'] == 'mdi:delete-sweep'
+    assert reset['command_topic'] == f'{prefix}/123456/reset/set' and reset['payload_press'] == 'RESET'
+    reading = json.loads(published[f'homeassistant/text/{node}/dial_reading/config'])
+    for value in ('1597.765', '1597,765 1800', '1597.765 at 6:00', '1597.765@18:00'):
+        assert re.fullmatch(reading['pattern'], value)
+    assert not re.fullmatch(reading['pattern'], '1597.765 2500')
+    window = json.loads(published[f'homeassistant/binary_sensor/{node}/read_dial_now/config'])
+    assert window['name'] == 'Good time to read the dial'
+    assert window['default_entity_id'] == 'binary_sensor.taggle_123456_read_dial_now'
+    assert window['availability_topic'] == f'{prefix}/status'

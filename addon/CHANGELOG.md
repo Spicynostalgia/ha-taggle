@@ -4,6 +4,11 @@
 
 Released 2026-11-03.
 
+- Replace the number and separate photo-time controls with one validated Dial reading text box: optional time travels with its reading; accept HHMM, at/@ and comma decimals, preserve JSON, and remove old discovery/pending time on upgrade.
+- Guide calibration over one hour: read within ten minutes after a transmission, use 20–50 L (reuse it), then read just after the next transmission. Add Good time to read the dial, countdown and three-step card guidance, exact flags and a phone reminder example.
+- Remove the minimum-usage gate and retired option; name ambiguous standard sizes, tolerate obsolete saved options with a warning, and include typed dial resolution in bounds, fits and residual checks.
+- Move reset to Configuration as Delete all dial readings with a delete-sweep icon and an explanation in calibration attributes; clarify that m³ = kL.
+
 - Add guided calibration from manual dial readings: m³/kL/L selector, reading box, optional photo time and reset, with automatic standard pulse selection and an absolute meter reading for Energy.
 - Align readings to persisted counter intervals, resolve unambiguous missing-slot wraps, validate units/typos and pinned factors, and report bounds, weighted residuals and exclusions.
 - Show the next expected local transmission time and dial-reading guidance in Home Assistant and the card; publish litre entities automatically after calibration.

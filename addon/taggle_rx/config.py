@@ -1,7 +1,8 @@
 """Validated configuration, shared by CLI, Docker and the add-on."""
 import json
+import logging
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -33,7 +34,6 @@ class Config:
     meter_reading_offset: dict = field(default_factory=dict)
     dial_unit: str = 'm3'
     calibration_max_uncertainty: float = .02
-    calibration_min_litres: float = 200
     mqtt: dict = field(default_factory=dict)
     data_dir: str = './data'
     jsonl_logging: bool = False
@@ -49,7 +49,12 @@ class Config:
 
     @classmethod
     def from_dict(cls, raw, *, scan=False):
-        config = cls(**raw)
+        if not isinstance(raw, dict):
+            raise ValueError('configuration must be an object')
+        known = {f.name for f in fields(cls)}
+        for name in raw.keys() - known:
+            logging.getLogger(__name__).warning('Ignoring unknown option %s', name)
+        config = cls(**{k: v for k, v in raw.items() if k in known})
         for name in ('log_all_meters', 'jsonl_logging', 'neighbourhood'):
             if not isinstance(getattr(config, name), bool):
                 raise ValueError(f'{name} must be boolean')
@@ -92,11 +97,10 @@ class Config:
             config.litres_per_count[key] = float(value)
         if config.dial_unit not in ('m3', 'kl', 'litres', 'm³', 'kL', 'L'):
             raise ValueError('dial_unit must be m3, kl or L')
-        for name, upper in (('calibration_max_uncertainty', 1), ('calibration_min_litres', 1e9)):
-            value = getattr(config, name)
-            if (isinstance(value, bool) or not isinstance(value, (int, float))
-                    or not math.isfinite(value) or not 0 < value <= upper):
-                raise ValueError(f'{name} must be finite, positive and at most {upper:g}')
+        value = config.calibration_max_uncertainty
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(value) or not 0 < value <= 1):
+            raise ValueError('calibration_max_uncertainty must be finite, positive and at most 1')
         offsets = config.meter_reading_offset
         if isinstance(offsets, list):
             offsets = {item['meter_id']: item['value'] for item in offsets}

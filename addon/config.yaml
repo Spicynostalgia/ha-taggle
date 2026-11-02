@@ -26,7 +26,6 @@ options:
   meter_reading_offset: []
   dial_unit: m3
   calibration_max_uncertainty: 0.02
-  calibration_min_litres: 200
   jsonl_logging: false
   scan_minutes: 0
   leak_detection: true
@@ -53,7 +52,6 @@ schema:
       value: float
   dial_unit: "list(m3|kl|L)"
   calibration_max_uncertainty: "float(0.000001,1)"
-  calibration_min_litres: "float(0.000001,1000000000)"
   jsonl_logging: bool
   scan_minutes: "int(0,1440)"
   leak_detection: bool

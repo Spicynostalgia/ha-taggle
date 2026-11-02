@@ -36,9 +36,6 @@ configuration:
   calibration_max_uncertainty:
     name: Maximum calibration uncertainty
     description: Maximum full relative bounds width for a nonstandard pulse fit. Default 0.02 (2%). A unique standard pulse size applies automatically.
-  calibration_min_litres:
-    name: Minimum calibration usage (L)
-    description: Default 200 L between readings, or at least 40 pulses. Use water normally and take another reading about a day later.
   jsonl_logging:
     name: Write daily JSONL logs
     description: Store filtered decoded readings in persistent app data. Logs need manual retention management.

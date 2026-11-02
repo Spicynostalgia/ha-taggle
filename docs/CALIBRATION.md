@@ -11,22 +11,24 @@ Use the dashboard card’s **Read your dial** panel: its mechanical register pic
 
 ![Read your dial panel with one fictional entered reading](images/card-calibration.png)
 
-1. Read or photograph the dial **now**, with units and multipliers visible. Once a frame arrives, **Calibration status** and the card estimate **“Next transmission expected ≈ HH:MM”** locally. Read within a few minutes after it, ideally with nobody using water, to narrow the uncertainty. The time is an estimate; messages can be missed. Other reading times can work too.
-2. Set **Dial unit** to **m³** (default), **kL** or **L**, matching the dial. **1 m³ = 1 kL = 1,000 L**. Use the example below before entering digits; two consistently wrong-unit initial readings may not be detected as mistakes.
-3. Type the complete **Meter reading** and press **Save reading** (or Enter). Use a decimal point without thousands separators or unit letters. Leave optional **Photo taken at** blank for a fresh reading and submit promptly; a time uses **the receiver’s timezone** (today, or yesterday if the clock time is ahead of now). For an older photo, [set its original time](#older-photos-and-reading-time). The card sends the photo time and unit before submitting the reading, and clears a previously set time when the field is blank. It checks for missing, negative, invalid or implausibly large readings, including a 1000× unit difference from a known previous reading.
-4. Use water normally and enter another fresh reading, for example tomorrow. Do not waste water to reach a target. Follow the status: it may need more use or another reading. Once calibrated, litre sensors appear automatically, without a configuration edit or receiver restart. **Meter reading** appears when the absolute counter and offset are resolved. Later dial readings check the result.
+1. **Just after a transmission**, read the dial within **10 minutes**, before anyone uses water. The card shows **Read now** with minutes remaining; **Good time to read the dial** turns on. Choose **m³, kL or L** to match the face (1 m³ = 1 kL = 1,000 L), type the full reading, and save promptly.
+2. **Use some water during the hour**, for example fill buckets or run a shower, about **20–50 L**. Reuse the water. This is practical guidance, not a minimum-usage gate.
+3. **Just after the NEXT transmission** (normally about one hour later), read within 10 minutes again, before further water use. Save the second reading and follow **Calibration status**. When exactly one standard pulse size fits, calibration supplies litres automatically. If multiple sizes fit, status names them and asks for another reading.
 
-Below the form, follow **Calibration status** and **“Next transmission expected ≈ HH:MM — best read within a few minutes after it”**. The last ten entered readings show their time, original value/unit and whether they are used, excluded or still pending, with the receiver’s reason when available. **Reading sent** means the command was sent; check the status and list for the receiver’s result.
+The card’s friendly form combines **Meter reading** and optional **Photo taken at** into one text command, preserving the decimals you type. Leave the photo time blank for a fresh reading. A clock time uses the receiver’s timezone: today, or yesterday if ahead of now. The last ten readings show time, value/unit, exactness and whether they are used, excluded or pending. **Reading sent** means the command was sent; check receiver status for acceptance.
 
-**Without the custom card:** open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ / kL / L)**, set **Photo time (optional, HH:MM)** before submitting if needed, then type **Meter reading (from dial)** and press Enter. Clear the photo time before a fresh reading if it remains populated. The device page cannot display help or pictures; use the dial guide below.
+**Without the card:** open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ = kL, or L)** and type `1597.765` or `1597.765 18:00` into **Dial reading (e.g. 1597.765 or 1597.765 18:00)**. Submit once with Enter. The reading and time travel together; there is no pending time for the next reading.
+
+Outside the read-now window, readings remain accepted but are **less precise; a third reading may be needed**. Take these fallback readings about a day apart. The read-now sensor is on for ten minutes after every configured-meter frame, off otherwise; its attributes give `since`, `until` and `next_transmission`.
 
 | Calibration status says | Next action |
 | --- | --- |
-| Needs 2 readings / Need a second reading | Enter a fresh reading, then another after more normal use. |
+| Step 1 / Read your dial now | Read within 10 minutes of a transmission, before water use. |
+| Step 2 / Step 3 | Use 20–50 L this hour (reuse it), then read just after the next transmission. |
 | Waiting for next transmission to line up your reading | Keep receiving; the next frame supplies the later counter boundary. |
 | No counter history before this reading | Take a fresh reading while reception is running. An old photo without usable history cannot be aligned. |
-| Need more use | Wait for normal household use, then enter another reading; tomorrow is a suggestion, not a deadline or guarantee. |
-| Several pulse sizes or wrap counts fit / Readings are too uncertain | Follow the message; more normal use and a reading just after a transmission can narrow the bounds. |
+| No water was used between your readings | Use some water before the next transmission, then read again. |
+| Named pulse sizes both/all fit / Several wrap counts fit / Readings are too uncertain | Follow the message; more normal use and a reading just after a transmission can narrow the bounds. |
 | Readings disagree / Check your reading | Check digits, unit, timestamp and transmitter ID, then [delete the mistake](#correct-or-reset-readings) and submit a correction. |
 | Calibrated | Check the estimated Meter reading against the physical dial, and submit later readings to validate it. |
 | Counter gap may hide wraps / resolve the absolute reading | Follow the request for a fresh reading; usage litres may be known while the absolute reading is withheld. |
@@ -46,19 +48,28 @@ The card’s compact illustration uses a different fictional reading: black `015
 
 ### Older photos and Reading time
 
-A plain number with blank **Photo time (optional, HH:MM)** (the `reading_time` entity) is timestamped when submitted. Do not enter an older photo as a current reading. In the card, **Photo taken at** accepts only a clock time in the receiver’s timezone: today, or yesterday when that time is ahead of now. Use the device control or timestamped MQTT entry below to specify an exact date.
+Use one reading box (default `text.taggle_123456_dial_reading`) or publish to `taggle/123456/reading/set`, with **retain off**:
 
-1. On the same MQTT device, set **Photo time (optional, HH:MM)** before entering the photo's dial reading. `18:00` means **today at 18:00 in the receiver's configured timezone**, or yesterday if it is not yet 18:00 (for example, last night’s photo submitted after midnight). To specify an exact date, use an offset-aware timestamp such as `2026-11-02T18:00:00+10:00`.
-2. Enter the reading in **Meter reading (from dial)** using the matching Dial unit, submit, then check Calibration status. Photo time clears after the next accepted entry; an input rejected before storage leaves it set. Clear it yourself before a fresh reading if it remains populated.
-3. If history cannot bracket the photo time, follow the status or take a fresh reading. The receiver retains counter checkpoints for 90 days; it does not invent history from before reception. Ambiguous/nonexistent daylight-saving clock times require ISO time with the actual UTC offset at the photo's time.
+```text
+1597.765
+1597,765
+1597.765 18:00
+1597.765 6:00
+1597.765 1800
+1597.765 at 18:00
+1597.765@18:00
+1597.765 2026-11-02T18:00:00+10:00
+```
 
-Advanced timestamped MQTT entry: under **Developer tools → Actions**, choose **MQTT: Publish** (`mqtt.publish`), use topic `taggle/123456/reading/set`, leave **retain off**, and send this complete fictional payload, replacing ID, reading and actual photo time:
+A bare number uses submission time and the selected dial unit. Append the photo’s original time in the same submission: HH:MM, H:MM, HHMM, or offset-aware ISO-8601. Clock times mean today in the receiver’s timezone, or yesterday if later than now. Nonexistent or repeated DST clock times require ISO with an explicit UTC offset. A future ISO timestamp is rejected. Use a decimal point or comma, without grouping separators or unit letters. These formats also work with `at` or `@` before the time.
+
+JSON remains supported on the same MQTT topic:
 
 ```json
 {"m3":1234.567,"time":"2026-11-02T08:15:00+10:00","source":"photo"}
 ```
 
-Use exactly one of `m3`, `kl` or `litres`; explicit JSON units override the selector, and explicit `time` overrides Reading time. Never use an automation's execution time for an older measurement. Topics here assume the default MQTT prefix `taggle`; adjust it if configured otherwise.
+Use exactly one of `m3`, `kl` or `litres`; JSON units override the selector. Optional `time` is the measurement time, and optional `source` describes it. No time means submission time. Use actual measurement time for automation and older photos. A photo outside stored counter history cannot be aligned; take a fresh reading. Topics here use the default `taggle` prefix.
 
 ### Energy and the three counters
 
@@ -82,10 +93,10 @@ The manual-factor-only route can use `sensor.taggle_123456_total_litres` for Ene
 
 | Control/sensor | Default entity ID for fictional 123456 | MQTT command topic |
 | --- | --- | --- |
-| Dial unit (m³ / kL / L) | `select.taggle_123456_dial_unit` | `taggle/123456/dial_unit/set` (`m³`, `kL`, `L`) |
-| Meter reading (from dial) | `number.taggle_123456_enter_reading` | `taggle/123456/reading/set` (plain number in selected unit, or JSON above) |
-| Photo time (optional, HH:MM) | `text.taggle_123456_reading_time` | `taggle/123456/reading_time/set` (blank, HH:MM or ISO time) |
-| Reset calibration | `button.taggle_123456_reset_calibration` | `taggle/123456/reset/set` (`RESET`) |
+| Dial unit (m³ = kL, or L) | `select.taggle_123456_dial_unit` | `taggle/123456/dial_unit/set` (`m³`, `kL`, `L`) |
+| Dial reading (optional photo time in the same box) | `text.taggle_123456_dial_reading` | `taggle/123456/reading/set` (formats above) |
+| Good time to read the dial | `binary_sensor.taggle_123456_read_dial_now` | No command; state and attributes on `taggle/123456/read_dial_now`. |
+| Delete all dial readings (Configuration) | `button.taggle_123456_reset_calibration` | `taggle/123456/reset/set` (`RESET`) |
 | Calibration status | `sensor.taggle_123456_calibration_status` | No command; attributes on `taggle/123456/calibration`. |
 | Meter reading | `sensor.taggle_123456_meter_reading` | No command; value on `taggle/123456/state`. |
 
@@ -97,37 +108,37 @@ The card resolves these controls through the same device/entity registry as Cali
 entities:
   calibration_status: sensor.taggle_123456_calibration_status
   dial_unit: select.taggle_123456_dial_unit
-  enter_reading: number.taggle_123456_enter_reading
-  reading_time: text.taggle_123456_reading_time
+  dial_reading: text.taggle_123456_dial_reading
+  read_dial_now: binary_sensor.taggle_123456_read_dial_now
 ```
 
 Each meter has its own form. The card preserves unsent entries and keyboard focus through Home Assistant state updates. If controls are missing or unavailable, it shows an explanation and disables saving.
 
-Up to **200 readings** are stored. To inspect them, open **Developer tools → States**, select your actual Calibration status entity and inspect its `readings` attribute. Each row includes an `id`, time, original value/unit, litres, source, counter interval, `used` flag, reason and residual when available. Attributes also report bounds, chosen factor, method, offset, uncertainty and next expected transmission. Delete an older reading before adding another at the limit.
+Up to **200 readings** are stored. To inspect them, open **Developer tools → States**, select your actual Calibration status entity and inspect its `readings` attribute. Each row includes an `id`, time, original value/unit, litres, source, `resolution_litres`, `exact` flag, counter interval, `used` flag, reason and residual when available. Attributes also report bounds, chosen factor, method, offset, uncertainty and next expected transmission. Delete an older reading before adding another at the limit.
 
 ### How alignment and the solver work
 
-The receiver retains 90 days of counter checkpoints using the same sequence and slot identities as usage accounting. Each frame includes the current and two earlier counter slots, so a later frame can fill missed transmissions. A dial reading at time `t` is bracketed by the last checkpoint before it and first after it. If their unwrapped counters agree, the reading is exact; otherwise its true counter remains an interval. An explicit photo time brackets against stored history. If there is no older checkpoint, take a new reading; the receiver does not invent one.
+The receiver retains 90 days of counter checkpoints using the same sequence and slot identities as usage accounting. Each frame includes the current and two earlier counter slots, so a later frame can fill missed transmissions. A dial reading at time `t` is bracketed by the last checkpoint before it and first after it. The `exact` flag is true only within ten minutes of a received frame and when both unwrapped bracket counters agree (no pulses since that frame); otherwise it remains false. A reading at the frame timestamp has a zero-width bracket. A later frame can confirm a static bracket for a photo taken minutes after the earlier frame. A recovered slot without an observed frame does not open a window. Otherwise the true count remains an interval. An explicit photo time brackets against stored history. If there is no older checkpoint, take a new reading; the receiver does not invent one.
 
-Automatic selection normally needs at least `calibration_min_litres` (**200 L** by default) of dial change **or 40 pulses** of minimum separation between the reading counter intervals, plus a usable factor solution. This minimum alone does not guarantee calibration; pinned factors bypass the minimum-use test.
+There is no minimum-usage gate. Each typed reading `R` carries a litres interval `[R−resolution, R+resolution]`. Resolution follows the number of decimals typed: `1597.765` m³/kL is ±1 L, `1597.76` is ±10 L, and `1597` is ±1000 L; whole L readings are ±1 L. Additional decimal places narrow the resolution (for example four m³ decimals give ±0.1 L). JSON decimal precision is preserved too. Old stored readings default to ±1 L.
 
-For two readings, `ΔR` litres and counter intervals `[a,b]`, `[c,d]` give factor bounds `[ΔR/(d−a), ΔR/(c−b)]`; overlapping intervals may leave the upper bound open. Plausible factors are **0.05–1000 L/pulse**. The standard sizes are **0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100 L**. Exactly one standard value inside the bounds applies automatically, even with wide bounds. Several standard values mean more readings/use are needed. With no standard inside, a fit applies only when full relative bounds width is at most **2%** (`calibration_max_uncertainty`). The offset uses the narrowest interval for two readings and a weighted fit for three or more.
+For two readings, combine both resolution intervals with counter intervals `[a,b]`, `[c,d]`: the lower factor bound is `(ΔR−res1−res2)/(d−a)`, and when `c>b` the upper is `(ΔR+res1+res2)/(c−b)`. Bounds intersect across all usable readings. Plausible factors are **0.05–1000 L/pulse**. Standard sizes are **0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100 L**. Exactly one standard inside the bounds applies automatically. If several fit, status names the candidates and suggests the next transmission. With none inside, a nonstandard fit applies only when full relative bounds width is at most **2%** (`calibration_max_uncertainty`). For example, one pulse and a dial change of 4 L with ±1 L per reading allows both 2.5 L and 5 L; another reading is needed. Offset fitting also uses reading-resolution intervals; residual checks include resolution rather than a fixed rounding allowance.
 
 Missing-slot gaps may conceal extra 65,536-count wraps. The solver checks wrap counts against the register changes and plausible factor bounds. A uniquely supported standard factor applies even when the exact wrap placement is unresolved; the absolute reading is withheld if its counter/offset is still ambiguous. Ambiguous factors ask for more evidence. Each wrap search is limited to 4,096 combinations; standard factors are also checked separately to narrow that search. Searches that remain too large stay ambiguous rather than guessing. If a new gap after calibration could conceal wraps, the receiver withholds the absolute reading and asks for a fresh dial reading to resolve it. Observed `meter_count` and historical `total_litres` keep their original accounting.
 
-The fictionalised **2 November 2026** hardware example uses ID `123456`: **1,597,361 L at 02:43 +10:00**, counter static at **46,218**; then **1,597,765 L at 18:00 +10:00**, bracketed by **17:41 / 46,283** and **18:41 / 46,318**. The bounds are **4.04–6.22 L/pulse**. Only **5 L** fits, and the exact first reading fixes the offset to **1,366,271 L**. The counter did not match the dial modulo 65,536 at any common pulse size: its start is arbitrary.
+The fictionalised **2 November 2026** hardware example uses ID `123456`: **1,597,361 L at 02:43 +10:00**, counter static at **46,218**; then **1,597,765 L at 18:00 +10:00**, bracketed by **17:41 / 46,283** and **18:41 / 46,318**. The bounds are **4.02–6.25 L/pulse** (including ±1 L per reading). Only **5 L** fits, and the exact first reading fixes the offset to **1,366,271 L**. The counter did not match the dial modulo 65,536 at any common pulse size: its start is arbitrary.
 
 ### Correct or reset readings
 
-Negative use, implausible pulse sizes, and dial/prediction differences larger than the counter interval plus **0.5% of measured use** (at least 0.5 L for rounding) flag a suspect reading. Suspect readings remain stored, excluded and visible. A reading about **1000×** off suggests switching **Dial unit**; it is never silently converted. Check all digits, decimal places, units, photo time, timezone and your transmitter ID.
+Negative use, implausible pulse sizes, and dial/prediction differences larger than the counter interval plus dial-reading resolution and **0.5% of measured use** flag a suspect reading. Suspect readings remain stored, excluded and visible. A reading about **1000×** off suggests switching **Dial unit**; it is never silently converted. Check all digits, decimal places, units, photo time, timezone and your transmitter ID.
 
 Back up receiver state first: include the add-on's data in an HA OS backup, or stop the Docker receiver and copy its private `data` directory together with `config.json`. [Backup guidance](../README.md#back-up-and-update).
 
 To delete one mistake, inspect `readings` in Calibration status attributes. For example, a row with `id: 3`, `used: false` and a disagreement `reason` identifies reading **3**, not your transmitter number. In **Developer tools → Actions → MQTT: Publish**, send `{"delete":3}` to `taggle/123456/reading/set` (substitute your transmitter ID and the actual reading ID), with **retain off**. The remaining readings are solved again; check status, then submit the corrected reading with its actual time. Deleting may remove the solution if insufficient usable readings remain.
 
-**Reset calibration** clears all entered readings, the automatic solution/offset and unused Reading time. It preserves the selected Dial unit, observed usage totals and configuration pins. Ordinary reset retains counter checkpoints; after a blocked counter-sequence change it discards the invalid calibration checkpoint history. A pinned factor/offset can immediately restore a configured solution. Otherwise absolute Meter reading is withdrawn until solved again, and automatic litre discovery can be removed. HA's previously recorded statistics are not erased or repaired by a receiver reset. Review these consequences before pressing the button; it sends the reset immediately without an extra receiver confirmation dialog. Counter sequence changes require a reset and fresh readings as requested by status.
+**Delete all dial readings**, under the device’s **Configuration** (delete-sweep icon), clears all entered readings and the automatic solution/offset. The Calibration status attributes describe this action too. It preserves the selected Dial unit, observed usage totals and configuration pins. Ordinary reset retains counter checkpoints; after a blocked counter-sequence change it discards the invalid calibration checkpoint history. A pinned factor/offset can immediately restore a configured solution. Otherwise absolute Meter reading is withdrawn until solved again, and automatic litre discovery can be removed. HA's previously recorded statistics are not erased or repaired by a receiver reset. Review these consequences before pressing the button; it sends the reset immediately without an extra receiver confirmation dialog. Counter sequence changes require a reset and fresh readings as requested by status.
 
-Never retain command messages: replaying an entry would duplicate it. The receiver ignores retained commands. MQTT discovery and subscriptions return after broker reconnect or Home Assistant birth; readings, selected unit, unused photo time and solution persist privately in versioned `state.json` (0600). Normal INFO logs list configured-meter IDs only; heartbeat summaries count other meters without listing their IDs. Scans and explicitly enabled broad JSONL logging have separate privacy exceptions.
+Never retain command messages: replaying an entry would duplicate it. The receiver ignores retained commands. MQTT discovery and subscriptions return after broker reconnect or Home Assistant birth; readings, selected unit and solution persist privately in versioned `state.json` (0600). Normal INFO logs list configured-meter IDs only; heartbeat summaries count other meters without listing their IDs. Scans and explicitly enabled broad JSONL logging have separate privacy exceptions.
 
 ### Options and manual pins
 
@@ -135,7 +146,8 @@ Never retain command messages: replaying an entry would duplicate it. The receiv
 | --- | --- | --- |
 | `dial_unit` | `m3` | Add-on default: `m3`, `kl` or `L`; device selector shows m³, kL or L. |
 | `calibration_max_uncertainty` | `0.02` | Positive, at most 1; full relative bounds-width limit for a nonstandard fit. Add-on schema minimum is 0.000001. |
-| `calibration_min_litres` | `200` | Positive, at most 1,000,000,000 L; alternate minimum-use test is 40 pulses. Add-on schema minimum is 0.000001. |
+
+Old unknown add-on option keys are ignored with a startup warning, so retired options do not prevent startup. Upgrades remove the old reading-number and separate photo-time discovery entities and drop pending photo time from saved state.
 
 The selector’s saved choice takes precedence over the default. `litres_per_count` pins a factor; guided readings then validate/report and find the absolute offset, never replace that factor. Optional `meter_reading_offset` pins the offset in litres too (a mapping in JSON, a list of `meter_id` / `value` in add-on options, like `litres_per_count`). It requires a pinned factor. With a pin but no dial reading/offset, usage litres are available but an absolute meter reading is not yet possible. To let automatic calibration replace a previous manual pin, remove any `meter_reading_offset` pin and clear `litres_per_count`: use `[]` for both in add-on options, or `{}` for both inside the copied standalone JSON. Save and restart **Taggle water meter**, or run `docker compose restart taggle` from the receiver repository. Existing readings are solved again; a full reset is not required solely to remove a pin. Do not copy the example factor below as a default.
 

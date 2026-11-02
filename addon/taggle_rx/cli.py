@@ -93,6 +93,7 @@ def main(argv=None):
             except queue.Empty:
                 kind = None
             store.heartbeat()
+            store.expire_read_windows(datetime.now(timezone.utc))
             if time.monotonic() - refresh >= 60:
                 store.refresh(datetime.now(timezone.utc))
                 refresh = time.monotonic()
@@ -117,6 +118,7 @@ def main(argv=None):
                                 'Retrying every %d s (up to 60 s); this reminder repeats every 10 minutes.', delay)
                 retry = now + delay
                 while not stopping and time.monotonic() < min(retry, deadline):
+                    store.expire_read_windows(datetime.now(timezone.utc))
                     time.sleep(.1)
                 continue
             if kind != 'data':

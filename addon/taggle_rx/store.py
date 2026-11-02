@@ -39,6 +39,7 @@ class Store:
         self.zone = ZoneInfo(config.timezone)
         self.path = Path(config.data_dir)
         self.meters = {}
+        self.read_window_deadlines = {}
         self.neighbours = {}
         self.salt = None
         self.heartbeat_at = time.monotonic()
@@ -92,7 +93,10 @@ class Store:
                 if 'calibration' not in meter:
                     meter['calibration'] = calibration.migrate(meter, config.dial_unit)
                 cal = meter['calibration']
-                calibration.solve(cal, config, int(key))
+                if 'reading_time' in cal:
+                    cal.pop('reading_time')
+                    checkpoint_changed = True
+                calibration.solve(cal, config, int(key), zone=self.zone)
             if publisher:
                 publisher.command_handler = self.command
             if checkpoint_changed:
@@ -121,16 +125,12 @@ class Store:
                     raise ValueError('Choose m³, kL or L for Dial unit')
                 cal['dial_unit'] = payload
                 result = 'unit changed'
-            elif action == 'reading_time':
-                calibration.timestamp(payload, now, self.zone)
-                cal['reading_time'] = payload
-                result = 'reading time set'
             elif action in ('reading', 'reset'):
                 result = calibration.intake(cal, '{"reset":true}' if action == 'reset' else payload, now, self.zone)
             else:
                 return
             cal.pop('error', None)
-            calibration.solve(cal, self.config, identifier)
+            calibration.solve(cal, self.config, identifier, now, self.zone)
             if result == 'accepted':
                 last = cal['readings'][-1]
                 result += (', pending' if not last.get('base_interval') else
@@ -210,10 +210,11 @@ class Store:
         meter.update(last_seen=stamp.isoformat(), snr=frame['snr_median_db'],
                      signal_level=frame['signal_level_dbfs'], encrypted=frame['encrypted'])
         cal = meter.setdefault('calibration', calibration.initial(self.config.dial_unit))
+        cal['last_frame'] = stamp.isoformat()
         if 'counts' in frame:
             self.counts(meter, frame, stamp, self.factor(identifier) or 0)
             before = cal['status']
-            calibration.solve(cal, self.config, identifier)
+            calibration.solve(cal, self.config, identifier, stamp, self.zone)
             if before != cal['status'] and cal['readings']:
                 outcome = 'solved' if cal.get('solution') else 'pending'
                 LOG.info('Meter %s calibration: %s; %s', identifier, outcome, cal['status'])
@@ -269,11 +270,15 @@ class Store:
         meter = self.meters[str(identifier)]
         result = {k: meter[k] for k in ('last_seen', 'snr', 'signal_level', 'encrypted') if k in meter}
         cal = meter.get('calibration', calibration.initial(self.config.dial_unit))
+        calibration.solve(cal, self.config, identifier, now, self.zone)
         attrs = calibration.attributes(cal, now, self.zone)
+        window = attrs['read_dial_now']
+        if window['state'] == 'ON':
+            self.read_window_deadlines[identifier] = datetime.fromisoformat(window['until'])
+        else:
+            self.read_window_deadlines.pop(identifier, None)
         result.update(calibration_status=cal['status'], calibration=copy.deepcopy(attrs), dial_unit=cal['dial_unit'],
-                      reading_time=cal['reading_time'])
-        if 'last_entered_litres' in cal:
-            result['enter_reading'] = cal['last_entered_litres'] / calibration.UNITS[cal['dial_unit']]
+                      dial_reading=cal.get('last_entry', ''), read_dial_now=attrs['read_dial_now'])
         if meter.get('encrypted') or 'latest' not in meter:
             return result
         hours = sorted(meter['hours'].values(), key=lambda v: v['end'])
@@ -353,6 +358,15 @@ class Store:
         }
 
     @synchronized
+    def expire_read_windows(self, now):
+        """Publish OFF at the ten-minute deadline, independently of minute refreshes."""
+        for identifier, deadline in list(self.read_window_deadlines.items()):
+            if now >= deadline:
+                self.read_window_deadlines.pop(identifier)
+                if self.publisher:
+                    self.publisher.publish(identifier, self.snapshot(identifier, now))
+
+    @synchronized
     def refresh(self, now):
         """Republish date-dependent totals without changing the radio last-seen time."""
         neighbourhood = None
@@ -364,7 +378,7 @@ class Store:
             for identifier in self.config.meter_ids:
                 if str(identifier) not in self.meters:
                     cal = calibration.initial(self.config.dial_unit)
-                    calibration.solve(cal, self.config, identifier)
+                    calibration.solve(cal, self.config, identifier, now, self.zone)
                     self.meters[str(identifier)] = {'hours': {}, 'meter_count': 0, 'total_litres': 0.0,
                                                     'calibration': cal}
             if neighbourhood is not None:

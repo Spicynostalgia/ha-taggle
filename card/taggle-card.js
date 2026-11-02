@@ -3,8 +3,8 @@
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',
     'today', 'meter_count', 'snr', 'signal_level', 'last_seen', 'calibration_status', 'meter_reading', 'possible_leak',
-    'dial_unit', 'enter_reading', 'reading_time'];
-  const CONTROLS = {dial_unit:'select', enter_reading:'number', reading_time:'text'};
+    'dial_unit', 'dial_reading', 'read_dial_now'];
+  const CONTROLS = {dial_unit:'select', dial_reading:'text'};
   const esc = value => String(value ?? '').replace(/[&<>"']/g,
     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const number = entity => entity && !['unknown', 'unavailable', ''].includes(entity.state)
@@ -51,6 +51,13 @@
     .leak-badge { padding:2px 8px; border-radius:4px; font-size:13px; font-weight:500;
       color:var(--primary-text-color,#171717); background:var(--secondary-background-color,var(--divider-color,#eee)); }
     .read-panel { margin-top:20px; padding-top:20px; border-top:1px solid var(--divider-color,#ddd); }
+    .read-now { padding:12px; color:var(--primary-text-color,#171717);
+      background:color-mix(in srgb,var(--water) 18%,var(--ha-card-background,var(--card-background-color,#fff)));
+      border-left:4px solid var(--water); margin-bottom:12px; }
+    .read-now strong { font-size:20px; }
+    .routine-step { margin-bottom:8px; color:var(--primary-text-color,#171717); font-weight:600; }
+    .routine { padding-left:20px; font-size:14px; line-height:1.5; color:var(--muted); }
+    .routine [aria-current=step] { color:var(--primary-text-color,#171717); font-weight:600; }
     .read-panel h4 { margin:0 0 8px; font-size:17px; font-weight:500; }
     .read-panel figure { margin:16px 0 0; }
     .dial-picture { display:block; width:100%; max-width:320px; height:auto; }
@@ -161,12 +168,12 @@
         if (KEYS.includes(key) && !result[key]) result[key] = id;
       }
       // Existing pulse mappings also acquire calibration, litre and reading controls.
-      const anchor = Object.values(result).find(id => /^(?:sensor|select|number|text)\.taggle_\d+_/.test(id));
+      const anchor = Object.values(result).find(id => /^(?:sensor|select|text|binary_sensor)\.taggle_\d+_/.test(id));
       const base = anchor?.match(/^[^.]+\.(taggle_\d+_)/)?.[1];
       const device = registry.find(e => Object.values(result).includes(e.entity_id) && e.device_id)?.device_id;
-      if (!meter.device) for (const key of ['calibration_status', 'meter_reading', 'last_hour_litres', 'today_litres', 'total_litres', ...Object.keys(CONTROLS)]) {
+      if (!meter.device) for (const key of ['calibration_status', 'meter_reading', 'last_hour_litres', 'today_litres', 'total_litres', 'read_dial_now', ...Object.keys(CONTROLS)]) {
         const found = device && registry.find(e => e.device_id === device && (e.unique_id || '').endsWith('_' + key));
-        const fallback = (CONTROLS[key] || 'sensor') + '.' + base + key;
+        const fallback = (CONTROLS[key] || (key === 'read_dial_now' ? 'binary_sensor' : 'sensor')) + '.' + base + key;
         if (!result[key] && found) result[key] = found.entity_id;
         if (!result[key] && base && this._hass.states[fallback]) result[key] = fallback;
       }
@@ -191,7 +198,7 @@
         const clock = new Intl.DateTimeFormat(this._hass?.locale?.language || undefined, {
           timeZone: this._hass?.config?.time_zone || 'UTC', hour:'2-digit', minute:'2-digit', hourCycle:'h23'
         }).format(new Date(attrs.next_transmission));
-        next = `Next transmission expected ≈ ${clock} — best read within a few minutes after it`;
+        next = `Next transmission expected ≈ ${clock} — best read within 10 minutes, before water use`;
       }
       return `<p class="calibration ${warning ? 'warning' : ''}" role="status">${esc(message)}${!calibrated || warning
         ? ` · <a href="${esc(link)}">Open meter device</a>` : ''}${next ? '<br>'+esc(next) : ''}</p>`;
@@ -207,12 +214,12 @@
         && this._hass.states[ids[key]].state !== 'unavailable');
     }
     readingError(draft, ids) {
-      const value = Number(draft.reading), text = draft.reading.trim();
+      const value = Number(draft.reading.replace(',', '.')), text = draft.reading.trim();
       if (draft.badInput) return ['reading', 'Type a number with a decimal point, such as 1597.765.'];
       if (!text) return ['reading', 'Enter the complete reading from your dial.'];
       if (value < 0) return ['reading', 'A dial reading cannot be negative. Check the digits.'];
-      if (!Number.isFinite(value) || !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) {
-        return ['reading', 'Type a number with a decimal point, without commas or unit letters.'];
+      if (!Number.isFinite(value) || !/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(text)) {
+        return ['reading', 'Type a number with a decimal point or comma, without grouping separators or unit letters.'];
       }
       if (!['m³', 'kL', 'L'].includes(draft.unit)) return ['unit', 'Choose the unit printed on your meter.'];
       if (draft.time && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) return ['time', 'Use a photo time in HH:MM, or leave it blank for a fresh reading.'];
@@ -247,11 +254,9 @@
       Object.assign(this._drafts.get(meter), {busy:true, error:'', message:''});
       this.render();
       try {
-        // Always clear a stale photo time for a fresh reading. The number command
-        // submits immediately, so both time and unit must be sent before it.
-        await this._hass.callService('text', 'set_value', {entity_id:ids.reading_time, value:draft.time});
         await this._hass.callService('select', 'select_option', {entity_id:ids.dial_unit, option:draft.unit});
-        await this._hass.callService('number', 'set_value', {entity_id:ids.enter_reading, value:Number(draft.reading)});
+        const value = draft.reading.trim() + (draft.time ? ' ' + draft.time : '');
+        await this._hass.callService('text', 'set_value', {entity_id:ids.dial_reading, value});
         Object.assign(this._drafts.get(meter), {reading:'', time:'', badInput:false,
           message:'Reading sent. Check the status below; it may wait for the next transmission.'});
       } catch (_) {
@@ -267,8 +272,21 @@
       const draft = this.draft(meter, ids), prefix = `dial-${index}`;
       const ready = this.controlsReady(ids), collapsed = calibrated && !warning;
       const rows = Array.isArray(attrs.readings) ? attrs.readings.filter(r => r && typeof r === 'object').slice(-10) : [];
+      const window = this._hass.states[ids.read_dial_now]?.attributes || attrs.read_dial_now || {};
+      const remaining = Math.max(0, Math.ceil((Date.parse(window.until) - Date.now()) / 60000));
+      const open = Number.isFinite(remaining) && remaining > 0 && Date.parse(window.since) <= Date.now();
+      const first = rows[0];
+      const step = !first ? 1 : open && Date.parse(window.since) > Date.parse(first.time) ? 3 : 2;
       const body = `<h4>Read your dial</h4>
-        <p>Your meter's dial is the only source of real litres. Enter two readings about a day apart.</p>
+        ${open ? `<p class="read-now" role="status"><strong>Read now</strong> · ${remaining} min left<br>Before anyone uses water.</p>` : ''}
+        <p class="routine-step">Step ${step} of 3</p>
+        <p>Your meter's dial is the only source of real litres. Calibrate in about one hour:</p>
+        <ol class="routine">
+          <li ${step === 1 ? 'aria-current="step"' : ''}>Just after a transmission, read within 10 minutes, before anyone uses water.</li>
+          <li ${step === 2 ? 'aria-current="step"' : ''}>Use some water this hour: fill buckets or run a shower (20–50 L; reuse it).</li>
+          <li ${step === 3 ? 'aria-current="step"' : ''}>Just after the NEXT transmission, read again. Follow the calibration status.</li>
+        </ol>
+        <p class="note">Outside the window is less precise; take readings about a day apart. A third reading may be needed.</p>
         <figure><svg class="dial-picture" viewBox="0 0 320 118" role="img" aria-labelledby="${prefix}-picture-title ${prefix}-picture-desc">
           <title id="${prefix}-picture-title">Example mechanical register: 01597 black wheels and 765 red wheels</title>
           <desc id="${prefix}-picture-desc">Fictional reading: 1597.765 cubic metres. Black digits are whole cubic metres or kilolitres; red digits are litres.</desc>
@@ -294,11 +312,11 @@
           <fieldset ${draft.busy ? 'disabled' : ''}><legend>Dial unit</legend><div class="units">
             ${['m³', 'kL', 'L'].map((unit,i) => `<label><input type="radio" name="unit-${index}" value="${unit}" data-field="unit" data-focus="${index}-${i === 0 ? 'unit' : 'unit-'+i}" ${draft.unit === unit ? 'checked' : ''}><span>${unit}</span></label>`).join('')}
           </div></fieldset><div class="reading-fields">
-            <div><label for="${prefix}-reading">Meter reading</label><input id="${prefix}-reading" type="number" inputmode="decimal" min="0" step="any" required data-field="reading" data-focus="${index}-reading" value="${esc(draft.reading)}" ${draft.busy ? 'disabled' : ''} aria-invalid="${draft.error === 'reading'}" aria-describedby="${prefix}-feedback"></div>
+            <div><label for="${prefix}-reading">Meter reading</label><input id="${prefix}-reading" type="text" inputmode="decimal" required data-field="reading" data-focus="${index}-reading" value="${esc(draft.reading)}" ${draft.busy ? 'disabled' : ''} aria-invalid="${draft.error === 'reading'}" aria-describedby="${prefix}-feedback"></div>
             <div><label for="${prefix}-time">Photo taken at</label><input id="${prefix}-time" type="time" step="60" data-field="time" data-focus="${index}-time" value="${esc(draft.time)}" ${draft.busy ? 'disabled' : ''} aria-invalid="${draft.error === 'time'}" aria-describedby="${prefix}-time-help ${prefix}-feedback"></div>
           </div>
           <p class="note" id="${prefix}-time-help">Photo time is optional: leave blank for a fresh reading. Uses the receiver’s timezone; a time ahead of now means yesterday.</p>
-          ${!ready ? '<p class="note">Reading controls are unavailable. Check the receiver connection, or configure dial_unit, enter_reading and reading_time entities.</p>' : ''}
+          ${!ready ? '<p class="note">Reading controls are unavailable. Check the receiver connection, or configure dial_unit and dial_reading entities.</p>' : ''}
           <button type="submit" data-focus="${index}-save" aria-disabled="${draft.busy || !ready}" ${!ready ? 'disabled' : ''}>${draft.busy ? 'Sending…' : 'Save reading'}</button>
           <p id="${prefix}-feedback" class="form-feedback ${draft.error ? 'error' : ''}" role="status" aria-live="polite" aria-atomic="true">${esc(draft.message)}</p>
         </form>
@@ -306,9 +324,9 @@
         ${rows.length ? `<ul class="reading-list" aria-label="Last ${rows.length} entered readings">${rows.slice().reverse().map(r => `<li>
           <time datetime="${esc(r.time)}">${esc(this.time(r.time, true))}</time>
           <strong>${esc(Number.isFinite(r.value) ? String(r.value) : Number.isFinite(r.litres) ? String(r.litres) : '—')} ${esc(Number.isFinite(r.value) ? r.unit : 'L')}</strong>
-          <br>${r.used ? 'Used' : r.base_interval || r.count_interval ? 'Excluded' : 'Pending'}${r.reason ? ' — '+esc(r.reason) : ''}</li>`).join('')}</ul>`
+          <br>${r.used ? 'Used' : r.base_interval || r.count_interval ? 'Excluded' : 'Pending'}${r.exact ? ' · Exact' : ' · Less precise'}${r.reason ? ' — '+esc(r.reason) : ''}</li>`).join('')}</ul>`
           : '<p class="note">No dial readings entered yet. Add your first reading above.</p>'}`;
-      return collapsed ? `<details class="read-panel" data-disclosure="check-${index}"><summary data-focus="check-${index}">Add a check reading</summary>${body}</details>`
+      return collapsed ? `<details class="read-panel" data-disclosure="check-${index}"><summary class="${open ? 'read-now' : ''}" data-focus="check-${index}">${open ? 'Read now · ' + remaining + ' min left' : 'Add a check reading'}</summary>${body}</details>`
         : `<div class="read-panel">${body}</div>`;
     }
     format(value) {

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import paho.mqtt.client as mqtt
 
 from . import __version__
+from .calibration import READING_PATTERN
 from .leak import ATTRIBUTES as LEAK_ATTRIBUTES
 
 LOG = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ class Publisher:
 
     def subscribe_commands(self, client):
         for identifier in self.config.meter_ids:
-            for action in ('reading', 'dial_unit', 'reading_time', 'reset'):
+            for action in ('reading', 'dial_unit', 'reset'):
                 client.subscribe(f'{self.prefix}/{identifier}/{action}/set', qos=1)
 
     def on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties=None):
@@ -95,7 +96,7 @@ class Publisher:
         if getattr(message, 'retain', False) is True or not self.command_handler:
             return
         for identifier in self.config.meter_ids:
-            for action in ('reading', 'dial_unit', 'reading_time', 'reset'):
+            for action in ('reading', 'dial_unit', 'reset'):
                 if message.topic == f'{self.prefix}/{identifier}/{action}/set':
                     try:
                         if len(message.payload) > 4096:
@@ -130,30 +131,40 @@ class Publisher:
                            or (key == 'meter_reading' and 'meter_reading' not in state)
                            or (key == 'vs_neighbourhood_today' and not self.config.neighbourhood))
             self.send(topic, self.discovery(identifier, key, spec) if enabled else '')
-        for key, domain in (('dial_unit', 'select'), ('enter_reading', 'number'),
-                            ('reading_time', 'text'), ('reset_calibration', 'button')):
+        # Tombstones remove both old controls on upgrade, including retained time state.
+        for key, domain in (('enter_reading', 'number'), ('reading_time', 'text')):
+            self.send(f'{self.discovery_prefix}/{domain}/{self.prefix.replace("/", "_")}_{identifier}/{key}/config', '')
+        self.send(f'{self.prefix}/{identifier}/reading_time', '')
+        for key, domain in (('dial_unit', 'select'), ('dial_reading', 'text'), ('reset_calibration', 'button')):
             topic = f'{self.discovery_prefix}/{domain}/{self.prefix.replace("/", "_")}_{identifier}/{key}/config'
             self.send(topic, self.control_discovery(identifier, key, domain))
+        topic = (f'{self.discovery_prefix}/binary_sensor/'
+                 f'{self.prefix.replace("/", "_")}_{identifier}/read_dial_now/config')
+        result = self.discovery(identifier, 'read_dial_now', ('Good time to read the dial', None, None, None))
+        result.update(default_entity_id=f'binary_sensor.taggle_{identifier}_read_dial_now',
+                      state_topic=f'{self.prefix}/{identifier}/read_dial_now', value_template='{{ value_json.state }}',
+                      payload_on='ON', payload_off='OFF', json_attributes_topic=f'{self.prefix}/{identifier}/read_dial_now',
+                      icon='mdi:camera-metering-center')
+        self.send(topic, result)
         self.discovery_signature[identifier] = (factor, 'meter_reading' in state)
 
     def control_discovery(self, identifier, key, domain):
-        names = {'dial_unit': 'Dial unit (m³ / kL / L)', 'enter_reading': 'Meter reading (from dial)',
-                 'reading_time': 'Photo time (optional, HH:MM)', 'reset_calibration': 'Reset calibration'}
-        action = {'enter_reading': 'reading', 'reset_calibration': 'reset'}.get(key, key)
+        names = {'dial_unit': 'Dial unit (m³ = kL, or L)',
+                 'dial_reading': 'Dial reading (e.g. 1597.765 or 1597.765 18:00)',
+                 'reset_calibration': 'Delete all dial readings'}
+        action = {'dial_reading': 'reading', 'reset_calibration': 'reset'}.get(key, key)
         result = self.discovery(identifier, key, (names[key], None, None, None))
         result['default_entity_id'] = f'{domain}.taggle_{identifier}_{key}'
         result['command_topic'] = f'{self.prefix}/{identifier}/{action}/set'
         result['retain'] = False
         if domain == 'select':
             result['options'] = ['m³', 'kL', 'L']
-        elif domain == 'number':
-            result.update(mode='box', min=0, max=1e15, step=.001)
         elif domain == 'text':
-            result.update(mode='text', min=0, max=64)
+            result.update(mode='text', min=0, max=255, pattern=READING_PATTERN)
         else:
             result.pop('state_topic')
             result.pop('value_template')
-            result['payload_press'] = 'RESET'
+            result.update(payload_press='RESET', entity_category='config', icon='mdi:delete-sweep')
         return result
 
     def announce(self):
@@ -194,7 +205,7 @@ class Publisher:
                        'name': f'Taggle {identifier}', 'manufacturer': 'Taggle Systems',
                        'model': 'Water meter transmitter', 'sw_version': __version__},
         }
-        if key in ('calibration_status', 'dial_unit', 'enter_reading', 'reading_time', 'reset_calibration'):
+        if key in ('calibration_status', 'dial_unit', 'dial_reading', 'reset_calibration', 'read_dial_now'):
             result.pop('availability_mode')
             result.pop('availability')
             result['availability_topic'] = f'{self.prefix}/status'
@@ -274,8 +285,9 @@ class Publisher:
         self.send(f'{base}/available', 'online' if recent else 'offline')
         self.send(f'{base}/counts_available', 'online' if recent and 'meter_count' in state else 'offline')
         self.send(f'{base}/state', {k: state_value(v) if k in ENTITIES else v
-                                  for k, v in state.items() if k not in ('history', 'calibration', 'possible_leak')})
+                                  for k, v in state.items() if k not in ('history', 'calibration', 'possible_leak', 'read_dial_now')})
         self.send(f'{base}/calibration', state.get('calibration', {}))
+        self.send(f'{base}/read_dial_now', state.get('read_dial_now', {'state': 'OFF'}))
         self.send(f'{base}/attributes', {k: state[k] for k in (
             'history', 'hours_observed', 'litres_per_count', 'encrypted', 'raw_count') if k in state})
         if self.config.leak_detection and identifier in self.config.meter_ids and 'possible_leak' in state:

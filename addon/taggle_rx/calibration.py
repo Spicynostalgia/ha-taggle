@@ -5,15 +5,21 @@ import math
 import re
 import statistics
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 STANDARDS = (0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100)
 UNITS = {'m3': 1000, 'm³': 1000, 'kL': 1000, 'kl': 1000, 'L': 1, 'litres': 1}
 LABELS = {'m3': 'm³', 'kl': 'kL', 'litres': 'L'}
 MODULUS = 65536
+READ_WINDOW_SECONDS = 600
+NUMBER = r'(?:[0-9]+(?:[.,][0-9]*)?|[.,][0-9]+)'
+CLOCK = r'(?:[01]?[0-9]|2[0-3]):[0-5][0-9]|(?:[01][0-9]|2[0-3])[0-5][0-9]'
+ISO_TIME = r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:\.[0-9]+)?)?(?:Z|[+-][0-9]{2}:?[0-9]{2})'
+READING_PATTERN = rf'^\s*({NUMBER})(?:(?:\s+(?:at\s+)?|\s*@\s*)({CLOCK}|{ISO_TIME}))?\s*$'
 
 
 def initial(unit='m3'):
-    return {'dial_unit': LABELS.get(unit, unit), 'reading_time': '', 'readings': [],
+    return {'dial_unit': LABELS.get(unit, unit), 'readings': [],
             'next_id': 1, 'slots': {}, 'solution': None, 'status': 'Needs 2 readings'}
 
 
@@ -47,8 +53,8 @@ def timestamp(value, now, zone):
         return now
     if not isinstance(value, str):
         raise ValueError('Reading time must be HH:MM or ISO-8601 with a UTC offset')
-    if re.fullmatch(r'\d{2}:\d{2}', value):
-        hour, minute = map(int, value.split(':'))
+    if re.fullmatch(r'[0-9]{1,2}:[0-9]{2}|[0-9]{4}', value):
+        hour, minute = map(int, value.split(':') if ':' in value else (value[:2], value[2:]))
         local = now.astimezone(zone).replace(hour=hour, minute=minute, second=0, microsecond=0)
         if local > now:  # 23:50 typed at 00:05 means last night's photo
             local = (local - timedelta(days=1)).replace(hour=hour, minute=minute)
@@ -69,20 +75,28 @@ def timestamp(value, now, zone):
 
 def intake(cal, payload, now, zone):
     """Validate a command before mutating state; return its accepted action."""
-    try:
-        value = json.loads(payload)
-    except json.JSONDecodeError as error:
-        raise ValueError('Enter a number, or JSON with litres, m3 or kl') from error
+    match = re.fullmatch(READING_PATTERN, payload)
+    when = None
+    if match:
+        amount_text, when = match.groups()
+        value = Decimal(amount_text.replace(',', '.'))
+    else:
+        try:
+            value = json.loads(payload, parse_float=Decimal)
+        except json.JSONDecodeError as error:
+            raise ValueError('Use a dial reading, optionally followed by a time: 1597.765 18:00') from error
     if isinstance(value, dict):
         if value == {'reset': True}:
             unit, history = cal['dial_unit'], cal['slots'] if not cal.get('blocked') else {}
             gaps = cal.get('gaps', []) if history else []
             next_id = cal['next_id']
+            timing = {k: cal[k] for k in ('last_frame', 'transmission', 'cadence_intervals') if k in cal}
             cal.clear()
             cal.update(initial(unit))
             cal['slots'] = history
             cal['gaps'] = gaps
             cal['next_id'] = next_id
+            cal.update(timing)
             return 'reset'
         if set(value) == {'delete'}:
             identifier = value['delete']
@@ -100,11 +114,15 @@ def intake(cal, payload, now, zone):
         unit = next(iter(units))
         amount = value[unit]
         source = value.get('source', 'manual')
-        when = value.get('time', cal['reading_time'])
+        when = value.get('time')
     else:
-        amount, unit, source, when = value, cal['dial_unit'], 'manual', cal['reading_time']
-    if isinstance(amount, bool) or not isinstance(amount, (int, float)) or not math.isfinite(amount) or amount < 0:
+        amount, unit, source = value, cal['dial_unit'], 'manual'
+    if isinstance(amount, bool) or not isinstance(amount, (int, float, Decimal)) or not math.isfinite(amount) or amount < 0:
         raise ValueError('Enter a finite, nonnegative dial reading')
+    resolution = 10.0 ** Decimal(str(amount)).as_tuple().exponent * UNITS[unit]
+    if not math.isfinite(resolution) or resolution <= 0:
+        raise ValueError('Reading precision is out of range')
+    amount = float(amount)
     litres = amount * UNITS[unit]
     if not math.isfinite(litres) or litres > 1e15:
         raise ValueError('Dial reading is too large; check the unit')
@@ -117,10 +135,11 @@ def intake(cal, payload, now, zone):
         raise ValueError('200 readings stored; delete an older reading before adding another')
     cal['readings'].append({'id': cal['next_id'], 'time': stamp.isoformat(), 'litres': litres,
                             'value': amount, 'unit': LABELS.get(unit, unit),
-                            'source': source, 'used': False, 'count_interval': None})
+                            'source': source, 'resolution_litres': resolution, 'exact': False,
+                            'used': False, 'count_interval': None})
     cal['next_id'] += 1
     cal['last_entered_litres'] = litres
-    cal['reading_time'] = ''
+    cal['last_entry'] = payload.strip() if match else str(amount)
     cal.pop('error', None)
     return 'accepted'
 
@@ -137,6 +156,7 @@ def slots(cal, frame, stamp, index):
         cal['transmission'] = {'time': stamp.isoformat(), 'index': index,
                                'interval_seconds': statistics.median(intervals) if intervals else 3600}
     history = cal['slots']
+    history.setdefault(str(index), {'time': stamp.isoformat(), 'raw': frame['counts'][0]})['received'] = True
     for age in (2, 1, 0):
         key = str(index - age)
         if key not in history:
@@ -159,6 +179,8 @@ def slots(cal, frame, stamp, index):
 def align(cal):
     history = sorted(cal['slots'].items(), key=lambda item: int(item[0]))
     for row in cal['readings']:
+        row.setdefault('resolution_litres', 1.)
+        row.setdefault('exact', False)
         stamp = datetime.fromisoformat(row['time'])
         before = [(k, v) for k, v in history if datetime.fromisoformat(v['time']) <= stamp]
         after = [(k, v) for k, v in history if datetime.fromisoformat(v['time']) >= stamp]
@@ -167,6 +189,9 @@ def align(cal):
             row['bracket'] = [int(left[0]), int(right[0])]
             row['base_interval'] = [left[1]['count'], right[1]['count']]
             row['count_interval'] = row['base_interval'][:]
+            elapsed = (stamp - datetime.fromisoformat(left[1]['time'])).total_seconds()
+            row['exact'] = (0 <= elapsed < READ_WINDOW_SECONDS and left[1].get('received', False)
+                            and left[1]['count'] == right[1]['count'])
         elif not row.get('base_interval'):
             row['reason'] = ('Waiting for next transmission to line up your reading' if before else
                              'No counter history before this reading; enter a newer dial reading')
@@ -179,13 +204,15 @@ def bounds(rows):
         amin, amax = a['count_interval']
         bmin, bmax = b['count_interval']
         maximum, minimum = bmax - amin, bmin - amax
-        if usage == 0 and maximum == 0:
+        resolution = a.get('resolution_litres', 1) + b.get('resolution_litres', 1)
+        lower, upper = usage - resolution, usage + resolution
+        if maximum == 0 and lower <= 0 <= upper:
             continue
-        if usage < 0 or maximum <= 0:
+        if upper < 0 or maximum <= 0:
             return None
-        low = max(low, usage / maximum)
+        low = max(low, lower / maximum)
         if minimum > 0:
-            high = min(high, usage / minimum)
+            high = min(high, upper / minimum)
     if low > high and low - high <= 1e-10 * max(1, low, high):
         low = high = (low + high) / 2
     return (low, high) if low <= high and high > 0 else None
@@ -210,8 +237,8 @@ def regression(rows, factor=None):
     else:
         offset = mean - factor * centre
     # Ensure the chosen offset fits every retained interval, when feasible.
-    lower = max(r['litres'] - factor * r['count_interval'][1] for r in rows)
-    upper = min(r['litres'] - factor * r['count_interval'][0] for r in rows)
+    lower = max(r['litres'] - r.get('resolution_litres', 1) - factor * r['count_interval'][1] for r in rows)
+    upper = min(r['litres'] + r.get('resolution_litres', 1) - factor * r['count_interval'][0] for r in rows)
     if lower <= upper:
         offset = max(lower, min(upper, offset))
     return factor, offset
@@ -224,7 +251,8 @@ def hypotheses(cal, rows, factor=None):
     """
     start, end = rows[0]['bracket'][0], rows[-1]['bracket'][1]
     gaps = [b for b in cal.get('gaps', []) if start < b <= end]
-    usage = rows[-1]['litres'] - rows[0]['litres']
+    usage = (rows[-1]['litres'] - rows[0]['litres'] + rows[-1].get('resolution_litres', 1)
+             + rows[0].get('resolution_litres', 1))
     minimum = rows[-1]['base_interval'][0] - rows[0]['base_interval'][1]
     limit = max(0, math.floor((max(0, usage) / (factor or .05) - minimum + 1e-7) / MODULUS))
     if (limit + 1) ** len(gaps) > 4096:
@@ -250,7 +278,8 @@ def equivalent(candidates):
     return list(unique.values())
 
 
-def solve(cal, config, identifier):
+def solve(cal, config, identifier, now=None, zone=timezone.utc):
+    now = now or datetime.now(timezone.utc)
     if cal.get('blocked'):
         cal['solution'] = None
         cal['status'] = 'Counter sequence changed — reset calibration and enter fresh readings'
@@ -293,7 +322,8 @@ def solve(cal, config, identifier):
             predicted = offset + factor * sum(row['count_interval']) / 2
             tolerance = factor * (row['count_interval'][1] - row['count_interval'][0]) / 2
             reference = rows[0]['litres'] if rows else row['litres']
-            tolerance += max(.5, abs(predicted - reference) * .005)
+            tolerance += row.get('resolution_litres', 1) + max(
+                (r.get('resolution_litres', 1) for r in rows), default=0) + abs(predicted - reference) * .005
             residual = row['litres'] - predicted
             row['residual_litres'] = residual
             if abs(residual) > tolerance:
@@ -310,9 +340,6 @@ def solve(cal, config, identifier):
             rows.append(row)
     cal['bounds'] = None
     if len(rows) >= 2:
-        usage = rows[-1]['litres'] - rows[0]['litres']
-        pulse_span = rows[-1]['base_interval'][0] - rows[0]['base_interval'][1]
-        enough = usage >= config.calibration_min_litres or pulse_span >= 40
         fixed = pinned if pinned is not None else old['factor'] if old and old['method'] == 'standard value' else None
         candidates = hypotheses(cal, rows, fixed)
         standard = [(trial, interval, wraps, k) for trial, interval, wraps in candidates
@@ -342,7 +369,7 @@ def solve(cal, config, identifier):
                 chosen = (trial, interval, wraps, max(interval[0], min(interval[1], k)))
         if len(candidates) == 1:
             cal['bounds'] = list(candidates[0][1])
-        if chosen and (enough or pinned is not None):
+        if chosen:
             trial, interval, wraps, k = chosen
             cal['bounds'] = list(interval)
             k, offset = regression(trial, k)
@@ -354,25 +381,37 @@ def solve(cal, config, identifier):
                                'wraps': wraps}
             for row, aligned in zip(rows, trial):
                 row['count_interval'] = aligned['count_interval']
-        elif ambiguous_factor is not None and enough:
+        elif ambiguous_factor is not None:
             cal['solution'] = {'factor': ambiguous_factor, 'offset': None, 'method': 'standard value',
                                'bounds': None, 'uncertainty': None, 'wraps': {}, 'ambiguous': True}
-        elif not enough:
-            cal['status'] = (f'Need more use: at least {config.calibration_min_litres:g} L or 40 pulses '
-                             'between readings (≈ tomorrow)')
         elif not chosen:
             if pinned is not None:
                 cal['error'] = 'Readings disagree — the pinned factor does not fit; check digits, unit and factor'
-            cal['status'] = ('Several pulse sizes or wrap counts fit — read again after more use' if
+            sizes = sorted({c[3] for c in standard})
+            names = [f'{k:g} L' for k in sizes]
+            joined = ' and '.join(names) if len(names) <= 2 else ', '.join(names[:-1]) + ' and ' + names[-1]
+            next_time = attributes(cal, now, zone)['next_transmission']
+            clock = datetime.fromisoformat(next_time).strftime('%H:%M') if next_time else 'time not yet known'
+            cal['status'] = (f'{joined} per pulse {"both" if len(sizes) == 2 else "all"} fit — '
+                             f'take another reading, ideally just after the next transmission (≈ {clock})'
+                             if len(sizes) > 1 else
+                             'Several wrap counts fit — read again just after a transmission' if
                              standard or len(candidates) > 1 or cal['wrap_search_limited'] else
                              'Readings are too uncertain — read again just after a transmission')
+        if (pinned is None and all(r.get('exact') for r in rows)
+                and abs(rows[-1]['litres'] - rows[0]['litres']) <= sum(
+                    r.get('resolution_litres', 1) for r in (rows[0], rows[-1]))
+                and rows[-1]['base_interval'][1] == rows[0]['base_interval'][0]):
+            cal['solution'] = None
+            cal['status'] = ('No water was used between your readings — use some water before the next '
+                             'transmission, then read again.')
     elif rows:
         if pinned is not None:
             _, offset = regression(rows, pinned)
             cal['solution']['offset'] = offset_pin if offset_pin is not None else offset
-        cal['status'] = (f'Need a second reading after ≥ {config.calibration_min_litres:g} L of use (≈ tomorrow)')
+        cal['status'] = routine(cal, now, zone)
     else:
-        cal['status'] = 'Needs 2 readings — enter your dial reading to show litres'
+        cal['status'] = routine(cal, now, zone)
     solution = cal.get('solution')
     if solution:
         factor, offset = solution['factor'], solution['offset']
@@ -403,11 +442,41 @@ def solve(cal, config, identifier):
     pending = [r for r in cal['readings'] if not r.get('base_interval')]
     excluded = [r for r in cal['readings'] if r.get('base_interval') and not r['used']]
     if pending:
-        cal['status'] = pending[-1]['reason']
+        cal['status'] = (routine(cal, now, zone).split(' Outside the window')[0] +
+                         ' Waiting for next transmission to line up your reading.'
+                         if len(cal['readings']) == 1 and pending[-1]['reason'].startswith('Waiting')
+                         else pending[-1]['reason'])
     if excluded:
         cal['status'] = 'Readings disagree — check the last one: ' + excluded[-1]['reason']
     if cal.get('error'):
         cal['status'] = cal['error']
+
+
+def read_window(cal, now, next_time=None):
+    frame_time = cal.get('last_frame') or cal.get('transmission', {}).get('time')
+    since = datetime.fromisoformat(frame_time) if frame_time else None
+    until = since + timedelta(seconds=READ_WINDOW_SECONDS) if since else None
+    return {'state': 'ON' if since and since <= now < until else 'OFF',
+            'since': since.isoformat() if since else None,
+            'until': until.isoformat() if until else None, 'next_transmission': next_time}
+
+
+def routine(cal, now, zone):
+    attrs = attributes(cal, now, zone)
+    window = read_window(cal, now)
+    next_time = attrs['next_transmission']
+    clock = datetime.fromisoformat(next_time).strftime('%H:%M') if next_time else 'time not yet known'
+    if (window['state'] == 'ON' and (not cal['readings'] or
+            datetime.fromisoformat(window['since']) > datetime.fromisoformat(cal['readings'][0]['time']))):
+        minutes = int((now - datetime.fromisoformat(window['since'])).total_seconds() // 60)
+        return (f'Read your dial now — a transmission arrived {minutes} min ago. '
+                f'Step {3 if cal["readings"] else 1} of 3 — read within 10 minutes, before anyone uses water.')
+    if cal['readings']:
+        return (f'Step 2 of 3 — use some water this hour (20–50 L; reuse it), then just after the NEXT '
+                f'transmission (≈ {clock}) read again. Outside the window is less precise; '
+                'readings about a day apart may need a third reading.')
+    return (f'Step 1 of 3 — wait for the next transmission (≈ {clock}), then read your dial within '
+            '10 minutes, before anyone uses water.')
 
 
 def attributes(cal, now, zone):
@@ -431,4 +500,9 @@ def attributes(cal, now, zone):
                                            if next_time else 'Waiting to learn the transmission time'),
             'last_check': cal.get('last_check'), 'unresolved_gap': cal.get('unresolved_gap', False),
             'wrap_search_limited': cal.get('wrap_search_limited', False),
-            'guidance': 'Read the dial within a few minutes after it, or when nobody is using water.'}
+            'read_dial_now': read_window(cal, now, next_time.isoformat() if next_time else None),
+            'delete_all_dial_readings': ('Delete all dial readings clears readings and automatic calibration; '
+                                         'keeps units, usage totals and configuration pins.'),
+            'guidance': ('Read within 10 minutes after a transmission, before water use. Use 20–50 L this hour '
+                         '(reuse it), then read just after the next transmission. Outside the window is less '
+                         'precise; use readings about a day apart; a third reading may be needed.')}

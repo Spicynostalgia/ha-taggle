@@ -256,7 +256,7 @@ test('manual calibration prompt includes the local expected transmission and dev
   });
   card.hass = ha;
   assert.match(card.shadowRoot.innerHTML, /Next transmission expected ≈ 18:41/);
-  assert.match(card.shadowRoot.innerHTML, /within a few minutes after it/);
+  assert.match(card.shadowRoot.innerHTML, /within 10 minutes, before water use/);
   assert.match(card.shadowRoot.innerHTML, /href="\/config\/devices\/device\/meter-device"/);
   assert.match(card.shadowRoot.innerHTML, /enter your dial reading/);
   assert.doesNotMatch(card.shadowRoot.innerHTML, /class="register"/);
@@ -362,8 +362,7 @@ test('possible leak badge is scoped to the selected meter and tolerates missing 
 const calibrationCard = (attributes = {}, message = 'Needs 2 readings') => {
   const card = new Card(), ha = hass(), calls = [];
   ha.states['sensor.taggle_123456_calibration_status'] = state(message, {chosen_k:null, ...attributes});
-  for (const [key, domain, value] of [['dial_unit', 'select', 'm³'], ['enter_reading', 'number', 'unknown'],
-    ['reading_time', 'text', '18:00']]) ha.states[`${domain}.taggle_123456_${key}`] = state(value);
+  for (const [key, domain, value] of [['dial_unit', 'select', 'm³'], ['dial_reading', 'text', 'unknown']]) ha.states[`${domain}.taggle_123456_${key}`] = state(value);
   ha.callService = async (...args) => { calls.push(args); };
   card.setConfig({entities:{last_hour:'sensor.taggle_123456_last_hour'}});
   card.hass = ha;
@@ -375,7 +374,7 @@ test('uncalibrated panel teaches the register, other meters and the unit before 
     const {card} = calibrationCard({chosen_k});
     const html = card.shadowRoot.innerHTML;
     assert.match(html, /<div class="read-panel"><h4>Read your dial/);
-    assert.match(html, /Your meter's dial is the only source of real litres\. Enter two readings about a day apart\./);
+    assert.match(html, /Your meter's dial is the only source of real litres\. Calibrate in about one hour:/);
     assert.match(html, /01597 black wheels and 765 red wheels/);
     assert.match(html, /black = whole m³ \(kL\)/);
     assert.match(html, /red = litres/);
@@ -385,7 +384,7 @@ test('uncalibrated panel teaches the register, other meters and the unit before 
     assert.match(html, /Digital\/LCD display/);
     assert.match(html, /star\/triangle spinner/);
     assert.match(html, /Always check the unit printed on the face/);
-    assert.match(html, /type="number" inputmode="decimal"/);
+    assert.match(html, /type="text" inputmode="decimal"/);
     assert.match(html, /type="time" step="60"/);
     assert.match(html, /No dial readings entered yet/);
     assert.ok(html.indexOf('</form>') < html.indexOf('Needs 2 readings'));
@@ -418,15 +417,15 @@ test('reading history shows the last ten values, local times, used, pending and 
   assert.equal((list.match(/<time /g) || []).length, 10);
   assert.doesNotMatch(list, /2026-11-02T0[01]:00:00Z/);
   assert.match(list, /1597\.009 m³<\/strong>\s*<br>Used/);
-  assert.match(list, /Excluded — &lt;img src=x&gt; wrong unit/);
-  assert.match(list, /Pending — Waiting for next transmission/);
+  assert.match(list, /Excluded · Less precise — &lt;img src=x&gt; wrong unit/);
+  assert.match(list, /Pending · Less precise — Waiting for next transmission/);
   assert.match(list, /09:00 PM/);
   assert.doesNotMatch(list, /<img/);
 });
 
 test('control resolution handles lists, renamed device registries, explicit overrides and old mappings', async () => {
   const {card, ha} = calibrationCard();
-  const domains = {dial_unit:'select', enter_reading:'number', reading_time:'text'};
+  const domains = {dial_unit:'select', dial_reading:'text'};
   card.setConfig({entities:Object.keys(ha.states)});
   for (const [key, domain] of Object.entries(domains)) {
     assert.equal(card.resolve(card._config.meters[0])[key], `${domain}.taggle_123456_${key}`);
@@ -442,14 +441,14 @@ test('control resolution handles lists, renamed device registries, explicit over
   ha.entities = Object.fromEntries([...entries, {entity_id:'sensor.kitchen', device_id:'meter',
     unique_id:'house/taggle_123456_last_hour'}].map(e => [e.entity_id,e]));
   card.setConfig({entities:{last_hour:'sensor.kitchen', dial_unit:'select.override',
-    enter_reading:'number.override', reading_time:'text.override'}});
+    dial_reading:'text.override'}});
   const resolved = card.resolve(card._config.meters[0]);
   for (const [key,domain] of Object.entries(domains)) assert.equal(resolved[key], `${domain}.override`);
   card.setConfig({entities:{last_hour:'sensor.kitchen'}});
   for (const entry of entries) assert.equal(card.resolve(card._config.meters[0])[entry.unique_id.split('123456_')[1]], entry.entity_id);
 });
 
-test('save awaits photo time, unit, then reading, clears inputs, and never resubmits a previous entity value', async () => {
+test('save awaits unit then sends reading and photo time together, clears inputs, and never resubmits a previous entity value', async () => {
   for (const time of ['18:03', '']) {
     const {card, ha, meter, calls} = calibrationCard();
     assert.equal(card.draft(meter, card.resolve(meter)).reading, '');
@@ -464,13 +463,10 @@ test('save awaits photo time, unit, then reading, clears inputs, and never resub
     assert.equal(calls.length, 1);
     release(); await new Promise(setImmediate);
     assert.equal(calls.length, 2);
-    release(); await new Promise(setImmediate);
-    assert.equal(calls.length, 3);
     release(); await saving;
     assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
-      ['text', 'set_value', {entity_id:'text.taggle_123456_reading_time', value:time}],
       ['select', 'select_option', {entity_id:'select.taggle_123456_dial_unit', option:'kL'}],
-      ['number', 'set_value', {entity_id:'number.taggle_123456_enter_reading', value:1597.765}],
+      ['text', 'set_value', {entity_id:'text.taggle_123456_dial_reading', value:'1597.765' + (time ? ' ' + time : '')}],
     ]);
     assert.equal(card._drafts.get(meter).reading, '');
     assert.equal(card._drafts.get(meter).time, '');
@@ -481,8 +477,8 @@ test('save awaits photo time, unit, then reading, clears inputs, and never resub
 test('invalid readings give inline guidance without making service calls', async () => {
   for (const [reading, message] of [['', /Enter the complete reading/], ['  ', /Enter the complete reading/],
     ['-1', /cannot be negative/], ['NaN', /Type a number/], ['Infinity', /Type a number/],
-    ['1,597.765', /without commas/], ['abc', /Type a number/], ['0x10', /Type a number/],
-    ['1597.765 L', /without commas/], ['1000000000001', /too large/]]) {
+    ['1,597.765', /without grouping separators/], ['abc', /Type a number/], ['0x10', /Type a number/],
+    ['1597.765 L', /without grouping separators/], ['1000000000001', /too large/]]) {
     const {card, meter, calls} = calibrationCard();
     Object.assign(card._drafts.get(meter), {reading});
     await card.saveReading(meter);
@@ -504,7 +500,7 @@ test('unit conversions compare litres, valid zero and decimals save, and malform
     const {card, meter, calls} = calibrationCard({readings:[{litres:1597765, used:true}]});
     Object.assign(card._drafts.get(meter), {reading, unit});
     await card.saveReading(meter);
-    assert.equal(calls.length, 3);
+    assert.equal(calls.length, 2);
   }
   const {card, meter, calls} = calibrationCard();
   Object.assign(card._drafts.get(meter), {reading:'1597.765', time:'25:10'});
@@ -526,22 +522,22 @@ test('1000× validation can use the absolute reading and ignores an excluded typ
   assert.match(card.shadowRoot.innerHTML, /1000× different from the last reading/);
   Object.assign(card._drafts.get(meter), {reading:'1597.765'});
   await card.saveReading(meter);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 2);
 });
 
 test('missing or unavailable controls prevent saving and a failed service stops the sequence', async () => {
-  for (const failure of ['missing', 'unavailable', 'time', 'unit', 'reading']) {
+  for (const failure of ['missing', 'unavailable', 'unit', 'reading']) {
     const {card, ha, meter, calls} = calibrationCard();
     Object.assign(card._drafts.get(meter), {reading:'1597.765', time:'18:03'});
-    if (failure === 'missing') delete ha.states['text.taggle_123456_reading_time'];
+    if (failure === 'missing') delete ha.states['text.taggle_123456_dial_reading'];
     else if (failure === 'unavailable') ha.states['select.taggle_123456_dial_unit'] = state('unavailable');
     else ha.callService = async (...args) => {
       calls.push(args);
-      if (args[0] === {time:'text', unit:'select', reading:'number'}[failure]) throw new Error('offline');
+      if (args[0] === {unit:'select', reading:'text'}[failure]) throw new Error('offline');
     };
     card.hass = ha;
     await card.saveReading(meter);
-    assert.equal(calls.length, {missing:0, unavailable:0, time:1, unit:2, reading:3}[failure]);
+    assert.equal(calls.length, {missing:0, unavailable:0, unit:1, reading:2}[failure]);
     assert.match(card.shadowRoot.innerHTML, /unavailable|Could not send the reading/);
     assert.equal(card._drafts.get(meter).reading, '1597.765');
     assert.equal(card._drafts.get(meter).busy, false);
@@ -551,10 +547,9 @@ test('missing or unavailable controls prevent saving and a failed service stops 
 test('drafts survive HA updates and saving uses only the chosen meter and its explicit control IDs', async () => {
   const {card, ha, calls} = calibrationCard();
   ha.states['select.flat'] = state('L');
-  ha.states['number.flat'] = state('unknown');
   ha.states['text.flat'] = state('');
   card.setConfig({meters:[{name:'House', entities:{last_hour:'sensor.taggle_123456_last_hour'}},
-    {name:'Flat', entities:{dial_unit:'select.flat', enter_reading:'number.flat', reading_time:'text.flat'}}]});
+    {name:'Flat', entities:{dial_unit:'select.flat', dial_reading:'text.flat'}}]});
   const [house, flat] = card._config.meters;
   Object.assign(card._drafts.get(house), {reading:'1597.765', time:'18:03'});
   Object.assign(card._drafts.get(flat), {reading:'12345'});
@@ -563,7 +558,38 @@ test('drafts survive HA updates and saving uses only the chosen meter and its ex
   assert.match(card.shadowRoot.innerHTML, /value="1597\.765"/);
   assert.match(card.shadowRoot.innerHTML, /value="18:03"/);
   await card.saveReading(flat);
-  assert.deepEqual(calls.map(args => args[2].entity_id), ['text.flat', 'select.flat', 'number.flat']);
-  assert.equal(calls[1][2].option, 'L');
+  assert.deepEqual(calls.map(args => args[2].entity_id), ['select.flat', 'text.flat']);
+  assert.equal(calls[0][2].option, 'L');
   assert.equal(card._drafts.get(house).reading, '1597.765');
+});
+
+test('read-now state shows an accessible countdown, three-step guidance and expiry', () => {
+  const now = Date.now();
+  const {card, ha} = calibrationCard({read_dial_now:{state:'ON',
+    since:new Date(now - 2 * 60000).toISOString(), until:new Date(now + 8 * 60000).toISOString()}});
+  assert.match(card.shadowRoot.innerHTML, /class="read-now" role="status"><strong>Read now<\/strong> · 8 min left/);
+  assert.match(card.shadowRoot.innerHTML, /Step 1 of 3/);
+  assert.match(card.shadowRoot.innerHTML, /20–50 L; reuse it/);
+  assert.match(card.shadowRoot.innerHTML, /NEXT transmission/);
+  assert.match(card.shadowRoot.innerHTML, /Outside the window is less precise/);
+  ha.states['sensor.taggle_123456_calibration_status'].attributes.readings = [
+    {time:new Date(now - 65 * 60000).toISOString(), value:1597.765, unit:'m³', used:true, exact:true}];
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Step 3 of 3/);
+  assert.match(card.shadowRoot.innerHTML, /Used · Exact/);
+  ha.states['sensor.taggle_123456_calibration_status'].attributes.read_dial_now.until = new Date(now - 1000).toISOString();
+  card.hass = ha;
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /<strong>Read now/);
+  assert.match(card.shadowRoot.innerHTML, /Step 2 of 3/);
+});
+
+test('comma decimals and typed trailing zeros reach the text command intact', async () => {
+  for (const reading of ['1597,765', '1597.760']) {
+    const {card, meter, calls} = calibrationCard();
+    Object.assign(card._drafts.get(meter), {reading, time:'18:00'});
+    await card.saveReading(meter);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1][0], 'text');
+    assert.equal(calls[1][2].value, reading + ' 18:00');
+  }
 });
