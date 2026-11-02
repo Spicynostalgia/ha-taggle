@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="580" viewBox="0 0 1000 580" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration of a mechanical water meter register reading 1234.567 cubic metres</title>
+  <desc id="desc">Black digit wheels show 01234 whole kilolitres. Red wheels show 567 litres. Alternative red pointer dials marked times 0.1, times 0.01 and times 0.001 cubic metres represent 100, 10 and 1 litre units. A small star indicates flow or leaks. Do not add pointer readings again if they duplicate the red digits. Layouts vary; read the printed units.</desc>
+  <rect width="1000" height="580" rx="16" fill="#f7fafb"/>
+  <g font-family="Arial, sans-serif" fill="#203744">
+    <text x="28" y="40" font-size="23" font-weight="700">Read the register, not the serial number</text>
+    <text x="28" y="66" font-size="15" fill="#526975">Illustration · fictional reading · layouts vary; always check the units printed on your meter</text>
+    <circle cx="292" cy="309" r="219" fill="#dce6e9" stroke="#425e6c" stroke-width="4"/>
+    <circle cx="292" cy="309" r="202" fill="#fff" stroke="#8ca5af" stroke-width="2"/>
+    <text x="292" y="160" font-size="17" text-anchor="middle">WATER METER REGISTER</text>
+    <rect x="119" y="190" width="205" height="57" rx="4" fill="#203744"/>
+    <rect x="331" y="190" width="123" height="57" rx="4" fill="#b84435"/>
+    <g font-family="monospace" font-size="34" text-anchor="middle" fill="#fff">
+      <text x="140" y="230">0</text><text x="181" y="230">1</text><text x="222" y="230">2</text><text x="263" y="230">3</text><text x="304" y="230">4</text>
+      <text x="352" y="230">5</text><text x="393" y="230">6</text><text x="434" y="230">7</text>
+    </g>
+    <path d="M160 193V244M201 193V244M242 193V244M283 193V244M372 193V244M413 193V244" stroke="#fff" stroke-opacity=".3"/>
+    <text x="292" y="276" font-size="20" text-anchor="middle">m³ / kL</text>
+    <g fill="#fff7f5" stroke="#b84435" stroke-width="2">
+      <circle cx="149" cy="337" r="34"/><circle cx="250" cy="337" r="34"/><circle cx="351" cy="337" r="34"/>
+      <path d="M149 337L149 362M250 337L235 354M351 337L327 344" fill="none" stroke-width="3"/>
+      <circle cx="149" cy="337" r="3"/><circle cx="250" cy="337" r="3"/><circle cx="351" cy="337" r="3"/>
+    </g>
+    <g fill="#9e3529" font-size="14" text-anchor="middle">
+      <text x="149" y="393">×0.1 m³</text><text x="149" y="413">100 L</text>
+      <text x="250" y="393">×0.01 m³</text><text x="250" y="413">10 L</text>
+      <text x="351" y="393">×0.001 m³</text><text x="351" y="413">1 L</text>
+    </g>
+    <path d="M443 312L448 326L462 321L455 335L467 343L452 345L453 361L442 350L430 360L432 345L417 341L431 333L426 319L439 326Z" fill="#b84435"/>
+    <text x="292" y="460" text-anchor="middle" font-size="14" fill="#526975">Pointer dials shown as alternative fractional displays.</text>
+    <text x="292" y="483" text-anchor="middle" font-size="14" fill="#526975">Do not add fractions already included in the digits.</text>
+    <g fill="none" stroke="#167b9c" stroke-width="2.5" stroke-linejoin="round">
+      <path d="M223 187L530 124H581"/><path d="M398 249L534 220H581"/><path d="M353 372L535 318H581"/><path d="M463 337L539 412H581"/>
+    </g>
+    <text x="600" y="120" font-size="20" font-weight="700">Black wheels: whole kL (m³)</text>
+    <text x="600" y="147" font-size="17">01234 = 1,234 kilolitres</text>
+    <text x="600" y="216" font-size="20" font-weight="700">Red digits: fractional m³</text>
+    <text x="600" y="243" font-size="17">.567 m³ = 567 litres</text>
+    <text x="600" y="314" font-size="20" font-weight="700">Red pointers (where fitted)</text>
+    <text x="600" y="341" font-size="17">Read each printed multiplier.</text>
+    <text x="600" y="408" font-size="20" font-weight="700">Fast-spinning star / indicator</text>
+    <text x="600" y="435" font-size="17">Shows small flows; useful for leak checks.</text>
+    <rect x="28" y="533" width="944" height="31" rx="6" fill="#e3eef2"/>
+    <text x="500" y="555" text-anchor="middle" font-size="19" font-weight="700">01234 | 567 → 1234.567 m³ = 1,234,567 L · 1 m³ = 1 kL = 1,000 L</text>
+  </g>
+</svg>

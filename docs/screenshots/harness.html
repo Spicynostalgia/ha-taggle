@@ -108,7 +108,9 @@
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     // scripts/screenshots.py measures first, then captures with the same width.
     document.documentElement.dataset.screenshotWidth = String(width + 32);
-    document.documentElement.dataset.screenshotHeight = String(Math.ceil(container.getBoundingClientRect().height + 32));
+    // Headless --window-size includes hidden browser chrome, so add the outer/inner difference.
+    const chrome = Math.max(0, window.outerHeight - window.innerHeight);
+    document.documentElement.dataset.screenshotHeight = String(Math.ceil(container.getBoundingClientRect().height + 32 + chrome));
     document.documentElement.dataset.screenshotReady = 'true';
   </script>
 </body>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="500" viewBox="0 0 1080 500" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration of three Taggle installation styles</title>
+  <desc id="desc">Three schematic panels show a clip-on MRC transmitter over a V100 register, a separate sealed cable-connected pulse transmitter, and an integrated V200HT meter with radio inside. Shapes are illustrative, not product identification by colour. Cellular NB-IoT models are not supported.</desc>
+  <rect width="1080" height="500" rx="16" fill="#f7fafb"/>
+  <g font-family="Arial, sans-serif" fill="#203744" text-anchor="middle">
+    <text x="28" y="40" text-anchor="start" font-size="23" font-weight="700">Which installation style do you have?</text>
+    <text x="28" y="66" text-anchor="start" font-size="15" fill="#526975">Illustration · schematic shapes, not product colours · all example IDs fictional</text>
+    <g fill="#fff" stroke="#bac9ce" stroke-width="2">
+      <rect x="20" y="90" width="333" height="344" rx="12"/>
+      <rect x="373" y="90" width="334" height="344" rx="12"/>
+      <rect x="727" y="90" width="333" height="344" rx="12"/>
+    </g>
+    <text x="186" y="122" font-size="20" font-weight="700">1. Clip-on transmitter</text>
+    <text x="540" y="122" font-size="20" font-weight="700">2. Cable-connected tag</text>
+    <text x="893" y="122" font-size="20" font-weight="700">3. Integrated meter</text>
+    <g stroke="#425e6c" stroke-width="3" stroke-linejoin="round">
+      <path d="M47 286H326M400 286H679M754 286H1033" fill="none" stroke="#8ca5af" stroke-width="19"/>
+      <rect x="127" y="250" width="119" height="65" rx="18" fill="#dce6e9"/>
+      <circle cx="186" cy="248" r="48" fill="#fff"/>
+      <path d="M123 230V192Q123 163 153 163H220Q250 163 250 192V230H228V203H145V230Z" fill="#dce6e9"/>
+      <path d="M170 248H203M186 258V272" fill="none" stroke-width="2"/>
+      <rect x="441" y="250" width="107" height="65" rx="18" fill="#dce6e9"/>
+      <circle cx="495" cy="237" r="42" fill="#fff"/>
+      <path d="M477 237H512M495 247V262" fill="none" stroke-width="2"/>
+      <rect x="536" y="264" width="14" height="16" rx="3" fill="#425e6c"/>
+      <path d="M550 268C575 215 600 243 612 196" fill="none"/>
+      <rect x="597" y="170" width="38" height="147" rx="17" fill="#edf3f5"/>
+      <path d="M597 184H635M597 302H635M590 283H642" fill="none" stroke-width="2"/>
+      <rect x="822" y="248" width="142" height="67" rx="18" fill="#dce6e9"/>
+      <rect x="835" y="165" width="116" height="115" rx="40" fill="#edf3f5"/>
+      <rect x="851" y="191" width="84" height="29" rx="4" fill="#fff" stroke-width="2"/>
+      <path d="M879 244Q893 230 907 244M884 250Q893 241 902 250" fill="none" stroke="#167b9c" stroke-width="2"/>
+    </g>
+    <text x="186" y="190" font-size="12">Taggle · ID 123456</text>
+    <text x="616" y="214" font-size="10" transform="rotate(90 616 214)">Taggle · ID 123456</text>
+    <text x="893" y="211" font-size="12" font-family="monospace">01234.567</text>
+    <text x="186" y="346" font-size="17" font-weight="700">MRC series + V100</text>
+    <text x="186" y="373" font-size="15">Clips onto / over the register</text>
+    <text x="186" y="397" font-size="15">Honeywell / Elster mechanical meter</text>
+    <text x="540" y="346" font-size="17" font-weight="700">SP2A / SP3C / HP3D examples</text>
+    <text x="540" y="373" font-size="15">Sealed tag connected by cable</text>
+    <text x="540" y="397" font-size="15">Box wall / pipe mount; shapes vary</text>
+    <text x="893" y="346" font-size="17" font-weight="700">Honeywell V200HT</text>
+    <text x="893" y="373" font-size="15">Radio inside the meter body</text>
+    <text x="893" y="397" font-size="15">No separate transmitter box</text>
+    <text x="28" y="466" text-anchor="start" font-size="17" font-weight="700" fill="#9a6045">Not supported: NB-IoT (cellular)</text>
+    <text x="430" y="466" text-anchor="start" font-size="15" fill="#526975">Appearance alone does not confirm receiver compatibility.</text>
+  </g>
+</svg>

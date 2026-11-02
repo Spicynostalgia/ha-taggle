@@ -68,18 +68,24 @@ def main():
                 for filename, theme, width, scenario in SHOTS:
                     url = (f'{base}/docs/screenshots/harness.html?theme={theme}'
                            f'&width={width}&scenario={scenario}')
-                    measured = subprocess.run(
-                        [*common, f'--window-size={width + 32},1800', '--dump-dom', url],
-                        check=True, capture_output=True, text=True, timeout=45)
-                    if 'data-screenshot-ready="true"' not in measured.stdout:
+                    for _attempt in range(3):  # Headless Chromium occasionally exits before the module runs.
+                        measured = subprocess.run(
+                            [*common, f'--window-size={width + 32},1800', '--dump-dom', url],
+                            check=True, capture_output=True, text=True, timeout=45)
+                        if 'data-screenshot-ready="true"' in measured.stdout:
+                            break
+                    else:
                         raise RuntimeError(f'Fixture did not render for {filename}: {measured.stderr}')
                     height = int(re.search(r'data-screenshot-height="(\d+)"', measured.stdout)[1])
                     target = output / filename
                     # Write to a fresh temporary path, so failed runs cannot reuse old PNGs.
                     pending = Path(temporary) / filename
-                    subprocess.run(
-                        [*common, f'--window-size={width + 32},{height}', f'--screenshot={pending}', url],
-                        check=True, capture_output=True, text=True, timeout=45)
+                    for _attempt in range(3):  # Headless Chromium occasionally exits without writing.
+                        subprocess.run(
+                            [*common, f'--window-size={width + 32},{height}', f'--screenshot={pending}', url],
+                            check=True, capture_output=True, text=True, timeout=45)
+                        if pending.is_file():
+                            break
                     if not pending.is_file() or not pending.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'):
                         raise RuntimeError(f'Chromium did not write a PNG for {filename}')
                     shutil.copyfile(pending, target)

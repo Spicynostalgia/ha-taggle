@@ -2,6 +2,16 @@
 
 Requires an RTL-SDR, an antenna for 915–928 MHz, and the Home Assistant MQTT integration with a Supervisor-discoverable MQTT broker. Supports amd64 and aarch64. The build includes the RTL-SDR Blog driver for Blog V4 support.
 
+## Tested hardware
+
+**Exactly one transmitter has been verified so far:** Gladstone Regional Council, QLD, with an **RTL-SDR Blog V4**, **18-byte clear frames**, **hourly** updates and **922.2 MHz SDR centre**. The automated tests use generated signals; other deployments/models are not field-verified.
+
+The tested unit is a white cylindrical “baton” pulse transmitter hose-clamped to the supply pipe, with a thin cable to a pulse/Hall sensor on a V100-style mechanical meter (flip lid, black kL and red litre digits). The label has “taggle”, a barcode and an ID, **no model number**. SP-series / ADC-1 family identification is plausible but **unconfirmed**.
+
+See the [tested unit and identification guide](https://github.com/Spicynostalgia/ha-taggle#tested-hardware). Please [report other councils/models](https://github.com/Spicynostalgia/ha-taggle/issues) with whether usage worked, a label photo with the ID and identifying barcode blurred, frame length and SNR. Other Taggle generations may use different channels or encryption; NB-IoT/cellular models cannot be received by this project.
+
+## Beginner guide
+
 New to SDR? Follow the [beginner walkthrough](https://github.com/Spicynostalgia/ha-taggle#getting-started-beginner-guide) for hardware, safe meter identification, reception checks, dashboard setup and calibration.
 
 ![Illustration: receive-only path from the meter box through SDR and MQTT to Home Assistant](https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/images/setup-diagram.svg)

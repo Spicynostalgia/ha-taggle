@@ -2,7 +2,7 @@
 
 Receive your own Taggle-equipped water meter with an RTL-SDR. This project decodes supported hourly transmissions and publishes water usage and signal diagnostics through Home Assistant MQTT discovery. It runs as a Home Assistant add-on, a standalone Docker container, or a Python CLI.
 
-**0.1.0 is experimental.** The test suite uses generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
+**0.1.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
 <img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
 
@@ -14,6 +14,21 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 - Litres and a water total for Home Assistant Energy after you calibrate against the register.
 - A dashboard card with 48-hour history, visible gaps, light/dark themes and multiple meters.
 - Home Assistant add-on, Docker and Python installation options; reception stays local.
+
+## Tested hardware
+
+**Verified on exactly one transmitter: Gladstone Regional Council, QLD, using an RTL-SDR Blog V4.** This is one field report, not confirmation of every meter in Gladstone or any other deployment.
+
+- Cylindrical, cable-connected Taggle pulse transmitter: a white “baton” tube hose-clamped to the supply pipe, with a thin cable to a pulse/Hall sensor on a V100-style mechanical meter.
+- The meter has a flip lid, black whole-kL digits and red litre digits. The transmitter label shows only plain “taggle” text, a barcode and the ID; **no model number is printed**.
+- It is likely from Taggle's pulse-transmitter family (for example SP-series / ADC-1), but **the exact model is unconfirmed**.
+- Observed frames: **18-byte clear format, hourly**, with the SDR centre set to **922.2 MHz** (the default receiver setting).
+
+<img src="docs/images/tested-transmitter.jpg" alt="The tested cylindrical cable-connected Taggle transmitter hose-clamped to a pipe in Gladstone, with its ID blurred" width="360">
+
+*The tested transmitter in Gladstone (ID blurred).*
+
+Please [open an issue](https://github.com/Spicynostalgia/ha-taggle/issues) for other models/councils: include your council, whether reception/usage worked, a label photo **with the ID and identifying barcode blurred**, frame length and SNR. A PR updating the working reports is welcome. Do not post your real meter ID, private logs or configuration.
 
 ## Getting started (beginner guide)
 
@@ -28,6 +43,47 @@ An SDR (software-defined radio) is a USB radio receiver. It listens to your mete
 - [ ] Ask your council/water utility, or search its website for **smart water meter**, **Taggle** or **digital meter**. [Several Australian councils and utilities use Taggle](https://taggle.com/case-studies/), and it is also used elsewhere; a digital meter alone does not confirm compatibility.
 - [ ] Look in your meter box for a Taggle transmitter or label. This experimental receiver targets a known channel near 922 MHz; it does not support every smart meter or every Taggle deployment. See [transmitter support](#hardware-and-transmitter-support) before buying hardware.
 
+#### Is my area covered?
+
+**A Taggle deployment does not guarantee this receiver will work.** So far, only the [single Gladstone meter](#tested-hardware) has been confirmed at the default **922.2 MHz SDR centre**. Other deployments may use different channels, generations or encrypted formats. Taggle's [V200HT datasheet](https://taggle.com/wp-content/uploads/2023/05/Datasheet-Honeywell-V200HT-V4.pdf) permits **915–928 MHz or 928–933 MHz**; this receiver does not cover all those channels or decrypt usage.
+
+Taggle has cited [over 45 councils/utilities](https://taggle.com/case-studies/) in older material and [75 in its 2025 announcement](https://taggle.com/taggle-announces-plan-to-expand-to-new-zealand/), but publishes no full list. The public announcements below are **not exhaustive**. Some describe pilots, partial rollouts or older plans; rollouts change. Check your council's website or call them about **your property**.
+
+<details>
+<summary>Publicly announced deployments and leads (QLD, NSW, VIC, NT and NZ)</summary>
+
+| Council / utility | State | Public source |
+| --- | --- | --- |
+| Gladstone Regional Council | QLD | [Inside Water: staged rollout](https://insidewater.com.au/smart-water-metering-gladstone-taggle/) |
+| Mackay Regional Council (meters since 2013) | QLD | [Taggle case studies](https://taggle.com/category/case-studies/) |
+| Logan City Council / Logan Water (select areas, including Bannockburn) | QLD | [Taggle: Bannockburn and Logan announcements](https://taggle.com/category/case-studies/) |
+| Southern Downs Regional Council (Warwick, Stanthorpe) | QLD | [Taggle: staged installations](https://taggle.com/smart-water-meters-saving-dollars-and-drops-in-southern-downs/) |
+| Douglas Shire Council | QLD | [Council Magazine: rollout announcement](https://councilmagazine.com.au/douglas-shire-council-makes-the-switch-to-smart-water-metering/) |
+| Longreach Regional Council | QLD | [Taggle: community rollout](https://taggle.com/community-embraces-water-security-in-longreach/) |
+| Central Highlands Regional Council (pilot reported 2024; Taggle involvement unverified) | QLD | [Council: Capella installation, April 2024](https://chrc.qld.gov.au/council/news/capella-set-to-welcome-smart-water-meter-technology/) confirms smart meters but does not name Taggle; the [supplied Inside Water overview](https://insidewater.com.au/saving-gigalitres-of-water-with-smart-water/) does not identify this pilot. Confirmation needed. |
+| Cassowary Coast Regional Council (reported installing) | QLD | [Inside Water: Queensland councils, 2022](https://insidewater.com.au/queensland-councils-saving-water-with-smart-meters/) |
+| Flinders Shire Council (reported installing) | QLD | [Inside Water: Queensland councils, 2022](https://insidewater.com.au/queensland-councils-saving-water-with-smart-meters/) |
+| Richmond Shire Council (reported installing) | QLD | [Inside Water: Queensland councils, 2022](https://insidewater.com.au/queensland-councils-saving-water-with-smart-meters/) |
+| Tamworth Regional Council (about 23,000 meters; completed 2024; includes satellite installations) | NSW | [Taggle: completed project](https://taggle.com/tamworth-embraces-saving-water-with-taggle/) |
+| Dubbo Regional Council | NSW | [Daily Liberal: 2020 tender](https://www.dailyliberal.com.au/story/6597478/dubbo-council-awards-tender-for-compulsory-rollout-of-smart-meters/); [Council: Taggle update, December 2025](https://www.dubbo.nsw.gov.au/news-and-media/news-and-resources/council-news/2025/outcomes-from-the-december-2025-ordinary-council-meeting) |
+| Armidale Regional Council | NSW | [Taggle: rollout decision](https://taggle.com/armidale-regional-council-to-roll-out-smart-water-meters/) |
+| Queanbeyan-Palerang Regional Council | NSW | [Taggle: rollout announcement](https://taggle.com/securing-water-for-growing-population-in-queanbeyan-palerang-regional-council/) |
+| Narromine Shire Council | NSW | [Taggle: smart metering and district monitoring](https://taggle.com/transforming-regional-water-management-with-dmas/) |
+| Narrabri Shire Council | NSW | [Taggle case studies](https://taggle.com/category/case-studies/) |
+| Lithgow City Council | NSW | [Taggle case studies](https://taggle.com/category/case-studies/) |
+| Mid-Western Regional Council | NSW | [Taggle case studies](https://taggle.com/category/case-studies/) |
+| Gunnedah Shire Council | NSW | [Taggle case studies](https://taggle.com/category/case-studies/) |
+| Leeton Shire Council | NSW | [Council: Taggle project](https://www.leeton.nsw.gov.au/Council-Services/Water-and-Wastewater/Smart-Water-Meters); [Utility Magazine: rollout and portal](https://utilitymagazine.com.au/smart-water-meters-and-customer-portals-provide-council-community-and-environmental-benefits/) |
+| GWMWater (Grampians Wimmera Mallee Water) | VIC | [Taggle: rural metering replacement program](https://taggle.com/gwmwater-are-preparing-for-round-two/) |
+| Nhulunbuy Corporation | NT | [Corporation: 2022 rollout and FAQ](https://ncl.net.au/our-community/news/2022/roll-out-taggle-systems-smart-metering-solution-and-faq) |
+| New Zealand expansion (no named council in the announcement) | NZ | [Taggle: expansion plans, 2025](https://taggle.com/taggle-announces-plan-to-expand-to-new-zealand/) |
+
+</details>
+
+**Reported working:** Gladstone Regional Council, QLD — exactly one transmitter; see [Tested hardware](#tested-hardware). Report your council and whether it worked through an [issue](https://github.com/Spicynostalgia/ha-taggle/issues) or [PR](https://github.com/Spicynostalgia/ha-taggle/pulls).
+
+**Tip:** bills or portals mentioning “digital meter”, “smart meter”, hourly usage or leak alerts (for example “MyWater”) are useful clues. They do not distinguish Taggle radio from cellular or other vendors.
+
 ### 2. Open your meter box safely
 
 - [ ] Find the usually in-ground rectangular box near the front boundary or footpath. Wear gloves. Lift the lid carefully with a screwdriver at the lifting slot; don't stand on the lid or force it open.
@@ -35,6 +91,24 @@ An SDR (software-defined radio) is a USB radio receiver. It listens to your mete
 - [ ] **Do NOT remove, open, unplug or move the transmitter or meter. It belongs to the utility.** Just look and photograph, then replace the box lid.
 
 ### 3. Identify the transmitter and its ID
+
+![Illustration: clip-on MRC, separate cable-connected tag and integrated V200HT installation styles](docs/images/taggle-types.svg)
+
+*Illustration: three installation styles, with schematic shapes and plain text labels. Appearance does not establish a model or compatibility.*
+
+**Which one do I have?**
+
+- [ ] **Clip-on:** an MRC-series transmitter sits on/over the register body of a Honeywell/Elster **V100** mechanical meter, a very common Australian domestic meter. See [Taggle's MRC description](https://taggle.com/telemetry-devices/).
+- [ ] **Separate tag:** a small sealed battery transmitter is fixed in the box, on its wall or on the pipe, with a **cable to the meter's pulse output**. Examples include **SP2A (A-cell), SP3C (C-cell) and HP3D (D-cell)**; shapes vary. The [SP3C datasheet](https://taggle.com/wp-content/uploads/2025/12/Datasheet-SP3C-002.pdf) specifies encryption, so these examples are identification clues, not a list of working models.
+- [ ] **Integrated:** a Honeywell **V200HT** has the radio inside the meter body, with no separate tag. These product families are described in [Taggle's product list](https://taggle.com/products/).
+
+Look for “Taggle” text and an **ID** on the label, a cable to a sealed tag, or a wireless/antenna symbol on a newer meter. A symbol alone is not proof. A plain old meter with no attachment may be manual-read; a pulse logger from another vendor is not a Taggle transmitter. **NB-IoT-labelled devices are cellular and cannot be received by this project**, including the NB-IoT **Q400, EDMI WP20 and NB3D** variants in Taggle's product list.
+
+Metal lids can block radio. Some installations have a small external antenna on/through the lid; others use RF-friendly plastic boxes. [Taggle describes an external antenna for metal-lid installations](https://taggle.com/telemetry-devices/). Leave all utility equipment in place.
+
+<img src="docs/images/tested-transmitter.jpg" alt="Real-life example of the tested cable-connected Taggle transmitter in Gladstone, with its ID blurred" width="360">
+
+*What a cable-connected Taggle looks like in real life: the tested transmitter in Gladstone (ID blurred). Its exact model is unconfirmed.*
 
 ![Illustration: open in-ground meter box with callouts for the register, meter serial and transmitter ID 123456](docs/images/meter-box.svg)
 
@@ -114,8 +188,20 @@ For manual resource installation, calibrated entity mappings and device selectio
 
 ### 8. Calibrate to litres
 
-- [ ] Keep raw pulses until you measure your own scale. Take **two register photos at least a day apart**, and record `meter_count` at the **same radio interval endpoints**. Avoid water use between each endpoint and its photo; a photo and a counter captured at unrelated times are not aligned readings.
-- [ ] Use a period with **no missing receiver hours**, enough water use to exceed register rounding, and clear register units. Follow [docs/CALIBRATION.md](docs/CALIBRATION.md) to calculate litres per count and validate it over more days. Do not copy the fictional example factor.
+![Illustration: mechanical register with black whole-kL wheels, red fractions, pointer dials and flow indicator](docs/images/register-dial.svg)
+
+*Illustration: fictional `01234 | 567` means **1234.567 m³ = 1,234,567 L** on this layout. Register layouts vary; check the units printed on the face. **1 m³ = 1 kL = 1,000 L**.*
+
+Black wheels commonly show whole kL (m³). Red digits and/or red pointer dials show fractions: **×0.1 m³ = 100 L**, **×0.01 m³ = 10 L**, **×0.001 m³ = 1 L**. Do not add pointer fractions again if they repeat the red digits. The small fast-spinning star/leak indicator shows small flows; it is not the cumulative register. See [Reading your dial](docs/CALIBRATION.md#reading-your-dial).
+
+1. [ ] Wait for a fresh transmission (`last_seen` just updated). Record its time and the **`meter_count`** value. If reception was delayed or the frame is old, wait for the next fresh update.
+2. [ ] Go straight to the box and photograph the **register**, including its units. Keep the phone photo timestamp as the physical reading time, separately from the radio timestamp. Best: do not use water between the transmission and photo, so the values represent the same endpoint.
+3. [ ] Use water normally for **a day or more**, then repeat steps 1–2. Aim to observe at least **1,000 L of normal use** to reduce rounding error; wait longer if necessary rather than wasting water. Use only a period with **no missing receiver hours** or reset.
+4. [ ] Calculate `litres_per_count = (reading2_L − reading1_L) / (meter_count2 − meter_count1)`. Fictional example: **1234.567 → 1235.892 m³** is **1,325 L**; `meter_count` **10,000 → 10,530** is **530 counts**, giving **2.5 L/count**. Measure your own factor; do not copy this one. For **three or more aligned readings**, use the [`taggle-calibrate` CSV route](docs/CALIBRATION.md#calculate-and-validate-the-scale) to fit the scale and report residuals.
+5. [ ] Sanity-check it: immediately after a transmission, with no other water use, fill a known volume (for example **2 × 10 L**). At the next hourly update, `last_hour × factor` should be approximately **20 L**, allowing for pulse resolution and interval boundaries. This is a coarse bucket check; **do not calibrate from it alone**. Reuse the water.
+
+Watch for gaps, counter resets, confusing the meter serial with the register, mixing m³ with litres, or multiple 16-bit counter wraps between recovered slots. `meter_count` is the receiver's observed cumulative count, not the physical register. Follow the [calibration guide](docs/CALIBRATION.md) for alignment, validation and configuration.
+
 - [ ] Set the verified `litres_per_count` for your ID and restart. Add `last_hour_litres`, `today_litres` and `total_litres` entity mappings to the card's `entities` block, using `sensor.taggle_123456_<key>` with your own ID. In **Settings → Dashboards → Energy**, select the calibrated **total litres** sensor for water. Only future observed usage is added to that total; calibration does not backfill past Energy usage.
 
 ### 9. Troubleshooting
@@ -140,10 +226,14 @@ The sections below cover configuration, supported formats and operating limits i
 - An antenna suitable for **915–928 MHz**, positioned to receive your meter.
 - Home Assistant with its MQTT integration and an MQTT broker.
 
-| Decoded format | Available information |
-| --- | --- |
-| 18 or 21 bytes, clear format | Meter ID, three raw counter slots, hourly usage, SNR and signal level |
-| 24 bytes, encrypted format | Meter ID, SNR, signal level and last seen only |
+**Tested hardware:** exactly [one Gladstone transmitter with a Blog V4](#tested-hardware). Its model is unconfirmed. Protocol handling in generated tests does not establish field compatibility with other models/councils.
+
+| Format / radio | Available information | Validation |
+| --- | --- | --- |
+| 18 bytes, clear format | Meter ID, three raw counter slots, hourly usage, SNR and signal level | One Gladstone transmitter at 922.2 MHz SDR centre, plus generated tests |
+| 21 bytes, clear format | Meter ID, three raw counter slots, hourly usage, SNR and signal level | Generated tests only; no field confirmation |
+| 24 bytes, encrypted format | Meter ID, SNR, signal level and last seen only | Generated tests only; usage cannot be decrypted |
+| NB-IoT / cellular | Not receivable by this project | Unsupported |
 
 The default SDR centre frequency is **922.2 MHz**, at **2.4 MS/s**. Reception currently targets the known channel near 922 MHz; this is not a whole-band receiver for every Taggle deployment. Encrypted payloads are not and will not be attacked.
 
