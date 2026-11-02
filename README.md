@@ -4,9 +4,6 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 
 [Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
 
-> [!NOTE]
-> **Built with AI.** This project was written mostly by AI coding agents (Anthropic Claude and OpenAI Codex), directed, field-tested and reviewed by a human. See [AI disclosure](#ai-disclosure) for what that cost in tokens and estimates of the water and energy used.
-
 **0.2.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
 <img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
