@@ -4,6 +4,9 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 
 [Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
 
+> [!NOTE]
+> **Built with AI.** This project was written mostly by AI coding agents (Anthropic Claude and OpenAI Codex), directed, field-tested and reviewed by a human. See [AI disclosure](#ai-disclosure) for what that cost in tokens and an estimate of the water used.
+
 **0.2.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
 <img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
@@ -493,6 +496,29 @@ python scripts/prepare_release.py v0.2.0 --notes /tmp/taggle-release-notes.md
 The workflow uses only the built-in `GITHUB_TOKEN`, with `packages: write` and `contents: write`. It publishes `ghcr.io/<owner>/ha-taggle-addon-amd64:<version>` and `ha-taggle-addon-aarch64:<version>`, plus the standalone `ghcr.io/<owner>/ha-taggle:<version>` and `:latest` manifest for `linux/amd64` and `linux/arm64` using Buildx/QEMU. Tags omit the leading `v`. After all images succeed, it creates a GitHub Release using that version's changelog section.
 
 After the first publication, make all three GHCR packages public in their package settings so Home Assistant and Compose can pull without credentials. Ensure organization policy permits Actions package publishing. Pull-request CI remains build-only and never logs in or pushes images. See [RELEASE-CHECK.md](RELEASE-CHECK.md) for validation limits.
+
+## AI disclosure
+
+This repository — the radio reverse engineering, the receiver, the add-on, the card, the tests, the diagrams and this documentation — was produced mostly by AI coding agents: **Anthropic Claude (Claude Code, Opus)** for planning, live probing, review and docs, and **OpenAI Codex** for most of the code and signal analysis. A human chose the goals, captured and confirmed the signal from their own meter, checked the results against the physical register and approved every change. Treat it like any other experimental code: read it before you trust it.
+
+### What it cost (as of 2 November 2026)
+
+| | Model calls | Tokens processed | of which cached re-reads | Output tokens |
+| --- | ---: | ---: | ---: | ---: |
+| Claude (incl. sub-agents) | ~380 | ~57.5 M | ~56.5 M | ~0.21 M |
+| Codex | ~685 | ~61.8 M | ~59.7 M | ~0.55 M (incl. ~0.18 M reasoning) |
+| **Total** | **~1,065** | **~119 M** | **~116 M (97%)** | **~0.76 M** |
+
+Counted from the local agent session logs for the Taggle research and this repository. Most "tokens" are the agents re-reading their own context on every step (prompt cache hits), which costs far less compute than generating new text. Earlier unrelated Home Assistant work is excluded; a little unrelated chat in the same sessions may be included.
+
+### Estimated water use
+
+Nobody publishes a water figure for long agentic coding sessions, so this is a bracket, not a measurement:
+
+- **Floor, about 0.3 L:** ~1,065 model calls × 0.26–0.32 mL, the per-prompt figures published by [Google for a median Gemini prompt](https://arxiv.org/abs/2508.15734) and [OpenAI's CEO for an average ChatGPT query](https://blog.samaltman.com/the-gentle-singularity). This certainly undercounts: each agent call carried roughly 100,000 tokens of context, far more than a typical chat prompt.
+- **Ceiling, about 85 L:** ~0.76 M output tokens at [Mistral's life-cycle figure](https://mistral.ai/news/our-contribution-to-a-global-environmental-standard-for-ai) of 45 mL per 400-token response, which also counts a share of model training and hardware manufacture.
+
+So somewhere between **a water bottle and roughly ten minutes under a 9 L/min shower**, most plausibly in the tens of litres. Fittingly, once calibrated, this receiver would show a household using that much water within a single hour's reading.
 
 ## License and disclaimer
 
