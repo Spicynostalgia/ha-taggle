@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: frenck/action-addon-linter@v2.21.1
+      - uses: frenck/action-app-linter@v2.21.1
         with:
           path: ./addon
   hacs:
