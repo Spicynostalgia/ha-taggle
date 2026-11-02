@@ -5,7 +5,7 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 [Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
 
 > [!NOTE]
-> **Built with AI.** This project was written mostly by AI coding agents (Anthropic Claude and OpenAI Codex), directed, field-tested and reviewed by a human. See [AI disclosure](#ai-disclosure) for what that cost in tokens and an estimate of the water used.
+> **Built with AI.** This project was written mostly by AI coding agents (Anthropic Claude and OpenAI Codex), directed, field-tested and reviewed by a human. See [AI disclosure](#ai-disclosure) for what that cost in tokens and estimates of the water and energy used.
 
 **0.2.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
@@ -519,6 +519,15 @@ Nobody publishes a water figure for long agentic coding sessions, so this is a b
 - **Ceiling, about 85 L:** ~0.76 M output tokens at [Mistral's life-cycle figure](https://mistral.ai/news/our-contribution-to-a-global-environmental-standard-for-ai) of 45 mL per 400-token response, which also counts a share of model training and hardware manufacture.
 
 So somewhere between **a water bottle and roughly ten minutes under a 9 L/min shower**, most plausibly in the tens of litres. Fittingly, once calibrated, this receiver would show a household using that much water within a single hour's reading.
+
+### Estimated energy use
+
+Same caveat: a bracket built from published per-query figures, not a meter reading.
+
+- **Floor, about 0.3 kWh:** ~1,065 calls × 0.24–0.34 Wh, the [Google median Gemini prompt](https://arxiv.org/abs/2508.15734) and [average ChatGPT query](https://blog.samaltman.com/the-gentle-singularity) figures. Again an undercount for 100,000-token agent calls.
+- **Ceiling, about 40 kWh:** ~1,065 calls × ~40 Wh, [Epoch AI's estimate](https://epoch.ai/gradient-updates/how-much-energy-does-chatgpt-use) for a query with ~100,000 input tokens. This overcounts: it assumes the whole context is recomputed every time, while ~97% of these tokens were prompt-cache hits that skip most of that work.
+
+So somewhere between **boiling a 2 kW kettle for ten minutes and running a 2 kW heater for about 20 hours**, most plausibly a few kilowatt-hours. For carbon, Mistral's life-cycle figure of 1.14 g CO₂e per 400-token response gives roughly **2 kg CO₂e** for ~0.76 M output tokens; the real figure depends heavily on each data centre's electricity mix.
 
 ## License and disclaimer
 
