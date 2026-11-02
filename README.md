@@ -221,6 +221,7 @@ entities:
   signal_level: sensor.taggle_123456_signal_level
   calibration_status: sensor.taggle_123456_calibration_status
   meter_reading: sensor.taggle_123456_meter_reading
+  possible_leak: binary_sensor.taggle_123456_possible_leak
 ```
 
 <img src="docs/images/real-card-dark.png" alt="Dark theme dashboard card showing real raw pulse data" width="480">
@@ -240,6 +241,10 @@ This is **on by default**. Other meters are tracked anonymously with keys unique
 Values stay **unknown until at least three homes qualify**. Today's values also need enough received hours; hearing three meters is not enough. Neighbours' litre scales are assumptions, and reception gaps can bias comparisons. To stop collection, set `neighbourhood: false` in the receiver and restart; hiding the card row alone does not stop collection. Scans and explicit `log_all_meters` mode can expose IDs; keep those outputs private.
 
 More detail: [Neighbourhood comparison](https://github.com/Spicynostalgia/ha-taggle/wiki/Neighbourhood-Comparison).
+
+### Possible leak alert
+
+Configured meters also get a **Possible leak** hint, enabled by default, for continuous hourly flow or persistent night flow. The night rule decides at the end of the window: with at least three observed intervals, all must meet `leak_night_min_pulses` to activate it, and any below the threshold clears it. Nights with fewer observations leave its state unchanged. This is **a hint, not an alarm**: the receiver sees hourly totals only, so a dripping tap below one pulse per hour is invisible. Irrigation schedules can trigger the night rule; adjust `leak_night_start` / `leak_night_end` in your local timezone, or set `leak_detection: false`. Neighbours are never evaluated. The card shows a small badge with the reason when ON. See [rules and options](docs/LEAK-DETECTION.md) and the wiki [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference).
 
 ## Troubleshooting
 

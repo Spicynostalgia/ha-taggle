@@ -25,5 +25,10 @@
   "dial_unit": "m3",
   "calibration_max_uncertainty": 0.02,
   "calibration_min_litres": 200,
-  "meter_reading_offset": {}
+  "meter_reading_offset": {},
+  "leak_detection": true,
+  "leak_continuous_hours": 24,
+  "leak_night_start": "01:00",
+  "leak_night_end": "05:00",
+  "leak_night_min_pulses": 1
 }

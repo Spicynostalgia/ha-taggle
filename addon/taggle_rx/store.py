@@ -16,6 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import calibration
+from .leak import evaluate as evaluate_leak
 
 LOG = logging.getLogger(__name__)
 HEARTBEAT_SECONDS = 15 * 60
@@ -219,6 +220,9 @@ class Store:
         else:
             # Opaque frames expose diagnostics only, even after a clear-format frame.
             meter.pop('latest', None)
+        # Possible-leak rule state is private to configured meters.
+        if self.config.leak_detection and not meter['encrypted'] and 'latest' in meter:
+            meter['leak'] = evaluate_leak(meter['hours'], stamp, self.config, self.zone, meter.get('leak'))
         self.save()
         if self.publisher:
             state = self.snapshot(identifier, stamp)
@@ -290,6 +294,8 @@ class Store:
             count = cal['slots'][str(edge)]['count']
             count += 65536 * sum(int(w) for g, w in solution.get('wraps', {}).items() if int(g) <= edge)
             result['meter_reading'] = solution['offset'] + factor * count
+        if self.config.leak_detection:
+            result['possible_leak'] = evaluate_leak(meter['hours'], now, self.config, self.zone, meter.get('leak'))
         return result
 
     def neighbour_key(self, identifier):

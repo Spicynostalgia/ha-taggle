@@ -10,6 +10,7 @@ Released 2026-11-03.
 - Persist calibration in versioned private state, migrate old checkpoints, and restore MQTT command subscriptions after reconnect and Home Assistant birth.
 - Make manual guided calibration the beginner path; document maths/CLI and advanced utility automation separately.
 
+- Add a possible-leak hint for configured meters from continuous hourly usage or local night flow, with configurable rules, MQTT binary sensor attributes and a dashboard badge.
 - Limit MQTT sensor display precision and round published measurements without changing stored usage or calibration.
 - Log MQTT connections, receiver startup, configured-meter frames and a 15-minute listening heartbeat with counts only for other meters.
 - Add UTC frame timestamps and one-decimal signal measurements to scan JSON output.

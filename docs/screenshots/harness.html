@@ -41,7 +41,7 @@
     const params = new URLSearchParams(location.search);
     const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
     const scenario = params.get('scenario') || 'calibrated';
-    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending'].includes(scenario)) throw new Error('Unknown scenario');
+    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'leak'].includes(scenario)) throw new Error('Unknown scenario');
     const requestedWidth = Number(params.get('width') || 520);
     const width = Number.isInteger(requestedWidth) && requestedWidth >= 280 && requestedWidth <= 1600
       ? requestedWidth : 520;
@@ -68,7 +68,8 @@
       const history = Array.from({length: 48}, (_, i) => {
         const stamp = lastEnd - (47 - i) * 3600000;
         const localHour = (new Date(stamp).getUTCHours() + 10) % 24;
-        return {end: new Date(stamp).toISOString(), counts: Math.round(hourlyProfile[localHour] * scale)};
+        return {end: new Date(stamp).toISOString(), counts: Math.round(
+          (scenario === 'leak' ? Math.max(1, hourlyProfile[localHour]) : hourlyProfile[localHour]) * scale)};
       }).filter((_, i) => i !== 9 && i !== 32);
       const today = history.filter(row => localDay(row.end) === localDay(now));
       const countToday = today.reduce((sum, row) => sum + row.counts, 0);
@@ -99,6 +100,10 @@
             ...(key === 'calibration_status' ? {chosen_k:calibrated ? factor : null,
               next_transmission:'2026-01-03T19:15:00+10:00'} : {})},
         };
+      }
+      if (scenario === 'leak') {
+        entities.possible_leak = `binary_sensor.taggle_${id}_possible_leak`;
+        states[entities.possible_leak] = {state:'on', attributes:{reason:'continuous flow for 24 h'}};
       }
       return {name, entities};
     }
