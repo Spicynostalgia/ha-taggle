@@ -239,7 +239,7 @@ More detail: [Neighbourhood comparison](https://github.com/Spicynostalgia/ha-tag
 
 ### Possible leak alert
 
-Configured meters also get a **Possible leak** hint, enabled by default, for continuous hourly flow or persistent night flow. This is **a hint, not an alarm**: the receiver sees hourly totals only, so a dripping tap below one pulse per hour is invisible. Irrigation schedules can trigger the night rule; adjust `leak_night_start` / `leak_night_end` in your local timezone, or set `leak_detection: false`. Neighbours are never evaluated. The card shows a small badge with the reason when ON. See [rules and options](docs/LEAK-DETECTION.md) and the wiki [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference).
+Configured meters also get a **Possible leak** hint, enabled by default, for continuous hourly flow or persistent night flow. The night rule decides at the end of the window: with at least three observed intervals, all must meet `leak_night_min_pulses` to activate it, and any below the threshold clears it. Nights with fewer observations leave its state unchanged. This is **a hint, not an alarm**: the receiver sees hourly totals only, so a dripping tap below one pulse per hour is invisible. Irrigation schedules can trigger the night rule; adjust `leak_night_start` / `leak_night_end` in your local timezone, or set `leak_detection: false`. Neighbours are never evaluated. The card shows a small badge with the reason when ON. See [rules and options](docs/LEAK-DETECTION.md) and the wiki [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference).
 
 ## Troubleshooting
 

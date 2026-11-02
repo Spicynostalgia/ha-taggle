@@ -56,7 +56,7 @@ Enabled by default for configured meters only, never neighbours. Each gets a `pr
 | `leak_continuous_hours` | `24` | Integer 1–168 hours; all observed intervals must have positive pulses with at least 80% coverage. A new observed zero clears this reason. |
 | `leak_night_start` | `"01:00"` | Inclusive local `HH:MM`, using `timezone`. |
 | `leak_night_end` | `"05:00"` | Exclusive local `HH:MM`, different from start; supports crossing midnight. |
-| `leak_night_min_pulses` | `1` | Integer 1–65535; every observed night interval must meet this threshold, with at least three observations. A later completed clean window with at least three observations clears this reason. |
+| `leak_night_min_pulses` | `1` | Integer 1–65535; evaluated only at the end of the night window. With at least three observations, all must meet this threshold to activate the night hint; any below it clears the hint. Fewer observations leave its state unchanged. |
 
 **A hint, not an alarm:** the receiver sees hourly totals only. A dripping tap below one pulse per hour is invisible. Irrigation schedules can trigger night flow; adjust the night window to suit your household. Missing intervals are neither flow nor zero and cannot establish recovery. Calibration is not required. See the [full rules, attributes and card mapping](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/LEAK-DETECTION.md) and wiki [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference).
 

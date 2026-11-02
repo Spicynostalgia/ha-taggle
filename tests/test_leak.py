@@ -118,14 +118,17 @@ def test_night_gaps_threshold_and_half_open_boundaries():
                leak_night_min_pulses=2)['state'] == 'OFF'
 
 
-def test_night_crosses_midnight_and_latches_until_later_clean_window():
+def test_night_crosses_midnight_and_decides_only_on_complete_windows():
     options = dict(timezone='Australia/Brisbane', leak_night_start='23:00', leak_night_end='03:00')
     start = datetime(2026, 1, 1, 23, tzinfo=ZoneInfo(options['timezone'])).astimezone(UTC)
     history = hours(start, [1, 1, 1])
     result = run(history, **options)
+    assert result['state'] == 'OFF'
+    # Three positive observations do not trigger until the window ends.
+    result = run(history, now=start + timedelta(hours=4), previous=result, **options)
     assert result['reason'] == 'night flow'
-    # Daytime zeroes and a zero later in the triggering window do not clear it.
-    history.update(hours(start + timedelta(hours=3), [0, 0, 0, 0]))
+    # Daytime zeroes do not clear it.
+    history.update(hours(start + timedelta(hours=4), [0, 0, 0]))
     result = run(history, previous=result, **options)
     assert result['state'] == 'ON'
     assert result['night_pulses'] == 3
@@ -142,6 +145,23 @@ def test_night_crosses_midnight_and_latches_until_later_clean_window():
     assert result['state'] == 'OFF'
     assert result['reason'] is None
     assert result['night_pulses'] == 2
+
+
+def test_night_three_flow_intervals_then_zero_stays_off():
+    start = datetime(2026, 1, 1, 1, 41, tzinfo=UTC)
+    history = hours(start, [1, 1, 1])
+    result = run(history)
+    assert result['state'] == 'OFF'
+    history.update(hours(start + timedelta(hours=3), [0]))
+    result = run(history, previous=result)
+    assert result['state'] == 'OFF'
+    complete = start.replace(hour=5, minute=0)
+    result = run(history, now=complete, previous=result)
+    assert result['state'] == 'OFF'
+    assert result['reason'] is None
+    assert result['_night_checked'] == '2026-01-01'
+    assert run(history, now=complete)['state'] == 'OFF'
+    assert run(history, now=complete + timedelta(minutes=1), previous=result)['state'] == 'OFF'
 
 
 def test_both_reasons_and_independent_recovery():
@@ -248,7 +268,7 @@ def test_night_recovery_waits_for_later_ambiguous_dst_end():
     options = dict(timezone=zone.key, leak_night_start='00:00', leak_night_end='02:30')
     start = datetime(2026, 4, 4, 0, 15, tzinfo=zone).astimezone(UTC)
     history = hours(start, [1, 1, 1])
-    result = run(history, **options)
+    result = run(history, now=start + timedelta(minutes=135), **options)
     assert result['_night']
     next_start = datetime(2026, 4, 5, 0, 15, tzinfo=zone).astimezone(UTC)
     history.update(hours(next_start, [0, 0, 0]))
@@ -282,7 +302,7 @@ def test_continuous_recovered_zero_is_not_hidden_by_reception_gap():
 def test_next_night_with_late_zero_clears_without_retriggering_on_refresh():
     start = datetime(2026, 1, 1, 1, tzinfo=UTC)
     history = hours(start, [1, 1, 1, 1])
-    result = run(history)
+    result = run(history, now=start + timedelta(hours=4))
     assert result['reason'] == 'night flow'
     # An existing night hint must not postpone recovery merely because the
     # following night began with three positive observations before a zero.

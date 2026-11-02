@@ -35,11 +35,11 @@ run can trigger it again. Elapsed hours are measured in UTC, including across DS
 
 **Night flow:** every observed interval ending inside the local night window must
 have at least `leak_night_min_pulses`, with at least three observed intervals.
-The hint can appear after the third qualifying interval, before the window ends.
-It stays active for the rest of that night and through daytime zeroes. A later
-completed night window with at least three observations, including an interval
-below the threshold, clears this reason. Nights with insufficient observations
-cannot establish recovery. The end time is exclusive; for example, an interval
+The rule decides only when the window is complete, so the hint arrives at the
+end of the window. With at least three observations, all must meet the threshold
+to activate this reason; any below the threshold clears it. Daytime zeroes and
+nights with fewer than three observations leave the previous state unchanged.
+The end time is exclusive; for example, an interval
 ending at exactly 05:00 is outside the default window. Midnight-crossing windows
 belong to their start date. Repeated DST hours are distinct observations, while
 skipped hours are not invented. An ambiguous end time uses its later occurrence.

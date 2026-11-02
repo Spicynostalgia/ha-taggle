@@ -44,11 +44,7 @@ def continuous_flow(rows, required, previous=False, last_end=None):
 
 
 def night_flow(rows, now, zone, start, end, minimum, active=None, checked=None):
-    """Latch after three positive night intervals; clear on a later clean night.
-
-    Clean means a completed window with at least three observations and at least
-    one interval below the threshold. Unobserved/under-covered nights do not clear.
-    """
+    """Decide completed nights with at least three observations; otherwise retain state."""
     nights = {}
     for stamp, pulses in rows:
         local = stamp.astimezone(zone)
@@ -62,11 +58,6 @@ def night_flow(rows, now, zone, start, end, minimum, active=None, checked=None):
     for day, intervals in nights.items():
         if checked is not None and day < checked:
             continue
-        # Evaluate prefixes too: a hint that fired early in a night remains
-        # latched until a subsequent adequately observed clean window.
-        if (active is None and (checked is None or day > checked)
-                and len(intervals) >= 3 and all(p >= minimum for _, p in intervals[:3])):
-            active = day
         end_day = datetime.fromisoformat(day).date() + timedelta(days=int(start > end))
         # End at the later occurrence of an ambiguous clock time. The wall-time
         # check also keeps a nonexistent spring-forward end open until the jump.
@@ -74,8 +65,7 @@ def night_flow(rows, now, zone, start, end, minimum, active=None, checked=None):
         complete = (local_now.date() > end_day or
                     local_now.date() == end_day and local_now.time() >= end)
         if complete and now >= end_utc and len(intervals) >= 3:
-            if active is not None and active < day and any(p < minimum for _, p in intervals):
-                active = None
+            active = day if all(p >= minimum for _, p in intervals) else None
             checked = day
     return active, checked, latest_pulses
 
