@@ -1,52 +1,68 @@
 # Taggle water meter add-on
 
-Requires an RTL-SDR, an antenna for 915–928 MHz, and the Home Assistant MQTT integration with a Supervisor-discoverable MQTT broker. Supports amd64 and aarch64. The build includes the RTL-SDR Blog driver for Blog V4 support.
+Receive hourly pulse updates from a supported Taggle transmitter in Home Assistant. You need an RTL-SDR USB receiver, an antenna for 915–928 MHz and MQTT. Mosquitto can provide the broker if you do not have one.
 
-[Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
+**Only one transmitter has been verified:** Gladstone, QLD, with an RTL-SDR Blog V4. Other models and areas are unverified. This add-on supports amd64/aarch64 and includes the Blog driver for V4 support. The historical Docker hardware test used receiver 0.2.1; these instructions describe **0.3.0**.
+
+> [!IMPORTANT]
+> The transmitter sends a pulse counter, not your dial reading. Its starting offset and litres per pulse are both unknown. Guided calibration in **0.3.0** uses two manual dial readings, separated by enough normal water use, to establish both; follow Calibration status if another reading is needed. Check the estimate against your physical dial. This is experimental, not billing-grade measurement.
 
 ## Install
 
-The receiver add-on needs **Home Assistant OS or Supervised**. **Home Assistant Container/Core** users should use [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker). A running **MQTT broker** and the Home Assistant MQTT integration are prerequisites; use Mosquitto below if you need a broker, then configure the discovered MQTT integration under **Settings → Devices & services**.
+Use **Home Assistant OS** with an administrator account. An add-on is a program managed by HA OS; newer menus call it an app. Existing Supervised installations may also run it, but [upstream support ended after 2025.12](https://www.home-assistant.io/blog/2025/05/22/deprecating-core-and-supervised-installation-methods-and-32-bit-systems/). Container users should follow [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker).
 
-[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
+[![Open Mosquitto broker](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
 
-Open the add-on repository below, add it, then open **Taggle water meter**: **Install → set `meter_ids` → Start**. Connect the SDR and antenna; leave `litres_per_count: []` for guided calibration and set your timezone. Supervisor supplies MQTT credentials. See Setup below for details.
+1. In **Settings → Apps (Add-ons) → Store / Install app**, install **Mosquitto broker** if needed, enable **Start on boot**, and Start. Configure the discovered **MQTT** integration under **Settings → Devices & services**. If absent, choose **Add integration → MQTT** and follow the broker's Documentation tab.
+2. Add the repository using the button below, or the Store's **⋮ → Repositories** with `https://github.com/Spicynostalgia/ha-taggle`. Refresh the Store, install **Taggle water meter**, then connect the USB receiver and antenna.
+3. Follow **Setup** below, Save, enable **Start on boot**, Start, and open **Log/Logs**. Supervisor supplies MQTT credentials automatically; no broker password belongs in these add-on options.
 
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
+[![Add the Taggle add-on repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
 
-The optional dashboard card is installed separately through HACS. With HACS already installed, open its repository below, download the card and reload your browser. See the [dashboard card guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Dashboard-Card) for configuration.
+The custom card is optional; standard HA sensor cards work too. For a browser-only installation without HACS, follow the [README card steps](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md#add-the-dashboard-card). HACS is a community tool for cards and integrations, separate from the add-on Store. Complete its [prerequisites](https://hacs.dev/docs/use/download/prerequisites/), [download](https://hacs.dev/docs/use/download/download/) and [configuration](https://hacs.dev/docs/use/configuration/basic/) before using the button:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
+[![Open the card in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
 
 ## Tested hardware
 
-**Exactly one transmitter has been verified so far:** Gladstone Regional Council, QLD, with an **RTL-SDR Blog V4**, **18-byte clear frames**, **hourly** updates and **922.2 MHz SDR centre**. The automated tests use generated signals; other deployments/models are not field-verified.
+The one verified setup used **18-byte clear frames**, **hourly** updates and **922.2 MHz SDR centre**. Automated tests use generated signals; they do not field-verify other deployments.
 
-The tested unit is a white cylindrical “baton” pulse transmitter hose-clamped to the supply pipe, with a thin cable to a pulse/Hall sensor on a V100-style mechanical meter (flip lid, black kL and red litre digits). The label has “taggle”, a barcode and an ID, **no model number**. SP-series / ADC-1 family identification is plausible but **unconfirmed**.
+The transmitter is a white cable-connected cylinder on a V100-style mechanical meter. Its exact model is unconfirmed; appearance alone does not establish compatibility. **NB-IoT/cellular models cannot be received.** Other Taggle generations may use other channels or encryption. See the [tested setup and identification guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware).
 
-See the [tested unit and identification guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware). Please [report other councils/models](https://github.com/Spicynostalgia/ha-taggle/issues) with whether usage worked, a label photo with the ID and identifying barcode blurred, frame length and SNR. Other Taggle generations may use different channels or encryption; NB-IoT/cellular models cannot be received by this project.
-
-## Beginner guide
-
-New to SDR? Follow the [beginner walkthrough](https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started) for hardware, safe meter identification, reception checks, dashboard setup and calibration.
+Working or stuck? [Report your result](https://github.com/Spicynostalgia/ha-taggle/issues/new/choose) with the version, installation method, council/utility, receiver model and whether usage, ID only, or nothing was heard. Frame length and SNR are optional; **unknown is fine**. Normal logs and scans do not show exact frame length. Replace IDs with fictional **123456**, cover IDs/barcodes in photos, and omit private configuration, credentials and recordings.
 
 ![Illustration: receive-only path from the meter box through SDR and MQTT to Home Assistant](https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/images/setup-diagram.svg)
 
-*Illustration: the receiver setup. The broker can share the HA host; Energy requires calibration.*
-
-![Taggle dashboard card with fictional calibrated usage](https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/images/card-light.png)
-
-*Dashboard preview with synthetic data and fictional IDs; no default calibration is assumed.*
+*Illustration: the USB receiver listens; MQTT carries observations to Home Assistant. Energy needs calibration.*
 
 ## Setup
 
-Enter your own decimal transmitter ID in `meter_ids`. The transmitter label is usually marked `ID:xxxxxx`. Do not substitute the mechanical register serial. Every sample ID in this project is fictional.
+Open the add-on's **Configuration** tab. Add your decimal transmitter ID to the `meter_ids` list in the form. In **⋮ → Edit in YAML**, change the existing entry to `meter_ids: [123456]`, substituting your own ID. Keep other options. This is **add-on configuration**, not Home Assistant's `configuration.yaml` or Docker JSON. The mechanical meter serial is not the transmitter ID.
 
-Start with `litres_per_count: []`: counts have no assumed water-volume unit. Set your IANA timezone to match Home Assistant so daily totals use the intended local date. `device` accepts an RTL index or serial, `frequency` defaults to 922200000 Hz, and `gain` defaults to 40 dB. The sample rate is fixed at 2400000.
+Leave `litres_per_count: []` for guided calibration. Match `timezone` to Home Assistant's named zone, such as `Australia/Brisbane`, `Australia/Sydney`, `Australia/Adelaide` or `Australia/Perth`; use your own region. It controls daily totals and local photo times; scans use UTC. **Save** before starting/restarting **Taggle water meter**. If the label is unreadable, leave `meter_ids: []` and use Scan below; normal reception needs a confirmed ID.
 
-Supervisor supplies MQTT host, port, username and password automatically via the `mqtt:need` service. The startup script reads `/data/options.json`, writes a private runtime configuration under `/run`, and executes the receiver. It never prints broker credentials. USB plug-and-play access is requested with `usb: true`; another driver or SDR app must not hold the receiver.
+**Before first Start:** neighbourhood comparison is **on by default**. It publishes group statistics, not individual neighbours' identities/usage. To disable collection, set `neighbourhood: false`, Save, then start/restart the add-on. Hiding the card row only hides the display.
 
-### Possible leak alert
+Check that the add-on stays running, the USB receiver is detected and `Reading samples in async mode...` appears. In normal mode, confirm `MQTT connected`. Resolve startup errors now; once healthy, allow a full **65 minutes** for a transmission opportunity. Reception is not guaranteed. Every 15 minutes a normal-mode heartbeat counts frames and distinct other meters without printing neighbour IDs; it does not prove your own transmitter was heard.
+
+MQTT discovery announces the configured Taggle devices and enabled neighbourhood device immediately on broker connection. Unknown/unavailable initial values are expected; missing devices call for checking configuration/MQTT, rather than waiting for the radio. Open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Look under **Diagnostics** for Last seen, SNR and signal level.
+
+## Guided calibration
+
+Manual dial readings are the main route in **0.3.0**. No utility account, maths or restart is needed.
+
+1. Read the dial now. Include its units and decimal positions in a photo. **Calibration status** and the card estimate the next local transmission time after reception; reading just after it, ideally without water use, reduces uncertainty.
+2. On your MQTT device, choose **Dial unit: m³, kL or L**. **1 m³ = 1 kL = 1,000 L**. For illustrated digits `01234 | 567`, enter **1234.567** with m³/kL or **1234567** with L. Use a decimal point without grouping separators or unit letters; follow your own dial's printed multipliers.
+3. Enter the complete reading in **Enter meter reading** and submit with Enter. Blank **Reading time** means submission time: take a fresh reading and submit promptly. For an older photo, set **Reading time** first. `18:00` means **today** in the receiver's local timezone; another date needs an offset-aware timestamp such as `2026-11-02T18:00:00+10:00`. The time clears after the next accepted entry. If there was no receiver history at that time, take a fresh reading.
+4. Use water normally and enter another fresh reading, for example tomorrow. Do not run water just to calibrate. Follow **Calibration status**: an entry may wait for the next frame, more normal use or another reading. When calibrated, litre sensors appear automatically; **Meter reading** appears once the absolute counter/offset is resolved.
+
+Check later dial readings against the estimate. If an entry is wrong, [delete that reading or review reset consequences](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/CALIBRATION.md#correct-or-reset-readings) before using **Reset calibration**. Reset clears readings and automatic calibration, preserving observed usage totals and configuration pins.
+
+Already configured a manual `litres_per_count`? It pins litres per pulse: guided readings check it but cannot replace it. For automatic selection, clear `meter_reading_offset: []` if present, then `litres_per_count: []`, Save and restart **Taggle water meter** once. Guided reading submissions need no restart.
+
+Photo times, statuses, options, correction and the advanced manual/utility routes: [Calibration guide](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/CALIBRATION.md).
+
+## Possible leak alert
 
 Enabled by default for configured meters only, never neighbours. Each gets a `problem` binary sensor, `binary_sensor.taggle_<id>_possible_leak`, available whenever its usage sensors are available. The dashboard card can show a small **Possible leak** badge with the reason; add `possible_leak` to explicit card entity mappings or lists. Device-based cards find it automatically.
 
@@ -56,56 +72,63 @@ Enabled by default for configured meters only, never neighbours. Each gets a `pr
 | `leak_continuous_hours` | `24` | Integer 1–168 hours; all observed intervals must have positive pulses with at least 80% coverage. A new observed zero clears this reason. |
 | `leak_night_start` | `"01:00"` | Inclusive local `HH:MM`, using `timezone`. |
 | `leak_night_end` | `"05:00"` | Exclusive local `HH:MM`, different from start; supports crossing midnight. |
-| `leak_night_min_pulses` | `1` | Integer 1–65535; evaluated only at the end of the night window. With at least three observations, all must meet this threshold to activate the night hint; any below it clears the hint. Fewer observations leave its state unchanged. |
+| `leak_night_min_pulses` | `1` | Integer 1–65535; evaluated only at the end of the night window. With at least three observations, all must meet this threshold to activate the night hint; any below it clears the night-flow reason. Fewer observations leave its state unchanged. |
 
 **A hint, not an alarm:** the receiver sees hourly totals only. A dripping tap below one pulse per hour is invisible. Irrigation schedules can trigger night flow; adjust the night window to suit your household. Missing intervals are neither flow nor zero and cannot establish recovery. Calibration is not required. See the [full rules, attributes and card mapping](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/LEAK-DETECTION.md) and wiki [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference).
 
 ## Scan
 
-Set `scan_minutes` to 65 and start. Watch the log for IDs and SNR. A scan allows an empty meter list, prints counts only for configured IDs, and writes no usage state/logs or MQTT messages. It exits when the duration elapses. Set `scan_minutes` back to zero, configure your ID and restart for normal operation.
+Change modes by restarting this same add-on; do not start a second receiver against the USB device. Set `scan_minutes: 65`, **Save**, then **Start/Restart Taggle water meter**. An empty `meter_ids: []` is allowed for scanning. Watch Log/Logs for decoded IDs; silence can mean no frames yet. A scan covers an expected hourly opportunity, not guaranteed reception.
 
-Each scan JSON line includes the frame time in ISO-8601 UTC and SNR/signal level rounded to one decimal place. Example with a fictional unconfigured ID:
+Scans create no MQTT messages, usage state or JSONL logs and have no normal heartbeat. They exit after the requested duration. Afterwards confirm your ID using the label, a repeated household water-use check or your utility. Configure only your confirmed ID, restore **`scan_minutes: 0`**, Save and Start the add-on in normal mode. Never leave fictional `123456` configured. Do not add `scan_minutes` to standalone JSON; Docker/Python use `--scan` instead.
+
+Fictional unconfigured scan line:
 
 ```json
-{"time": "2026-01-01T12:15:00+00:00", "meter_id": 123456, "snr_median_db": 30.1, "signal_level_dbfs": -40.9}
+{"time":"2026-01-01T12:15:00+00:00","meter_id":123456,"snr_median_db":30.1,"signal_level_dbfs":-40.9}
 ```
 
-Configured clear meters also include `"counts": [120, 110, 104]`. Keep scan output private.
-
-In normal reception, INFO logs show the listening frequency and configured meter count, MQTT connections/disconnections (broker host:port only), and configured-meter frames. Every 15 minutes a heartbeat reports counts of frames and distinct other meters, never neighbour IDs. The card shows “Waiting for first reading (can take up to an hour)” on a fresh install; previously seen meters still show a warning when unavailable.
+`time` is sample-derived UTC frame time. Only configured clear meters also include `"counts": [120, 110, 104]`; missing counts for an unconfigured ID do not prove encryption. Keep scan output private. [Exact scan schema](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/PROTOCOL.md#scan-output).
 
 ## Entities and data
 
-One MQTT device is created per configured meter. Supported clear frames expose hourly usage, today's partial observed total and a cumulative observed count, plus SNR, signal level and last seen. Encrypted frames expose diagnostics only. On the device page, choose **Dial unit** (m³ default, kL or L) and type a physical dial reading into **Enter meter reading**. Repeat about a day later after at least 200 L or 40 pulses of normal use. Litres sensors appear automatically once calibrated, including an absolute **Meter reading** water entity for Energy. **Calibration status** and the card show the next expected local transmission time; read within a few minutes after it, ideally when nobody uses water. If typing a phone photo later, set **Reading time** first (HH:MM means today local; ISO-8601 with an offset can specify another date). It clears after the next entry. Blank means now.
+| Value | Meaning |
+| --- | --- |
+| Raw radio counter | Wrapping 16-bit pulses with an arbitrary starting offset; not the dial. |
+| `meter_count` | ha-taggle's cumulative recovered hourly pulses; also not the dial. |
+| **Meter reading** | Calibrated estimate of the absolute dial, in litres. Choose this for **Settings → Dashboards → Energy → Water** once available. |
+| `total_litres` | Observed cumulative usage: each newly recovered interval uses the litres per pulse active on first processing. Earlier stored intervals are not recalculated; recent earlier intervals may still arrive later. |
 
-**Reset calibration** clears dial readings and automatic calibration; confirm you want to start again before pressing it. See the [calibration guide](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/CALIBRATION.md) for deleting a mistake, status attributes and troubleshooting. `dial_unit`, `calibration_max_uncertainty` (0.02) and `calibration_min_litres` (200) set defaults. Optional `litres_per_count` entries pin a manually verified factor; guided calibration then validates it and cannot change it. Optional `meter_reading_offset` entries pin the absolute offset in litres too.
+Selecting Meter reading starts statistics from a baseline; it does not import lifetime consumption or recreate historical hourly data. Allow an hour or two for Energy statistics. With only a manual factor and no absolute reading, Total litres can be used instead. Select one source per supply. Review statistics after calibration corrections/reset or source changes; continuity is not guaranteed across a changed absolute estimate. Hourly/daily litre displays use the current factor. Only unrecovered intervals are omitted; a later frame can recover one missed transmission.
 
-Discovery uses `default_entity_id`: meter IDs default to `sensor.taggle_<id>_<key>` (for example `sensor.taggle_123456_today` and `sensor.taggle_123456_total_litres`), and aggregate IDs to `sensor.taggle_neighbourhood_<key>`. Existing registry IDs and user renames are preserved; collisions may add a suffix. The card’s device mode uses stable registry unique IDs, including for older name-derived IDs.
+Supported clear frames expose usage and diagnostics; confirmed encrypted frames provide diagnostics only. Usage can also disappear temporarily after a counter/sequence discontinuity. Discovery preserves existing entity IDs and renames. On a device, open sensor → settings → **Entity ID** before copying it into card YAML; the friendly name and transmitter ID are different things. Device-mode cards use the HA registry ID and find calibration/litre/leak entities automatically. See [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference) and [card setup](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md#add-the-dashboard-card).
 
-`neighbourhood` defaults to true. Other IDs never enter normal logs, JSONL, state or MQTT: neighbour counter tracking uses HMAC-SHA256 keys (16 hex characters) with a random 32-byte install salt in `/data/receiver/neighbourhood.salt` (0600). Only a **Taggle neighbourhood** device with aggregate sensors is published, with no per-neighbour entities. Your configured meters are excluded. Neighbours not heard for more than seven days are pruned. Set `neighbourhood: false` and restart to delete neighbour state and salt and remove retained neighbourhood discovery/state.
+### Neighbourhood comparison and privacy
 
-`neighbourhood_min_meters` defaults to 3 and cannot weaken the privacy floor below three. Each cohort's entities are unknown below the floor: meters heard within 24 h (including encrypted); clear meters qualifying today; or clear meters with a recent interval. Today requires at least six observed intervals ending on the local date and at least 75% of elapsed local clock hours observed. Missing intervals are never scaled or estimated. The last-hour average uses each clear neighbour's latest interval ending within two hours. Recomputed every minute; encrypted meters never contribute to usage.
+Neighbourhood comparison is on by default. Each cohort stays unknown below **three qualifying meters**; hearing three IDs alone does not qualify today's usage. Today also requires six observed intervals and at least 75% of elapsed local clock hours. The add-on accepts `neighbourhood_min_meters` of 3 or greater; standalone clamps lower integers to 3. Missing intervals are not estimated. Encrypted neighbours contribute only to the heard count.
 
-The sensors are `neighbourhood_meters_heard`, `neighbourhood_meters_counted`, `neighbourhood_average_today`, `neighbourhood_median_today` and `neighbourhood_average_last_hour` (default entity IDs start `sensor.taggle_`). Each configured meter also gets `vs_neighbourhood_today`, a percentage of the neighbourhood average (100 means equal), unknown when either value is missing, units differ or the average is zero. Average/median sensors use measurement statistics, not cumulative Energy totals. The card automatically shows average, median, qualifying homes and the comparison; renamed sensors can be mapped with `neighbourhood: {average_today: ..., median_today: ..., meters_counted: ...}`.
+Neighbours' litres per pulse are unknown. Unless `neighbourhood_litres_per_count` is set, aggregates use the first configured meter's calibrated value or raw pulses. Your calibration does not calibrate neighbours. This is a rough, reception-biased group comparison, not a household efficiency ranking. Aggregate measurements are not Energy totals.
 
-**Neighbours' litres per count is unknown.** Optionally set `neighbourhood_litres_per_count` to an assumed positive pulse value. When omitted, the first ID in `meter_ids` supplies its calibrated factor, or the aggregate uses raw pulses. Same council/model usually means the same pulse value, but this is unverified. Reception is biased toward strong nearby signals; partial-day usage stays partial. The median is more robust to a leaking neighbour than the average. See the root README's [Neighbourhood comparison](https://github.com/Spicynostalgia/ha-taggle#neighbourhood-comparison) for details.
+The card hides percentages when displayed units differ. **Receiver limitation:** when the first meter is uncalibrated and a later configured meter is calibrated, MQTT can still emit a raw-pulse `vs_neighbourhood_today` percentage for that later meter. Do not interpret it as a litres comparison.
 
-`log_all_meters` remains false by default. Explicitly enabling it allows other IDs to enter JSONL logs if logging is also enabled; it creates no per-neighbour MQTT entities. Scan output is unchanged and can print heard IDs.
+With default logging, neighbour IDs are absent from normal logs, JSONL, state and MQTT. Private neighbour state uses installation-specific opaque HMAC keys, and only group statistics reach MQTT; your own configured meters are excluded. **Exceptions:** scans print heard IDs, and enabling both `log_all_meters` and `jsonl_logging` writes them into private JSONL summaries. Disabling `neighbourhood`, then saving/restarting the receiver, removes neighbour state/salt and retained aggregate discovery/state. Hiding the card row alone does not stop collection. [Cohorts, assumptions and controls](https://github.com/Spicynostalgia/ha-taggle/wiki/Neighbourhood-Comparison).
 
-State is stored under `/data/receiver` and survives add-on restarts and upgrades. Include app data in backups. `jsonl_logging` is optional and defaults to false. Enabled daily JSONL logs require your own retention management. Do not publish your options, logs or state.
+### Backups and reference details
 
-New receiver data directories use mode 0700; JSONL logs, state and the neighbourhood salt use 0600.
+Private state lives under `/data/receiver` and survives add-on restarts/upgrades. **Include the add-on's data in HA OS backups before updating**: dial readings and the solution are in state, not just options. Do not delete state or reinstall to fix reception. New data directories use 0700; JSONL logs, state and neighbourhood salt use 0600. Optional `jsonl_logging` is off by default; enabled logs need your own retention management. Keep options, logs and state private.
 
-The standalone Python package and root README contain the full protocol, calibration, card configuration and troubleshooting guidance. The add-on's package files are the same source installed by the root Python project.
+Find the receiver version on the add-on Info tab or MQTT device information. Update the receiver and optional card together to **0.3.0**; replacing a manual card's file also needs browser/cache reload. [Backup and update steps](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md#back-up-and-update).
 
-When replaying a recording with the standalone CLI, availability and the final today/neighbourhood refresh use the current wall clock, so old recordings can show unavailable sensors and zero today. Standalone Python supports 3.11–3.13; on Debian/Ubuntu install `python3-venv` before creating a virtual environment.
+For all option names/defaults see [Configuration reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Configuration-Reference); for decoding see the [protocol specification](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/PROTOCOL.md). The standalone Python package uses the same receiver source and supports Python 3.11–3.13. Its replay availability and final daily refresh use the current wall clock, so old recordings can show unavailable sensors and zero today.
 
 ## Troubleshooting
 
-- No frames: confirm a suitable antenna, wait over an hour, verify SDR USB access and reduce strong-signal overload by lowering gain.
-- USB errors: stop competing SDR software, check power/cabling and whether the host DVB driver has claimed the device. The receiver retries a disconnected producer after two seconds.
-- No entities: confirm Home Assistant's MQTT integration uses the same broker and scan mode is off. Discovery is retained and resent when Home Assistant announces it is online.
-- Usage unavailable: 24-byte encrypted transmitters provide no counts, and meters expire after three hours without a valid frame.
-- Partial totals: only recovered hourly intervals count. This receiver cannot reconstruct arbitrarily long gaps.
+- **Startup or USB failure:** resolve errors immediately. Stop competing SDR software; check app USB access, power/cabling and VM passthrough if used. The receiver retries a disconnected producer after two seconds. Linux DVB driver commands are host-specific, not ordinary HA OS setup.
+- **No frames after healthy startup:** check antenna, placement and host noise. After changing gain or other options, Save and Restart Taggle water meter; compare reception over 65 minutes. Another channel or unsupported transmitter remains possible.
+- **No devices:** check configured IDs, normal mode (`scan_minutes: 0`), the same broker in HA, MQTT connection and discovery. Discovery happens on broker connection before a radio frame.
+- **Usage unavailable:** a new device can wait for its first frame. Previously seen meters expire after three hours. Encryption or sequence discontinuity can leave diagnostics updating without usage; unavailable alone does not diagnose encryption.
+- **Partial totals:** only recovered hourly intervals count. A later frame can recover a single missed transmission; long gaps can remain incomplete.
+
+A new custom card uses a neutral “Waiting for first reading (can take up to an hour)” message. Previously observed meters keep warnings when reception fails. [Troubleshooting guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Troubleshooting).
 
 Unofficial; not affiliated with Taggle Systems or any utility. Receive-only, for your own meter. Respect local radio and privacy laws. Encrypted payloads are not and will not be attacked.
