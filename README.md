@@ -8,6 +8,7 @@
 </p>
 
 <p align="center">
+  <a href="https://ha-taggle.dancloud.au"><img src="https://img.shields.io/badge/website-ha--taggle.dancloud.au-2bb3d6" alt="Project website"></a>
   <a href="https://github.com/Spicynostalgia/ha-taggle/releases"><img src="https://img.shields.io/github/v/release/Spicynostalgia/ha-taggle" alt="Latest release"></a>
   <a href="https://github.com/Spicynostalgia/ha-taggle/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Spicynostalgia/ha-taggle/ci.yml?branch=main&amp;label=CI" alt="CI workflow status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Spicynostalgia/ha-taggle" alt="MIT licence"></a>
@@ -563,6 +564,7 @@ Setup is complete. These references are optional background or help with a parti
 
 | Topic | Guide |
 | --- | --- |
+| Project overview | [ha-taggle.dancloud.au](https://ha-taggle.dancloud.au) — what it does, the card, and councils with Taggle meters |
 | Radio and decoding | [How it works](https://github.com/Spicynostalgia/ha-taggle/wiki/How-It-Works) · [local protocol specification](docs/PROTOCOL.md) |
 | Sensors and MQTT topics | [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference) |
 | All settings and defaults | [Configuration reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Configuration-Reference) · [example JSON](config.example.json) |
