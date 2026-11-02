@@ -2,6 +2,22 @@
 
 Requires an RTL-SDR, an antenna for 915–928 MHz, and the Home Assistant MQTT integration with a Supervisor-discoverable MQTT broker. Supports amd64 and aarch64. The build includes the RTL-SDR Blog driver for Blog V4 support.
 
+[Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
+
+## Install
+
+The receiver add-on needs **Home Assistant OS or Supervised**. **Home Assistant Container/Core** users should use [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle#standalone-docker). A running **MQTT broker** and the Home Assistant MQTT integration are prerequisites; use Mosquitto below if you need a broker, then configure the discovered MQTT integration under **Settings → Devices & services**.
+
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
+
+Open the add-on repository below, add it, then open **Taggle water meter**: **Install → set `meter_ids` → Start**. Connect the SDR and antenna; leave `litres_per_count: []` until calibrated and set your timezone. Supervisor supplies MQTT credentials. See Setup below for details.
+
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
+
+The optional dashboard card is installed separately through HACS. With HACS already installed, open its repository below, download the card and reload your browser. See the [dashboard card guide](https://github.com/Spicynostalgia/ha-taggle#7-add-the-dashboard-card) for configuration.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
+
 ## Tested hardware
 
 **Exactly one transmitter has been verified so far:** Gladstone Regional Council, QLD, with an **RTL-SDR Blog V4**, **18-byte clear frames**, **hourly** updates and **922.2 MHz SDR centre**. The automated tests use generated signals; other deployments/models are not field-verified.

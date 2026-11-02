@@ -2,6 +2,8 @@
 
 Receive your own Taggle-equipped water meter with an RTL-SDR. This project decodes supported hourly transmissions and publishes water usage and signal diagnostics through Home Assistant MQTT discovery. It runs as a Home Assistant add-on, a standalone Docker container, or a Python CLI.
 
+[Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
+
 **0.2.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
 <img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
@@ -14,6 +16,15 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 - Litres and a water total for Home Assistant Energy after you calibrate against the register.
 - A dashboard card with 48-hour history, visible gaps, light/dark themes and multiple meters.
 - Home Assistant add-on, Docker and Python installation options; reception stays local.
+
+**Install:** the receiver add-on needs **Home Assistant OS or Supervised**. Home Assistant **Container/Core** users should use [Standalone Docker](#standalone-docker). An **MQTT broker** and HA's MQTT integration are prerequisites; use Mosquitto below if you need a broker. Open the add-on repository, then **Install → set `meter_ids` → Start**. The HACS button opens the optional dashboard card repository (HACS must already be installed); download the card there.
+
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
+
+MQTT broker (Mosquitto):
+
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
 
 ## Tested hardware
 
@@ -131,7 +142,16 @@ Metal lids can block radio. Some installations have a small external antenna on/
 
 ### 5. Install
 
-For **Home Assistant OS**, use the add-on (called an *app* in newer HA menus). Non-HAOS users: follow [Standalone Docker](#standalone-docker), then return to step 6. On Docker/Linux, a DVB TV kernel driver can claim the dongle; release/blacklist that driver on the host if it causes “device busy”.
+For **Home Assistant OS or Supervised**, use the add-on (called an *app* in newer HA menus). **Home Assistant Container/Core** users: follow [Standalone Docker](#standalone-docker), then return to step 6. On Docker/Linux, a DVB TV kernel driver can claim the dongle; release/blacklist that driver on the host if it causes “device busy”.
+
+Use these shortcuts to open the receiver repository, the optional HACS dashboard card repository, or the Mosquitto broker. HACS must already be installed for its shortcut. You need a running MQTT broker and HA's MQTT integration before starting the receiver. After adding the receiver repository: **Install → set `meter_ids` → Start**; the checklist below covers the details.
+
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
+
+MQTT broker (Mosquitto):
+
+[![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
 
 1. [ ] In **Settings → Apps (Add-ons) → Store**, install and start **Mosquitto broker**, unless you already have a Supervisor-discoverable MQTT broker. Under **Settings → Devices & services**, configure the discovered **MQTT** integration. See [HA's MQTT setup](https://www.home-assistant.io/integrations/mqtt/).
 2. [ ] In the Store's **⋮ → Repositories**, add `https://github.com/Spicynostalgia/ha-taggle` and click **Add**. See [HA's app repository instructions](https://www.home-assistant.io/common-tasks/os/#installing-a-third-party-app-repository) if your menu differs.
@@ -224,6 +244,10 @@ The sections below cover configuration, supported formats and operating limits i
 
 ## Hardware and transmitter support
 
+![Signal flow from the meter and Taggle transmitter through radio decoding to own-meter state, anonymous neighbourhood aggregates, MQTT and Home Assistant](docs/images/signal-flow.svg)
+
+The meter sends pulses to its battery-powered Taggle transmitter, which broadcasts an hourly radio burst. The antenna and RTL-SDR feed that signal to the receiver software, which recovers and checks the frame before routing your configured meter's readings into saved usage state. Other heard meters take the optional anonymous neighbourhood path: install-specific keys keep local counter tracking separate, and only aggregates from large enough groups reach MQTT. Home Assistant discovers your meter sensors and the “Taggle neighbourhood” device; the dashboard card shows usage and comparisons, while Energy needs calibrated litres. See [Protocol details](docs/PROTOCOL.md) for the radio format and decoding steps.
+
 - An RTL-SDR with USB access. The container builds include the **RTL-SDR Blog driver**, including Blog V4 support.
 - An antenna suitable for **915–928 MHz**, positioned to receive your meter.
 - Home Assistant with its MQTT integration and an MQTT broker.
@@ -256,6 +280,8 @@ docker compose run --rm taggle --config /config/options.json --scan 65
 Scan prints one JSON object per valid frame with the ID, SNR and signal level. It prints counts **only for explicitly configured IDs**, writes no state or logs, and makes no MQTT connection. An empty meter list is allowed while scanning. Verify your own label before configuring an ID; reception does not establish ownership.
 
 ## Home Assistant add-on
+
+Requires **Home Assistant OS or Supervised**; Container/Core users should use [Standalone Docker](#standalone-docker). A running MQTT broker and the Home Assistant MQTT integration are required.
 
 Add `https://github.com/Spicynostalgia/ha-taggle` under **Settings → Apps (Add-ons) → Store → Repositories**. Install **Taggle water meter**. Home Assistant pulls the versioned amd64 or aarch64 image from GHCR, substituting `{arch}` in the add-on image name.
 

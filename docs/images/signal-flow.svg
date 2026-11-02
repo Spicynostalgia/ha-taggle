@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1100" viewBox="0 0 1200 1100" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1436" viewBox="0 0 1200 1436" role="img" aria-labelledby="title desc">
   <title id="title">How a reading travels: equipment → bitstream → application</title>
-  <desc id="desc">Three lanes trace the tested Gladstone, Queensland cable-connected Taggle path. A mechanical meter feeds a pulse or Hall sensor and battery transmitter, which sends hourly BPSK DSSS bursts near 922 MHz to an antenna, RTL-SDR Blog V4 and host. At approximately 1172.66 symbols per second, 392, 440 and 488 symbols take 0.334, 0.375 and 0.416 seconds. The coding ladder unwraps 4095-chip PN symbols into a 104-symbol preamble and 288 coded bits, then an 18-byte, 144-bit clear frame. Its fields are sync bits 0–7, example transmitter ID 123456 or 0x1E240 in bits 8–27, header CRC bits 28–35, body bits 36–127, frame CRC bits 128–135 and zero tail bits 136–143. The expanded body covers hex nibbles 9–31: format, unknown fields, hourly sequence, separate flags and three 16-bit counters. The software lane shows rtl_sdr, receiver.py acquisition, dsss.py recovery, coding.py exact inversion or Viterbi, protocol.py validation and parsing, store.py filtering and usage checkpoints, mqtt.py discovery and state, Home Assistant sensors, then taggle-card and Energy. Only configured IDs reach usage state and MQTT; Energy requires calibration to litres.</desc>
+  <desc id="desc">Three lanes trace the tested Gladstone, Queensland cable-connected Taggle path. A mechanical meter feeds a pulse or Hall sensor and battery transmitter, which sends hourly BPSK DSSS bursts near 922 MHz to an antenna, RTL-SDR Blog V4 and host. At approximately 1172.66 symbols per second, 392, 440 and 488 symbols take 0.334, 0.375 and 0.416 seconds. The coding ladder unwraps 4095-chip PN symbols into a 104-symbol preamble and 288 coded bits, then an 18-byte, 144-bit clear frame. Its fields are sync bits 0–7, example transmitter ID 123456 or 0x1E240 in bits 8–27, header CRC bits 28–35, body bits 36–127, frame CRC bits 128–135 and zero tail bits 136–143. The expanded body covers hex nibbles 9–31: format, unknown fields, hourly sequence, separate flags and three 16-bit counters. The software lane shows rtl_sdr, receiver.py acquisition, dsss.py recovery, coding.py exact inversion or Viterbi, protocol.py validation and parsing, store.py routing into two paths: configured meter IDs enter usage checkpoints, while other meters enter anonymous neighbourhood tracking by HMAC-SHA256 of the decimal ID with a per-install salt, truncated to 16 hex characters. Local per-neighbour deltas feed aggregate average and median today, average last hour, and meters heard and counted, each subject to a minimum three-meter cohort. Only aggregates reach the MQTT Taggle neighbourhood device; no neighbour IDs or tracking keys are published. Configured meter state also reaches MQTT discovery, Home Assistant sensors, taggle-card and Energy, which requires calibration to litres. Neighbourhood tracking is on by default and can be disabled; scan and explicit log-all modes differ.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#167b9c"/></marker>
   </defs>
-  <rect width="1200" height="1100" rx="16" fill="#f7fafb"/>
+  <rect width="1200" height="1436" rx="16" fill="#f7fafb"/>
   <g font-family="Arial, sans-serif" fill="#203744">
     <text x="28" y="38" font-size="24" font-weight="700">How a reading travels: equipment → bitstream → application</text>
     <text x="28" y="65" font-size="15" fill="#526975">Tested path: Gladstone (QLD) cable-connected Taggle transmitter, 18-byte clear frames</text>
@@ -146,13 +146,15 @@
       <text x="28" y="803" fill="#167b9c">3</text>
       <text x="28" y="828">Application</text>
     </g>
-    <text x="164" y="773" font-size="13" fill="#526975">Software on the host · read each row left → right</text>
+    <text x="164" y="773" font-size="13" fill="#526975">Software on the host · configured meters and anonymous aggregates</text>
     <g fill="none" stroke="#167b9c" stroke-width="2" marker-end="url(#arrow)">
       <path d="M348 838H364"/><path d="M548 838H564"/>
       <path d="M748 838H764"/><path d="M948 838H964"/>
-      <path d="M1148 838H1160V914H152V997H164"/>
-      <path d="M348 997H364"/><path d="M548 997H564"/>
-      <path d="M748 997H764"/><path d="M948 997H964"/>
+      <path d="M1148 838H1160V914H152V1013H164"/>
+      <path d="M348 1013H388"/><path d="M688 1013H732"/>
+      <path d="M256 1153V1241H388"/>
+      <path d="M688 1241H710V1065H732"/>
+      <path d="M832 1093V1121"/><path d="M932 1241H948"/>
     </g>
     <g stroke="#425e6c" stroke-width="1.5">
       <rect x="164" y="785" width="184" height="106" rx="9" fill="#fff"/>
@@ -160,18 +162,20 @@
       <rect x="564" y="785" width="184" height="106" rx="9" fill="#e3eef2"/>
       <rect x="764" y="785" width="184" height="106" rx="9" fill="#e3eef2"/>
       <rect x="964" y="785" width="184" height="106" rx="9" fill="#b5e1ef"/>
-      <rect x="164" y="933" width="184" height="135" rx="9" fill="#fff"/>
-      <rect x="364" y="933" width="184" height="135" rx="9" fill="#e3eef2"/>
-      <rect x="564" y="933" width="184" height="135" rx="9" fill="#e3eef2"/>
-      <rect x="764" y="933" width="184" height="135" rx="9" fill="#fff"/>
-      <rect x="964" y="933" width="184" height="135" rx="9" fill="#d7e7df"/>
+      <rect x="164" y="933" width="184" height="220" rx="9" fill="#fff"/>
+      <rect x="388" y="933" width="300" height="160" rx="9" fill="#e3eef2"/>
+      <rect x="388" y="1121" width="300" height="240" rx="9" fill="#e3eef2"/>
+      <rect x="732" y="933" width="416" height="160" rx="9" fill="#e3eef2"/>
+      <rect x="732" y="1121" width="200" height="240" rx="9" fill="#fff"/>
+      <rect x="948" y="1121" width="200" height="240" rx="9" fill="#d7e7df"/>
     </g>
     <g text-anchor="middle">
       <g font-size="16" font-weight="700">
         <text x="256" y="809">rtl_sdr</text><text x="456" y="809">receiver.py</text><text x="656" y="809">dsss.py</text>
         <text x="856" y="809">coding.py</text><text x="1056" y="809">protocol.py</text>
-        <text x="256" y="957">store.py · filter</text><text x="456" y="957">store.py · state</text><text x="656" y="957">mqtt.py</text>
-        <text x="856" y="957">Home Assistant</text><text x="1056" y="957">taggle-card</text>
+        <text x="256" y="960">store.py · route</text><text x="538" y="960">store.py · state</text>
+        <text x="538" y="1148">neighbourhood (anonymous)</text><text x="940" y="960">mqtt.py · via MQTT broker</text>
+        <text x="832" y="1148">Home Assistant</text><text x="1048" y="1148">taggle-card</text>
       </g>
       <g font-size="13">
         <text x="256" y="834">IQ stream</text><text x="256" y="853">cu8 over stdout</text><text x="256" y="872" fill="#526975">Launched by cli.py</text>
@@ -179,13 +183,42 @@
         <text x="656" y="834">Timing + clock recovery</text><text x="656" y="853">Costas loop</text><text x="656" y="872">Despread → symbols</text>
         <text x="856" y="834">Exact inverse first</text><text x="856" y="853">Viterbi fallback</text><text x="856" y="872">≤12 bit corrections*</text>
         <text x="1056" y="834">Sync + zero tail</text><text x="1056" y="853">Header CRC + frame CRC</text><text x="1056" y="872">ID, sequence, counters</text>
-        <text x="256" y="984">Configured meter_ids only</text><text x="256" y="1005">Others dropped</text><text x="256" y="1038" fill="#526975">Before state / MQTT</text>
-        <text x="456" y="979">state.json</text><text x="456" y="995">Dedupe intervals</text><text x="456" y="1011">16-bit counter wraps</text><text x="456" y="1027">Hourly deltas</text><text x="456" y="1043">Today: local end dates</text><text x="456" y="1059">Cumulative counts / litres</text>
-        <text x="656" y="984">HA discovery</text><text x="656" y="1005">taggle/&lt;id&gt;/state</text><text x="656" y="1026" fill="#526975">e.g. taggle/123456/state</text><text x="656" y="1047">Via MQTT broker</text>
-        <text x="856" y="980">Sensors: last_hour, today</text><text x="856" y="999">meter_count</text><text x="856" y="1018">snr, signal_level</text><text x="856" y="1037">last_seen</text><text x="856" y="1056">Litres when calibrated</text>
-        <text x="1056" y="984">Usage + history</text><text x="1056" y="1009" font-size="16" font-weight="700">Energy dashboard</text><text x="1056" y="1033">Calibrated total_litres</text><text x="1056" y="1054" fill="#526975">Required for Energy</text>
+        <text x="256" y="993" font-weight="700">Configured meter_ids</text>
+        <text x="256" y="1036">→ own usage state</text>
+        <text x="256" y="1083" font-weight="700">Other meters</text>
+        <text x="256" y="1106">↓ neighbourhood</text>
+        <text x="256" y="1132" fill="#526975">On by default; optional</text>
+        <text x="538" y="987">state.json · deduplicate intervals</text>
+        <text x="538" y="1010">16-bit wraps → hourly deltas</text>
+        <text x="538" y="1033">Today by local interval-end date</text>
+        <text x="538" y="1056">Cumulative counts / calibrated litres</text>
+        <text x="538" y="1175">HMAC(per-install salt, decimal ID)</text>
+        <text x="538" y="1198">SHA-256 → 16-hex tracking key</text>
+        <text x="538" y="1221">Local per-neighbour hourly deltas</text>
+        <text x="538" y="1244" font-weight="700">Aggregates only → MQTT</text>
+        <text x="538" y="1267">Average + median today; avg last hour</text>
+        <text x="538" y="1290">Meters heard / counted · ≥3 per cohort</text>
+        <text x="538" y="1313">Today: ≥6 intervals + ≥75% coverage</text>
+        <text x="538" y="1336" fill="#526975">Encrypted: heard only · no own meters</text>
+        <text x="940" y="987">Retained HA discovery + state</text>
+        <text x="940" y="1010">Own meters: taggle/&lt;id&gt;/state</text>
+        <text x="940" y="1033">“Taggle neighbourhood”: taggle/neighbourhood/state</text>
+        <text x="940" y="1056">No neighbour IDs, tracking keys or individual readings</text>
+        <text x="832" y="1175">Own usage + diagnostics</text>
+        <text x="832" y="1198">last_hour · today</text>
+        <text x="832" y="1221">meter_count · last_seen</text>
+        <text x="832" y="1244">snr · signal_level</text>
+        <text x="832" y="1267">Litres when calibrated</text>
+        <text x="832" y="1290">Neighbourhood aggregates</text>
+        <text x="832" y="1313">+ vs_neighbourhood_today</text>
+        <text x="1048" y="1175">Usage + history</text>
+        <text x="1048" y="1198">Neighbourhood comparison</text>
+        <text x="1048" y="1244" font-size="16" font-weight="700">Energy dashboard</text>
+        <text x="1048" y="1271">Calibrated total_litres</text>
+        <text x="1048" y="1294" fill="#526975">Required for Energy</text>
       </g>
     </g>
-    <text x="164" y="1091" font-size="13" fill="#526975">*protocol.py enforces the coded-bit correction limit. Filter shown for normal receive mode; optional scan / log-all modes differ.</text>
+    <text x="164" y="1392" font-size="13" fill="#526975">*protocol.py enforces the coded-bit correction limit. Normal receive mode shown; neighbourhood off → other meters discarded.</text>
+    <text x="164" y="1415" font-size="13" fill="#526975">Scan prints heard IDs without state / MQTT. Explicit log-all + JSONL logging can record other IDs. MQTT topic prefixes are configurable.</text>
   </g>
 </svg>
