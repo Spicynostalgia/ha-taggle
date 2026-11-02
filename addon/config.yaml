@@ -1,0 +1,38 @@
+name: Taggle water meter
+version: "0.1.0"
+slug: taggle_rx
+url: https://github.com/Spicynostalgia/ha-taggle
+image: ghcr.io/spicynostalgia/ha-taggle-addon-{arch}
+description: Receive your own Taggle water meter with RTL-SDR and MQTT
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+usb: true
+services:
+  - mqtt:need
+options:
+  meter_ids: []
+  log_all_meters: false
+  frequency: 922200000
+  gain: 40
+  device: "0"
+  timezone: UTC
+  litres_per_count: []
+  jsonl_logging: false
+  scan_minutes: 0
+schema:
+  meter_ids:
+    - "int(0,1048575)"
+  log_all_meters: bool
+  frequency: "int(921700000,922490000)"
+  gain: "float(0,50)"
+  device: str
+  timezone: str
+  litres_per_count:
+    - meter_id: "int(0,1048575)"
+      value: "float(0.000001,1000000)"
+  jsonl_logging: bool
+  scan_minutes: "int(0,1440)"

@@ -1,0 +1,26 @@
+configuration:
+  meter_ids:
+    name: Meter IDs
+    description: Decimal transmitter IDs you own. Required unless scanning or explicitly logging all meters.
+  log_all_meters:
+    name: Accept all meter IDs
+    description: Allow logging other heard IDs. Leave disabled for normal use.
+  frequency:
+    name: Centre frequency (Hz)
+    description: Default 922200000. The supported channel must remain inside the sampled band.
+  gain:
+    name: SDR gain (dB)
+  device:
+    name: RTL-SDR index or serial
+  timezone:
+    name: Daily totals timezone
+    description: An IANA timezone, for example UTC. Also set Home Assistant to this timezone.
+  litres_per_count:
+    name: Litres per count
+    description: Optional meter_id and value pairs. Leave empty until calibrated.
+  jsonl_logging:
+    name: Write daily JSONL logs
+    description: Store filtered decoded readings in persistent app data. Logs need manual retention management.
+  scan_minutes:
+    name: Scan duration (minutes)
+    description: Set above zero to print heard IDs and SNR without MQTT or disk writes. Set back to zero for normal operation.

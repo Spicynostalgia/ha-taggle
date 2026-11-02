@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ha-taggle"
+version = "0.1.0"
+description = "Receive your own Taggle water meter with RTL-SDR and Home Assistant MQTT"
+requires-python = ">=3.11,<3.14"
+license = "MIT"
+dynamic = ["dependencies"]
+
+[project.scripts]
+taggle-rx = "taggle_rx.cli:main"
+taggle-calibrate = "taggle_rx.calibrate:main"
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2", "ruff==0.14.3", "build==1.3.0", "PyYAML==6.0.3"]
+
+[tool.setuptools]
+package-dir = {"" = "addon"}
+packages = ["taggle_rx"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["addon/requirements.txt"]}
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = ["E701", "E702", "E741"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

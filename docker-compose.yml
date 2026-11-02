@@ -1,0 +1,21 @@
+services:
+  taggle:
+    image: ghcr.io/spicynostalgia/ha-taggle:latest
+    # To build locally, uncomment this block and run docker compose up -d --build.
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 15s
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    volumes:
+      - ./config.json:/config/options.json:ro
+      - ./data:/data
+    environment:
+      TZ: UTC
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

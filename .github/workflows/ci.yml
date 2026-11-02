@@ -1,0 +1,61 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev]'
+      - run: ruff check .
+      - run: pytest -q
+        env:
+          OPENBLAS_NUM_THREADS: "2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --check card/taggle-card.js && node --test tests/card.test.cjs
+      - run: python scripts/check_release.py
+      - run: python -m build --outdir /tmp/package-check
+  containers:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, aarch64]
+        image: [standalone, addon]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Choose build context
+        id: target
+        shell: bash
+        env:
+          IMAGE: ${{ matrix.image }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          if [ "$ARCH" = aarch64 ]; then platform=arm64; else platform=amd64; fi
+          echo "platform=linux/$platform" >> "$GITHUB_OUTPUT"
+          if [ "$IMAGE" = addon ]; then
+            echo 'context=./addon' >> "$GITHUB_OUTPUT"
+            echo 'file=./addon/Dockerfile' >> "$GITHUB_OUTPUT"
+          else
+            echo 'context=.' >> "$GITHUB_OUTPUT"
+            echo 'file=./docker/Dockerfile' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.target.outputs.context }}
+          file: ${{ steps.target.outputs.file }}
+          platforms: ${{ steps.target.outputs.platform }}
+          push: false
+          build-args: |
+            BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base-debian:bookworm
+            BUILD_ARCH=${{ matrix.arch }}

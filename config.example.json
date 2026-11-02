@@ -1,0 +1,20 @@
+{
+  "meter_ids": [123456],
+  "log_all_meters": false,
+  "frequency": 922200000,
+  "sample_rate": 2400000,
+  "gain": 40,
+  "device": "0",
+  "timezone": "UTC",
+  "litres_per_count": {},
+  "mqtt": {
+    "host": "mqtt",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "topic_prefix": "taggle",
+    "discovery_prefix": "homeassistant"
+  },
+  "data_dir": "/data",
+  "jsonl_logging": false
+}
