@@ -4,7 +4,7 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 
 [Wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) — beginner guides live here too.
 
-**0.2.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
+**0.2.1 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
 <img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
 
@@ -273,7 +273,7 @@ If you need to check reception, scan for at least 65 minutes: a transmitter can 
 # With config.json prepared as below; launches rtl_sdr automatically.
 taggle-rx --config config.json --scan 65
 
-# Docker, after configuring the image owner (see Publishing):
+# Docker:
 docker compose run --rm taggle --config /config/options.json --scan 65
 ```
 
@@ -302,13 +302,17 @@ timezone: UTC
 litres_per_count: []
 jsonl_logging: false
 scan_minutes: 0
+neighbourhood: true
+neighbourhood_min_meters: 3
+# Optional assumed neighbour scale (otherwise uses your first meter’s scale, or pulses):
+# neighbourhood_litres_per_count: 2.5
 ```
 
 MQTT credentials come from Supervisor service discovery. To scan, set `scan_minutes: 65`; once finished, set it back to `0` and restart. See [add-on documentation](addon/DOCS.md).
 
 ## Standalone Docker
 
-Compose uses `ghcr.io/spicynostalgia/ha-taggle:latest` (amd64/aarch64); use a version such as `:0.2.0` to pin a release. A commented `build` block in [docker-compose.yml](docker-compose.yml) enables local builds.
+Compose uses `ghcr.io/spicynostalgia/ha-taggle:latest` (amd64/aarch64); use a version such as `:0.2.1` to pin a release. A commented `build` block in [docker-compose.yml](docker-compose.yml) enables local builds.
 
 ```sh
 cp config.example.json config.json
@@ -330,6 +334,8 @@ The receiver restarts the SDR process after disconnects and reanchors incoming s
 
 Python **3.11–3.13** on Linux, plus `rtl_sdr`, is supported. NumPy, SciPy, Paho MQTT and timezone data are pinned in [requirements.txt](addon/requirements.txt).
 
+On Debian/Ubuntu, install venv support first with `sudo apt install python3-venv`. Python 3.14 is excluded because the pinned NumPy/SciPy versions do not provide CPython 3.14 wheels.
+
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
@@ -345,13 +351,15 @@ rtl_sdr -f 922200000 -s 2400000 -g 40 - | taggle-rx --config config.json --input
 taggle-rx --config config.json --input own-meter.cu8 --start-utc 2026-01-01T00:00:00Z
 ```
 
+Replays keep the recording timestamps for readings, but availability and the final “today”/neighbourhood refresh use the current wall clock (and your configured timezone for daily totals). An old recording can therefore show unavailable sensors and `today: 0`; replaying does not move the wall clock back.
+
 The package source lives under `addon/taggle_rx` so Home Assistant can build from the add-on directory alone. Root `pyproject.toml` installs that same package.
 
 ## Configuration and privacy
 
 [config.example.json](config.example.json) lists the standalone configuration keys. `meter_ids` is required unless `log_all_meters` is explicitly enabled or scan mode is used. Anonymous neighbourhood comparison is **on by default**. Other meters are tracked only under install-specific HMAC keys; their IDs never enter normal logs, JSONL, state or MQTT. Only aggregate neighbourhood entities are created. Explicit `log_all_meters: true` still permits JSONL logging of other heard IDs when `jsonl_logging` is enabled; keep it disabled for ordinary use. Scan output is unchanged and still prints heard IDs.
 
-`jsonl_logging` defaults to false. When enabled, decoded summaries go to daily JSONL files under `data_dir`; raw radio frames and encrypted bodies are never written. Logs have no automatic rotation: manage their retention yourself. Persistent `state.json` contains your meter IDs and usage; keep it private and backed up. Configuration and local data are git-ignored. MQTT payloads contain your configured meter IDs and usage, plus anonymous neighbourhood aggregates, so use a trusted broker and network.
+`jsonl_logging` defaults to false. When enabled, decoded summaries go to daily JSONL files under `data_dir`; raw radio frames and encrypted bodies are never written. New data directories are created with mode 0700; JSONL logs, state and salt use 0600. Logs have no automatic rotation: manage their retention yourself. Persistent `state.json` contains your meter IDs and usage; keep it private and backed up. Configuration and local data are git-ignored. MQTT payloads contain your configured meter IDs and usage, plus anonymous neighbourhood aggregates, so use a trusted broker and network.
 
 ## Neighbourhood comparison
 
@@ -369,7 +377,7 @@ Neighbours' litres per count is **unknown**. `neighbourhood_litres_per_count` se
 
 Reception favours strong nearby signals: these are **heard meters, not a representative survey of the neighbourhood**. Coverage and partial days can bias the comparison. A leaking neighbour can raise the average; the median is more robust, so the card shows both. These are experimental comparisons, not billing or leak detection.
 
-Default suggested entities (HA may rename them):
+Default entity IDs (existing registry IDs and user renames are preserved; collisions may add a suffix):
 
 | Entity | Unit | Meaning |
 | --- | --- | --- |
@@ -384,7 +392,7 @@ Averages and median use the `measurement` state class, never `total_increasing`;
 
 ## MQTT entities
 
-Each configured meter has one device, with stable entity unique IDs. Default suggested entity IDs are `sensor.taggle_123456_<key>`; Home Assistant may rename them.
+Each configured meter has one device, with stable entity unique IDs. Default entity IDs are `sensor.taggle_123456_<key>`; existing registry IDs and user renames are preserved, and collisions may add a suffix.
 
 | Entity key | Unit | Meaning |
 | --- | --- | --- |
@@ -408,7 +416,9 @@ The receiver recomputes today's observed total once a minute, including at local
 
 ## Dashboard card
 
-Add `https://github.com/Spicynostalgia/ha-taggle` as a **custom Dashboard repository** in HACS, or copy [dist/taggle-card.js](dist/taggle-card.js) to Home Assistant's `www/taggle-card.js`. Add a JavaScript module resource `/local/taggle-card.js?v=0.2.0` for manual installation. HACS installs the committed `dist` file; no frontend build or dependencies are needed. Publishing a GitHub release makes versioned installation available.
+MQTT discovery requests `sensor.taggle_<id>_<key>` for meter entities and `sensor.taggle_neighbourhood_<key>` for aggregates using [`default_entity_id`](https://www.home-assistant.io/integrations/sensor.mqtt/#default_entity_id). These defaults apply on first registration; existing registry IDs and user renames are preserved, and collisions can add a numeric suffix. For an existing installation with name-derived IDs such as `sensor.taggle_123456_water_today`, use card device mode or map the actual IDs explicitly.
+
+Add `https://github.com/Spicynostalgia/ha-taggle` as a **custom Dashboard repository** in HACS, or copy [dist/taggle-card.js](dist/taggle-card.js) to Home Assistant's `www/taggle-card.js`. Add a JavaScript module resource `/local/taggle-card.js?v=0.2.1` for manual installation. HACS installs the committed `dist` file; no frontend build or dependencies are needed. Publishing a GitHub release makes versioned installation available.
 
 Configure entity IDs explicitly (including renamed entities):
 
@@ -484,10 +494,10 @@ Tests generate fake frames and filtered PN-modulated IQ from the project's own e
 
 **Forking?** Before your first release, run `python scripts/set_owner.py your-github-name` with the GitHub user or organization hosting your fork (this repository is already set to `spicynostalgia`). It replaces the literal `GITHUB_OWNER` placeholder everywhere in the distributable files with the lowercase owner; commit the result once. In particular, `addon/config.yaml` must contain `image: ghcr.io/GITHUB_OWNER/ha-taggle-addon-{arch}` with your owner substituted. Keep `{arch}` literal: Home Assistant substitutes `amd64` or `aarch64`, and uses the add-on version as the image tag. The script also configures Compose and updates documentation.
 
-Keep `addon/config.yaml`, root `pyproject.toml` and `addon/pyproject.toml` versions equal, and add the matching `## <version>` section to `CHANGELOG.md` (also update `addon/CHANGELOG.md`). A pushed tag such as `v0.2.0` triggers [release.yml](.github/workflows/release.yml); it rejects version mismatches or missing release notes before publishing. You can validate locally with:
+Keep `addon/config.yaml`, root `pyproject.toml` and `addon/pyproject.toml` versions equal, and add the matching `## <version>` section to `CHANGELOG.md` (also update `addon/CHANGELOG.md`). A pushed tag such as `v0.2.1` triggers [release.yml](.github/workflows/release.yml); it rejects version mismatches or missing release notes before publishing. You can validate locally with:
 
 ```sh
-python scripts/prepare_release.py v0.2.0 --notes /tmp/taggle-release-notes.md
+python scripts/prepare_release.py v0.2.1 --notes /tmp/taggle-release-notes.md
 ```
 
 The workflow uses only the built-in `GITHUB_TOKEN`, with `packages: write` and `contents: write`. It publishes `ghcr.io/<owner>/ha-taggle-addon-amd64:<version>` and `ha-taggle-addon-aarch64:<version>`, plus the standalone `ghcr.io/<owner>/ha-taggle:<version>` and `:latest` manifest for `linux/amd64` and `linux/arm64` using Buildx/QEMU. Tags omit the leading `v`. After all images succeed, it creates a GitHub Release using that version's changelog section.

@@ -135,3 +135,28 @@ def test_corrupt_state_is_not_silently_reset(tmp_path):
     (tmp_path / 'state.json').write_text('{broken')
     with pytest.raises(ValueError):
         Store(config(tmp_path))
+
+
+@pytest.mark.parametrize('existing_log', [False, True])
+def test_private_data_directory_and_jsonl_permissions(tmp_path, existing_log):
+    import os
+    import stat
+
+    data = tmp_path / 'receiver'
+    previous_umask = os.umask(0)
+    try:
+        store = Store(config(data, jsonl_logging=True))
+        log = data / f'{START.date()}.jsonl'
+        if existing_log:
+            log.write_text('{}\n')
+            log.chmod(0o644)
+        store.frame(frame(), START)
+        store.frame(frame(sequence=8), START + timedelta(hours=1))
+    finally:
+        os.umask(previous_umask)
+    assert stat.S_IMODE(data.stat().st_mode) == 0o700
+    for path in (log, data / 'state.json', data / 'neighbourhood.salt'):
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    rows = [json.loads(line) for line in log.read_text().splitlines()]
+    assert len(rows) == 2 + existing_log
+    assert rows[-1]['sequence'] == 8

@@ -109,6 +109,8 @@ def main(argv=None):
                 raise ValueError('truncated IQ input: odd trailing byte')
             rx.feed(raw)
         rx.flush()
+        if publisher:
+            store.refresh(datetime.now(timezone.utc))
     except (OSError, ValueError) as error:
         LOG.error('%s', error)
         failed = True

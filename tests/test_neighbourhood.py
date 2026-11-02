@@ -209,7 +209,7 @@ def test_discovery_nulls_reconnect_birth_and_disabled_removal(tmp_path):
         spec = publisher.neighbourhood_discovery(key)
         assert spec['device']['name'] == 'Taggle neighbourhood'
         assert spec['state_class'] == 'measurement'
-        assert spec['object_id'] == f'taggle_neighbourhood_{key}'
+        assert spec['default_entity_id'] == f'sensor.taggle_neighbourhood_{key}'
     state = dict(meters_heard=4, meters_counted=None, average_today=None,
                  median_today=None, average_last_hour=None)
     publisher.publish_neighbourhood({**state, 'forbidden': 'private'})

@@ -40,7 +40,7 @@ def test_discovery_units_reconnect_and_availability():
     configs = [json.loads(v) for v in configs]
     assert len(configs) == 15
     assert len({tuple(v['device']['identifiers']) for v in configs}) == 2
-    water = next(c for c in configs if c['name'] == 'Water total litres')
+    water = next(c for c in configs if c['name'] == 'Total litres')
     assert water['device_class'] == 'water'
     assert water['state_class'] == 'total_increasing'
     assert water['unit_of_measurement'] == 'L'
@@ -94,3 +94,72 @@ def test_scan_file_cli_does_not_connect_or_write(tmp_path, monkeypatch):
     assert rx_main(['--config', str(config), '--input', str(source), '--scan', '1',
                     '--start-utc', '2026-01-01T00:00:00Z']) == 0
     assert not data.exists()
+
+
+@pytest.mark.parametrize('prefix', ['taggle', 'house/taggle'])
+def test_discovery_entity_ids_and_name_fallback(prefix):
+    from taggle_rx.mqtt import ENTITIES, NEIGHBOURHOOD_ENTITIES
+
+    publisher = Publisher(Config.from_dict({'meter_ids': [123456], 'mqtt': {'topic_prefix': prefix}}), Mock())
+    for key, spec in ENTITIES.items():
+        payload = publisher.discovery(123456, key, spec)
+        assert payload['default_entity_id'] == f'sensor.taggle_123456_{key}'
+        assert payload['unique_id'] == f'{prefix}_123456_{key}'
+        assert 'object_id' not in payload
+        fallback = (payload['device']['name'] + ' ' + payload['name']).lower().replace(' ', '_')
+        assert 'sensor.' + fallback == payload['default_entity_id']
+    for key in NEIGHBOURHOOD_ENTITIES:
+        payload = publisher.neighbourhood_discovery(key)
+        assert payload['default_entity_id'] == f'sensor.taggle_neighbourhood_{key}'
+        assert payload['unique_id'] == f'{prefix}_neighbourhood_{key}'
+        assert 'object_id' not in payload
+        fallback = (payload['device']['name'] + ' ' + payload['name']).lower().replace(' ', '_')
+        assert 'sensor.' + fallback == payload['default_entity_id']
+
+
+def test_file_cli_refreshes_wall_clock_state_after_flush(tmp_path, monkeypatch):
+    import json
+
+    import taggle_rx.cli as cli
+
+    from .test_store import frame
+
+    now = datetime(2026, 1, 2, 0, 30, tzinfo=timezone.utc)
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now.astimezone(tz)
+
+    publisher = Mock()
+    monkeypatch.setattr(cli, 'datetime', Clock)
+    monkeypatch.setattr(cli, 'Publisher', Mock(return_value=publisher))
+
+    def receiver(store, *args):
+        rx = Mock()
+        flushed = False
+
+        def flush():
+            nonlocal flushed
+            if not flushed:
+                flushed = True
+                stamp = now - timedelta(hours=1)
+                store.frame(frame(), stamp)
+                for identifier in (234567, 234568, 234569):
+                    store.frame(frame(identifier=identifier, size=24), stamp)
+        rx.flush.side_effect = flush
+        return rx
+
+    monkeypatch.setattr(cli, 'Receiver', receiver)
+    config = tmp_path / 'options.json'
+    config.write_text(json.dumps({'meter_ids': [123456], 'data_dir': str(tmp_path / 'data')}))
+    source = tmp_path / 'empty.bin'
+    source.write_bytes(b'')
+    assert rx_main(['--config', str(config), '--input', str(source),
+                    '--start-utc', '2026-01-01T23:30:00Z']) == 0
+    assert publisher.publish.call_args_list[0].args[1]['today'] == 16
+    final = publisher.publish.call_args.args[1]
+    assert final['today'] == 0
+    assert final['last_seen'] == '2026-01-01T23:30:00+00:00'
+    assert publisher.publish_neighbourhood.call_args.args[0]['meters_heard'] == 3
+    assert publisher.method_calls[-1][0] == 'close'

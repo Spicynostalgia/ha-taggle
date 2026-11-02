@@ -22,7 +22,7 @@ class Store:
         self.neighbours = {}
         self.salt = None
         if scan is None:
-            self.path.mkdir(parents=True, exist_ok=True)
+            self.path.mkdir(mode=0o700, parents=True, exist_ok=True)
             checkpoint = self.path / 'state.json'
             checkpoint_changed = False
             if checkpoint.exists():
@@ -102,7 +102,9 @@ class Store:
                 'meter_id', 'format_bytes', 'encrypted', 'sequence', 'counts', 'flags',
                 'snr_median_db', 'signal_level_dbfs', 'fec_errors')}
             row['time'] = stamp.isoformat()
-            with (self.path / f'{stamp.date()}.jsonl').open('a') as target:
+            fd = os.open(self.path / f'{stamp.date()}.jsonl', os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, 'a') as target:
+                os.fchmod(target.fileno(), 0o600)
                 target.write(json.dumps(row, allow_nan=False) + '\n')
         if not configured:
             return

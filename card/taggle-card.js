@@ -1,4 +1,4 @@
-/* Taggle card 0.2.0. MIT. Home Assistant states only; no external requests. */
+/* Taggle card 0.2.1. MIT. Home Assistant states only; no external requests. */
 (() => {
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',
@@ -71,7 +71,7 @@
     set hass(hass) {
       this._hass = hass;
       if ((this._config?.meters.some(m => m.device || m.neighbourhood?.device)
-          || this._config?.neighbourhood?.device) && !hass.entities && !this._registryRequested && hass.callWS) {
+          || this._config?.neighbourhood?.device) && !this._registryRequested && hass.callWS) {
         this._registryRequested = true;
         hass.callWS({type: 'config/entity_registry/list'}).then(registry => {
           this._registry = registry;
@@ -84,16 +84,24 @@
       }
       this.render();
     }
+    entityRegistry() {
+      // The frontend's entity map may omit unique_id; the full registry includes it.
+      const entries = new Map(Object.values(this._hass?.entities || {}).map(e => [e.entity_id, e]));
+      for (const entry of this._registry) entries.set(entry.entity_id, {...entries.get(entry.entity_id), ...entry});
+      return [...entries.values()];
+    }
     resolve(meter) {
       const result = {};
       if (meter.entities && !Array.isArray(meter.entities)) return {...meter.entities};
-      const registry = this._hass?.entities ? Object.values(this._hass.entities) : this._registry;
+      const registry = this.entityRegistry();
       const selected = meter.device ? registry.filter(e => e.device_id === meter.device) : [];
       const ids = Array.isArray(meter.entities) ? meter.entities : selected.map(e => e.entity_id);
       for (const id of ids) {
         const entry = registry.find(e => e.entity_id === id);
-        const key = KEYS.find(k => (entry?.unique_id || id).endsWith('_' + k));
-        if (key) result[key] = id;
+        const uniqueKey = entry?.unique_id?.match(/^.+_\d+_(.+)$/)?.[1];
+        const entityKey = id.match(/^sensor\.taggle_\d+_(?:water_)?(.+)$/)?.[1];
+        const key = KEYS.includes(uniqueKey) ? uniqueKey : entityKey;
+        if (KEYS.includes(key)) result[key] = id;
       }
       return result;
     }
@@ -104,7 +112,7 @@
     comparison(meter, today, unit) {
       const config = meter.neighbourhood ?? this._config.neighbourhood;
       if (config === false) return '';
-      const registry = this._hass.entities ? Object.values(this._hass.entities) : this._registry;
+      const registry = this.entityRegistry();
       const get = key => {
         const selected = config?.device ? registry.filter(e => e.device_id === config.device) : registry;
         const defaultId = 'sensor.taggle_neighbourhood_' + key;

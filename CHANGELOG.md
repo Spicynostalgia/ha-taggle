@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+- Fix MQTT discovery defaults for Home Assistant 2026.4+ and align sensor names with documented entity IDs.
+- Fix card device lookup confusing today with the neighbourhood comparison, including existing name-derived and renamed entities.
+- Refresh retained daily and neighbourhood state after file input finishes.
+- Create JSONL logs with mode 0600 and new data directories with mode 0700.
+- Clarify Python 3.11–3.13 support, Debian/Ubuntu venv setup, replay wall-clock behavior and add-on options.
+
 ## 0.2.0
 
 - Add anonymous neighbourhood comparison enabled by default, with salted HMAC identities, a minimum three-meter privacy floor, coverage qualification and seven-day pruning.

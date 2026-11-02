@@ -127,3 +127,63 @@ test('explicit neighbourhood device does not fall back to a different receiver',
   card.hass = withNeighbourhood();
   assert.doesNotMatch(card.shadowRoot.innerHTML, /Neighbourhood avg/);
 });
+
+test('device lookup matches today exactly even when comparison is listed first or last', () => {
+  for (const keys of [['vs_neighbourhood_today', 'today'], ['today', 'vs_neighbourhood_today'],
+                      ['vs_neighbourhood_today']]) {
+    const card = new Card();
+    card.setConfig({device:'meter'});
+    const ha = hass();
+    ha.entities = Object.fromEntries(keys.map(key => {
+      const id = 'sensor.taggle_123456_' + key;
+      ha.states[id] = state(key === 'today' ? 16 : 80);
+      return [id, {entity_id:id, device_id:'meter', unique_id:'taggle_123456_' + key}];
+    }));
+    card.hass = ha;
+    const ids = card.resolve(card._config.meters[0]);
+    assert.equal(ids.today, keys.includes('today') ? 'sensor.taggle_123456_today' : undefined);
+    assert.equal(ids.last_hour, undefined);
+  }
+});
+
+test('entity list fallback supports default and HA name-derived water IDs without suffix collisions', () => {
+  const card = new Card();
+  const keys = ['last_hour', 'today', 'last_hour_litres', 'today_litres', 'total_litres'];
+  for (const prefix of ['', 'water_']) {
+    const entities = keys.map(key => 'sensor.taggle_123456_' + prefix + key);
+    entities.push('sensor.taggle_123456_vs_neighbourhood_today', 'sensor.unrelated_today');
+    card.setConfig({entities});
+    card.hass = hass();
+    const ids = card.resolve(card._config.meters[0]);
+    for (const key of keys) assert.equal(ids[key], 'sensor.taggle_123456_' + prefix + key);
+  }
+});
+
+test('device lookup fetches stable unique IDs even when frontend entity map is present', async () => {
+  const card = new Card();
+  card.setConfig({device:'meter'});
+  const ha = hass();
+  const records = ['last_hour', 'today', 'last_hour_litres', 'today_litres', 'total_litres'].map(key => ({
+    entity_id:'sensor.taggle_123456_water_' + key, device_id:'meter',
+    unique_id:'custom/prefix_123456_' + key,
+  }));
+  // A user rename cannot be resolved from its entity ID alone.
+  records[1].entity_id = 'sensor.kitchen_water';
+  records.push({entity_id:'sensor.taggle_123456_vs_neighbourhood_today', device_id:'meter',
+    unique_id:'custom/prefix_123456_vs_neighbourhood_today'});
+  ha.entities = Object.fromEntries(records.map(({unique_id, ...entry}) => [entry.entity_id, entry]));
+  let calls = 0;
+  ha.callWS = async message => {
+    assert.equal(message.type, 'config/entity_registry/list');
+    calls++;
+    return records;
+  };
+  card.hass = ha;
+  await Promise.resolve();
+  const ids = card.resolve(card._config.meters[0]);
+  assert.equal(ids.today, 'sensor.kitchen_water');
+  assert.equal(ids.last_hour, 'sensor.taggle_123456_water_last_hour');
+  assert.equal(ids.total_litres, 'sensor.taggle_123456_water_total_litres');
+  card.hass = ha;
+  assert.equal(calls, 1);
+});

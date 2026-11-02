@@ -54,11 +54,13 @@ Set `scan_minutes` to 65 and start. Watch the log for IDs and SNR. A scan allows
 
 One MQTT device is created per configured meter. Supported clear frames expose hourly usage, today's partial observed total and a cumulative observed count, plus SNR, signal level and last seen. Encrypted frames expose diagnostics only. Adding `litres_per_count` entries (`meter_id` and positive `value`) enables litre entities, including a persistent `total_increasing` water entity for Energy.
 
+Discovery uses `default_entity_id`: meter IDs default to `sensor.taggle_<id>_<key>` (for example `sensor.taggle_123456_today` and `sensor.taggle_123456_total_litres`), and aggregate IDs to `sensor.taggle_neighbourhood_<key>`. Existing registry IDs and user renames are preserved; collisions may add a suffix. The card’s device mode uses stable registry unique IDs, including for older name-derived IDs.
+
 `neighbourhood` defaults to true. Other IDs never enter normal logs, JSONL, state or MQTT: neighbour counter tracking uses HMAC-SHA256 keys (16 hex characters) with a random 32-byte install salt in `/data/receiver/neighbourhood.salt` (0600). Only a **Taggle neighbourhood** device with aggregate sensors is published, with no per-neighbour entities. Your configured meters are excluded. Neighbours not heard for more than seven days are pruned. Set `neighbourhood: false` and restart to delete neighbour state and salt and remove retained neighbourhood discovery/state.
 
 `neighbourhood_min_meters` defaults to 3 and cannot weaken the privacy floor below three. Each cohort's entities are unknown below the floor: meters heard within 24 h (including encrypted); clear meters qualifying today; or clear meters with a recent interval. Today requires at least six observed intervals ending on the local date and at least 75% of elapsed local clock hours observed. Missing intervals are never scaled or estimated. The last-hour average uses each clear neighbour's latest interval ending within two hours. Recomputed every minute; encrypted meters never contribute to usage.
 
-The sensors are `neighbourhood_meters_heard`, `neighbourhood_meters_counted`, `neighbourhood_average_today`, `neighbourhood_median_today` and `neighbourhood_average_last_hour` (suggested entity IDs start `sensor.taggle_`). Each configured meter also gets `vs_neighbourhood_today`, a percentage of the neighbourhood average (100 means equal), unknown when either value is missing, units differ or the average is zero. Average/median sensors use measurement statistics, not cumulative Energy totals. The card automatically shows average, median, qualifying homes and the comparison; renamed sensors can be mapped with `neighbourhood: {average_today: ..., median_today: ..., meters_counted: ...}`.
+The sensors are `neighbourhood_meters_heard`, `neighbourhood_meters_counted`, `neighbourhood_average_today`, `neighbourhood_median_today` and `neighbourhood_average_last_hour` (default entity IDs start `sensor.taggle_`). Each configured meter also gets `vs_neighbourhood_today`, a percentage of the neighbourhood average (100 means equal), unknown when either value is missing, units differ or the average is zero. Average/median sensors use measurement statistics, not cumulative Energy totals. The card automatically shows average, median, qualifying homes and the comparison; renamed sensors can be mapped with `neighbourhood: {average_today: ..., median_today: ..., meters_counted: ...}`.
 
 **Neighbours' litres per count is unknown.** Optionally set `neighbourhood_litres_per_count` to an assumed positive pulse value. When omitted, the first ID in `meter_ids` supplies its calibrated factor, or the aggregate uses raw pulses. Same council/model usually means the same pulse value, but this is unverified. Reception is biased toward strong nearby signals; partial-day usage stays partial. The median is more robust to a leaking neighbour than the average. See the root README's [Neighbourhood comparison](https://github.com/Spicynostalgia/ha-taggle#neighbourhood-comparison) for details.
 
@@ -66,7 +68,11 @@ The sensors are `neighbourhood_meters_heard`, `neighbourhood_meters_counted`, `n
 
 State is stored under `/data/receiver` and survives add-on restarts and upgrades. Include app data in backups. `jsonl_logging` is optional and defaults to false. Enabled daily JSONL logs require your own retention management. Do not publish your options, logs or state.
 
+New receiver data directories use mode 0700; JSONL logs, state and the neighbourhood salt use 0600.
+
 The standalone Python package and root README contain the full protocol, calibration, card configuration and troubleshooting guidance. The add-on's package files are the same source installed by the root Python project.
+
+When replaying a recording with the standalone CLI, availability and the final today/neighbourhood refresh use the current wall clock, so old recordings can show unavailable sensors and zero today. Standalone Python supports 3.11–3.13; on Debian/Ubuntu install `python3-venv` before creating a virtual environment.
 
 ## Troubleshooting
 

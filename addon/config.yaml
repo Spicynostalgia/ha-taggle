@@ -1,5 +1,5 @@
 name: Taggle water meter
-version: "0.2.0"
+version: "0.2.1"
 slug: taggle_rx
 url: https://github.com/Spicynostalgia/ha-taggle
 image: ghcr.io/spicynostalgia/ha-taggle-addon-{arch}

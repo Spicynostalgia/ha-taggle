@@ -9,15 +9,15 @@ from . import __version__
 
 # key: (display name, unit, device class, state class)
 ENTITIES = {
-    'last_hour': ('Water last hour', 'pulses', None, 'measurement'),
-    'today': ('Water today', 'pulses', None, None),
+    'last_hour': ('Last hour', 'pulses', None, 'measurement'),
+    'today': ('Today', 'pulses', None, None),
     'meter_count': ('Meter count', 'pulses', None, 'total_increasing'),
     'snr': ('SNR', 'dB', 'signal_strength', 'measurement'),
     'signal_level': ('Signal level', 'dBFS', None, 'measurement'),
     'last_seen': ('Last seen', None, 'timestamp', None),
-    'last_hour_litres': ('Water last hour litres', 'L', 'water', None),
-    'today_litres': ('Water today litres', 'L', 'water', None),
-    'total_litres': ('Water total litres', 'L', 'water', 'total_increasing'),
+    'last_hour_litres': ('Last hour litres', 'L', 'water', None),
+    'today_litres': ('Today litres', 'L', 'water', None),
+    'total_litres': ('Total litres', 'L', 'water', 'total_increasing'),
     'vs_neighbourhood_today': ('Vs neighbourhood today', '%', None, 'measurement'),
 }
 DIAGNOSTICS = {'snr', 'signal_level', 'last_seen'}
@@ -96,7 +96,7 @@ class Publisher:
         base = f'{self.prefix}/{identifier}'
         result = {
             'name': name, 'unique_id': f'{self.prefix}_{identifier}_{key}',
-            'object_id': f'taggle_{identifier}_{key}', 'state_topic': f'{base}/state',
+            'default_entity_id': f'sensor.taggle_{identifier}_{key}', 'state_topic': f'{base}/state',
             'value_template': '{{ value_json.' + key + ' | default(none) }}',
             'availability_mode': 'all',
             'availability': [{'topic': f'{self.prefix}/status'},
@@ -121,7 +121,7 @@ class Publisher:
         result = {
             'name': NEIGHBOURHOOD_ENTITIES[key],
             'unique_id': f'{self.prefix}_neighbourhood_{key}',
-            'object_id': f'taggle_neighbourhood_{key}',
+            'default_entity_id': f'sensor.taggle_neighbourhood_{key}',
             'state_topic': f'{self.prefix}/neighbourhood/state',
             'value_template': '{{ value_json.' + key + ' | default(none) }}',
             'availability_topic': f'{self.prefix}/status',
