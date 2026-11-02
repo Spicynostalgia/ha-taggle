@@ -1,18 +1,31 @@
 name: Does it work in my area?
 description: Share a safe compatibility report for your own Taggle water meter.
 title: "[Compatibility]: "
+labels: [compatibility]
 body:
   - type: markdown
     attributes:
       value: |
         Report only your own meter. Never paste your real meter ID, logs with IDs, or radio captures.
-        Give your council/utility and state/country only; do not include your address or exact location.
+        Give your council/utility and state/country; an optional town/suburb is fine, but never your street address or exact location.
   - type: input
     id: council
     attributes:
       label: Council / utility
     validations:
       required: true
+  - type: input
+    id: town
+    attributes:
+      label: Town/suburb (optional, no street address)
+      description: Optional context for maintainers; this is not included in the compatibility table.
+  - type: checkboxes
+    id: public-consent
+    attributes:
+      label: Can we list your council publicly?
+      options:
+        - label: I agree to list my council publicly in the compatibility tables.
+          required: true
   - type: input
     id: region
     attributes:
@@ -26,6 +39,7 @@ body:
       options:
         - clip-on
         - cable tag
+        - cable-connected tube
         - integrated
         - unsure
     validations:
@@ -64,10 +78,11 @@ body:
   - type: dropdown
     id: usage
     attributes:
-      label: Did usage counts appear?
+      label: Reception result
       options:
-        - "Yes"
-        - "No"
+        - Usage worked
+        - IDs only
+        - Not received
         - Unsure
     validations:
       required: true
