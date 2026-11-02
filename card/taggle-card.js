@@ -40,6 +40,8 @@
     .calibration { margin-top:12px; } .calibration a { color:var(--water); text-underline-offset:3px; }
     .calibration a:hover { text-decoration-thickness:2px; }
     .calibration.warning { color:var(--error-color,#b3261e); }
+    .uncalibrated { margin:12px 0 0; padding:8px 12px; border-left:3px solid var(--water); border-radius:6px;
+      background:color-mix(in srgb, var(--water) 12%, transparent); }
     .register { margin-top:16px; color:var(--primary-text-color,#171717); font-variant-numeric:tabular-nums; }
     .register strong { font-size:24px; font-weight:500; }
     .leak { margin-top:12px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; }
@@ -232,12 +234,13 @@
         ${this.calibration(meter, ids)}
         ${absolute !== null ? `<p class="register">Meter reading <strong>${esc(new Intl.NumberFormat(this._hass?.locale?.language || undefined, {maximumFractionDigits:0}).format(absolute))}</strong> L</p>` : ''}
         ${leak?.state === 'on' ? `<p class="leak" role="status"><span class="leak-badge">Possible leak</span>${esc(leak.attributes?.reason)}</p>` : ''}
+        ${!attrs.encrypted && !hasLitres ? '<p class="uncalibrated" role="note"><strong>Not litres yet.</strong> These are raw pulses from the transmitter, not water used. Your real usage in litres and your meter reading appear once you calibrate: enter two readings from your meter\'s dial, about a day apart.</p>' : ''}
         <dl>${metrics.map(([entity,label]) => `<div><dt>${label}</dt><dd>${esc(this.format(number(entity)))} <small>${esc(unit)}</small></dd></div>`).join('')}</dl>
         ${this.comparison(meter, today, unit)}
         <div class="diagnostics"><span>SNR ${esc(this.format(number(get('snr'))))} dB</span>
         <span>Signal ${esc(this.format(number(get('signal_level'))))} dBFS</span>
         ${Number.isFinite(attrs.hours_observed) ? `<span>${attrs.hours_observed} hourly intervals today</span>` : ''}</div>
-        <p class="note">${attrs.encrypted ? 'Encrypted transmitter. Only identity and signal diagnostics are available.' : hasLitres ? 'Today includes observed intervals only; missed intervals are not estimated.' : 'Raw pulses. Enter two dial readings about a day apart to show litres.'}</p>
+        ${attrs.encrypted || hasLitres ? `<p class="note">${attrs.encrypted ? 'Encrypted transmitter. Only identity and signal diagnostics are available.' : 'Today includes observed intervals only; missed intervals are not estimated.'}</p>` : ''}
         ${!unavailable ? this.history(hour, hasLitres && Number.isFinite(attrs.litres_per_count) ? attrs.litres_per_count : 1) : ''}</section>`;
     }
     render() {
