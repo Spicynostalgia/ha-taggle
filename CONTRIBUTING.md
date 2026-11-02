@@ -10,8 +10,12 @@ The frontend is dependency-free. Edit `card/taggle-card.js`, then copy it to `di
 
 Explain changed behavior, compatibility implications and validation in your pull request. Contributions are under the repository's MIT license; preserve third-party dependency licenses and document provenance when incorporating code.
 
+## Reporting issues
+
+Use the [issue forms](https://github.com/Spicynostalgia/ha-taggle/issues/new/choose) for bug reports or “Does it work in my area?” compatibility reports. Check the linked Troubleshooting and FAQ pages first. Blur transmitter IDs and barcodes in photos, redact logs, and never include real meter IDs or radio captures.
+
 ## Publishing
 
 Before publishing your fork, run `python scripts/set_owner.py your-github-name` and commit the substitutions. `GITHUB_OWNER` is a literal placeholder, replaced everywhere with your lowercase GitHub user or organization. The add-on `image` must point at `ghcr.io/GITHUB_OWNER/ha-taggle-addon-{arch}` with the owner replaced; preserve `{arch}` for Home Assistant. Compose uses the standalone GHCR image and retains a commented local-build block.
 
-Update versions together in `addon/config.yaml`, `pyproject.toml` and `addon/pyproject.toml`, and maintain both changelogs. Run `python scripts/prepare_release.py v<version> --notes /tmp/taggle-release-notes.md` before tagging. Tags `v*.*.*` trigger the release workflow, which requires an exact `vMAJOR.MINOR.PATCH` match and a nonempty matching root changelog section. It publishes both add-on architectures and the standalone multi-arch version/latest images with the built-in `GITHUB_TOKEN`, then creates a GitHub Release from that section. No personal access token is needed. Make the GHCR packages public after their first publication; PR CI continues to build without publishing. See the wiki [Contributing and releasing guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Contributing).
+Update versions together in `addon/config.yaml`, `pyproject.toml`, `addon/pyproject.toml` and the image tag in `docker-compose.yml`, and maintain both changelogs. Run `python scripts/prepare_release.py v<version> --notes /tmp/taggle-release-notes.md` before tagging. Tags `v*.*.*` trigger the release workflow, which requires an exact `vMAJOR.MINOR.PATCH` match and a nonempty matching root changelog section. It publishes both add-on architectures and the standalone multi-arch version/latest images with the built-in `GITHUB_TOKEN`, then creates a GitHub Release from that section. No personal access token is needed. Make the GHCR packages public after their first publication; PR CI continues to build without publishing. See the wiki [Contributing and releasing guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Contributing).

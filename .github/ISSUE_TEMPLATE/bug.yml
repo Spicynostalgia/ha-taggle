@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a problem with ha-taggle.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste your real meter ID, logs with IDs, or radio captures.
+        Remove meter/transmitter IDs, barcodes, credentials, private paths and personal details before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: ha-taggle software version
+    validations:
+      required: true
+  - type: dropdown
+    id: install-type
+    attributes:
+      label: Install type
+      options:
+        - add-on
+        - Docker
+        - CLI
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      description: Enter not applicable if you are running the CLI without Home Assistant.
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include what you expected, what happened instead, and steps to reproduce. Use fictional IDs only.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs (optional)
+      description: Include only the relevant lines after removing all IDs and private information. Do not attach radio captures.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I redacted all IDs and private information from logs and other content, and included no radio captures.
+          required: true

@@ -3,6 +3,21 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  addon-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: frenck/action-addon-linter@v2.21.1
+        with:
+          path: ./addon
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@22.5.0
+        with:
+          category: plugin
+          comment: false
   test:
     runs-on: ubuntu-latest
     strategy:

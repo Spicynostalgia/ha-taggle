@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title description">
+  <title id="title">ha-taggle</title>
+  <desc id="description">Taggle water meters → Home Assistant, via RTL-SDR. A water meter connects wirelessly to a radio receiver, then to a home dashboard.</desc>
+  <rect width="1280" height="640" fill="#dcecf4"/>
+  <rect x="40" y="36" width="1200" height="568" rx="28" fill="#ffffff" stroke="#c4dce8" stroke-width="2"/>
+  <g font-family="'DejaVu Sans', Arial, sans-serif">
+    <text x="100" y="156" font-size="72" font-weight="700" letter-spacing="-3" fill="#163e54">ha-taggle</text>
+    <text x="102" y="211" font-size="29" fill="#426578">Taggle water meters → Home Assistant, via RTL-SDR</text>
+    <path d="M102 249H1178" stroke="#dce8ee" stroke-width="2"/>
+
+    <!-- Original line illustrations: no manufacturer marks or identifying data. -->
+    <g stroke="#237da6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Water meter, register and pipe. -->
+      <path d="M152 388H194M302 388H344" fill="none" stroke-width="22"/>
+      <path d="M152 388H194M302 388H344" fill="none" stroke="#dcecf4" stroke-width="10"/>
+      <circle cx="248" cy="379" r="65" fill="#edf6fa"/>
+      <circle cx="248" cy="379" r="48" fill="#ffffff" stroke="#9dc7dc" stroke-width="3"/>
+      <path d="M216 383a32 32 0 0 1 64 0" fill="none"/>
+      <path d="M248 383l19-18" fill="none"/>
+      <circle cx="248" cy="383" r="5" fill="#237da6" stroke="none"/>
+      <path d="M231 407h34" stroke="#9dc7dc" stroke-width="4"/>
+      <rect x="227" y="300" width="42" height="17" rx="6" fill="#237da6"/>
+
+      <!-- Wireless path. -->
+      <path d="M392 365q24 23 0 46M410 350q40 38 0 76" fill="none" stroke="#82b6cf" stroke-width="4"/>
+      <path d="M465 388h52m-12-12 12 12-12 12" fill="none" stroke="#82b6cf" stroke-width="4"/>
+
+      <!-- RTL-SDR receiver with antenna. -->
+      <path d="M611 346v-40l27-34" fill="none"/>
+      <rect x="576" y="347" width="128" height="85" rx="14" fill="#edf6fa"/>
+      <rect x="704" y="369" width="25" height="40" rx="3" fill="#ffffff"/>
+      <path d="M716 382v14" stroke="#9dc7dc" stroke-width="3"/>
+      <circle cx="601" cy="389" r="6" fill="#36a7af" stroke="none"/>
+      <path d="M628 379h49m-49 17h33" stroke="#9dc7dc" stroke-width="4"/>
+
+      <!-- Connection to the dashboard. -->
+      <path d="M772 388h79m-12-12 12 12-12 12" fill="none" stroke="#82b6cf" stroke-width="4"/>
+
+      <!-- Generic home outline and a water usage chart. -->
+      <path d="M936 354l80-61 80 61v83a9 9 0 0 1-9 9H945a9 9 0 0 1-9-9Z" fill="#edf6fa"/>
+      <path d="M960 418h113" stroke="#9dc7dc" stroke-width="3"/>
+      <path d="M968 403v-24m25 24v-39m25 39v-31m25 31v-50m25 50v-62" stroke="#36a7af" stroke-width="10"/>
+    </g>
+    <g font-size="22" font-weight="600" text-anchor="middle" fill="#163e54">
+      <text x="248" y="497">Your water meter</text>
+      <text x="640" y="497">RTL-SDR receiver</text>
+      <text x="1016" y="497">Home Assistant</text>
+    </g>
+    <text x="102" y="565" font-size="18" fill="#557587">From radio readings to everyday water insight.</text>
+  </g>
+</svg>
