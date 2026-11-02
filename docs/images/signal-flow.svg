@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1100" viewBox="0 0 1200 1100" role="img" aria-labelledby="title desc">
+  <title id="title">How a reading travels: equipment → bitstream → application</title>
+  <desc id="desc">Three lanes trace the tested Gladstone, Queensland cable-connected Taggle path. A mechanical meter feeds a pulse or Hall sensor and battery transmitter, which sends hourly BPSK DSSS bursts near 922 MHz to an antenna, RTL-SDR Blog V4 and host. At approximately 1172.66 symbols per second, 392, 440 and 488 symbols take 0.334, 0.375 and 0.416 seconds. The coding ladder unwraps 4095-chip PN symbols into a 104-symbol preamble and 288 coded bits, then an 18-byte, 144-bit clear frame. Its fields are sync bits 0–7, example transmitter ID 123456 or 0x1E240 in bits 8–27, header CRC bits 28–35, body bits 36–127, frame CRC bits 128–135 and zero tail bits 136–143. The expanded body covers hex nibbles 9–31: format, unknown fields, hourly sequence, separate flags and three 16-bit counters. The software lane shows rtl_sdr, receiver.py acquisition, dsss.py recovery, coding.py exact inversion or Viterbi, protocol.py validation and parsing, store.py filtering and usage checkpoints, mqtt.py discovery and state, Home Assistant sensors, then taggle-card and Energy. Only configured IDs reach usage state and MQTT; Energy requires calibration to litres.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#167b9c"/></marker>
+  </defs>
+  <rect width="1200" height="1100" rx="16" fill="#f7fafb"/>
+  <g font-family="Arial, sans-serif" fill="#203744">
+    <text x="28" y="38" font-size="24" font-weight="700">How a reading travels: equipment → bitstream → application</text>
+    <text x="28" y="65" font-size="15" fill="#526975">Tested path: Gladstone (QLD) cable-connected Taggle transmitter, 18-byte clear frames</text>
+    <g fill="none" stroke="#c9d9df" stroke-width="1">
+      <path d="M28 328H1172M28 746H1172"/>
+    </g>
+
+    <!-- Cross-lane connectors run in the outer gutter, clear of field labels. -->
+    <g fill="none" stroke="#167b9c" stroke-width="1.3" marker-end="url(#arrow)">
+      <path d="M927 282V292H1184V340H1144V354"/>
+      <path d="M1172 548H1184V768H1056V785"/>
+    </g>
+
+    <!-- 1. Physical equipment; the dashed span is the over-the-air hop. -->
+    <g font-size="17" font-weight="700">
+      <text x="28" y="122" fill="#167b9c">1</text>
+      <text x="28" y="147">Equipment</text>
+    </g>
+    <g fill="none" stroke="#167b9c" stroke-width="2.5" marker-end="url(#arrow)">
+      <path d="M272 214H290"/><path d="M414 214H432"/>
+      <path d="M820 214H838"/><path d="M1016 214H1034"/>
+      <path d="M572 214H708" stroke-dasharray="5 5"/>
+    </g>
+    <g stroke="#425e6c" stroke-width="1.5">
+      <rect x="146" y="128" width="126" height="154" rx="9" fill="#fff"/>
+      <rect x="290" y="128" width="124" height="154" rx="9" fill="#fff"/>
+      <rect x="432" y="128" width="140" height="154" rx="9" fill="#d7e7df"/>
+      <rect x="708" y="128" width="112" height="154" rx="9" fill="#fff"/>
+      <rect x="838" y="128" width="178" height="154" rx="9" fill="#dce6e9"/>
+      <rect x="1034" y="128" width="138" height="154" rx="9" fill="#e3eef2"/>
+    </g>
+    <g stroke="#425e6c" stroke-width="2.5" stroke-linejoin="round" fill="none">
+      <path d="M183 166L191 153H231L239 166V186H183ZM183 166H239" fill="#d7e7df"/>
+      <rect x="194" y="170" width="34" height="10" rx="2" fill="#fff"/>
+      <path d="M201 171V178M209 171V178M217 171V178" stroke-width="1.5"/>
+      <rect x="325" y="151" width="27" height="35" rx="5" fill="#dce6e9"/>
+      <path d="M352 168H366Q376 168 376 180V187"/>
+      <circle cx="338" cy="164" r="4" fill="#167b9c" stroke="none"/>
+      <rect x="478" y="150" width="44" height="39" rx="6" fill="#fff"/>
+      <rect x="489" y="163" width="24" height="12" rx="2"/>
+      <path d="M513 167H517V171H513M493 166V172M499 169H507M500 150V141M508 143Q517 146 517 153"/>
+      <path d="M764 146V184M747 188H781M764 153L749 168M764 153L779 168"/>
+      <rect x="890" y="158" width="62" height="24" rx="4" fill="#fff"/>
+      <path d="M952 163H964V177H952M897 158V150"/>
+      <rect x="1076" y="147" width="54" height="41" rx="5" fill="#fff"/>
+      <path d="M1084 158H1122M1084 167H1111" stroke-width="2"/>
+      <circle cx="1120" cy="179" r="3" fill="#167b9c" stroke="none"/>
+    </g>
+    <g text-anchor="middle">
+      <g font-size="14" font-weight="700">
+        <text x="209" y="211">Mechanical</text><text x="209" y="230">meter</text>
+        <text x="352" y="211">Pulse / Hall</text><text x="352" y="230" font-size="13">sensor + cable</text>
+        <text x="502" y="211">Taggle</text><text x="502" y="230">transmitter</text>
+        <text x="764" y="211">Antenna</text>
+        <text x="927" y="211">RTL-SDR Blog V4</text>
+        <text x="1103" y="211">Host</text>
+      </g>
+      <g font-size="13" fill="#526975">
+        <text x="209" y="249">V100-style</text><text x="209" y="268">register</text>
+        <text x="352" y="255">Wired pulses</text>
+        <text x="502" y="255">Battery · hourly</text>
+        <text x="764" y="236">915–928 MHz</text>
+        <text x="927" y="232">922.2 MHz centre</text>
+        <text x="927" y="251">2.4 MS/s</text>
+        <text x="927" y="270">cu8 IQ over USB</text>
+        <text x="1103" y="236">HA add-on</text><text x="1103" y="255">/ Docker</text>
+      </g>
+      <g font-size="13" fill="#167b9c">
+        <text x="640" y="151" font-weight="700">922 MHz RF</text>
+        <text x="640" y="170">BPSK DSSS</text>
+        <text x="640" y="188">~922.0 MHz</text>
+        <text x="640" y="238">~1 burst/hour</text>
+        <text x="640" y="257">392 symbols</text>
+        <text x="640" y="276">≈ 0.334 s</text>
+      </g>
+    </g>
+    <text x="164" y="314" font-size="13" fill="#526975">At ~1172.66 sym/s: 18 bytes / 392 symbols ≈ 0.334 s · 21 bytes / 440 ≈ 0.375 s · 24 bytes / 488 ≈ 0.416 s</text>
+
+    <!-- 2. Coding layers, then a bit-proportional decoded frame. -->
+    <g font-size="17" font-weight="700">
+      <text x="28" y="372" fill="#167b9c">2</text>
+      <text x="28" y="397">Bitstream</text>
+    </g>
+    <rect x="164" y="354" width="1008" height="41" rx="8" fill="#e3eef2" stroke="#425e6c" stroke-width="1.5"/>
+    <text x="180" y="380" font-size="15"><tspan font-weight="700">RF chips</tspan><tspan> · 4095-chip PN m-sequence per symbol · poly 0x1267 · ~4.802 Mchip/s</tspan></text>
+    <path d="M182 395V420" fill="none" stroke="#167b9c" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="198" y="413" font-size="13" fill="#167b9c">despread</text>
+    <rect x="164" y="422" width="1008" height="43" rx="8" fill="#fff" stroke="#425e6c" stroke-width="1.5"/>
+    <text x="180" y="449" font-size="15"><tspan font-weight="700">Coded symbols</tspan><tspan> · 104-symbol preamble + 288 coded bits · rate 1/2, K=7 · polys 0x6d / 0x4f</tspan></text>
+    <path d="M182 465V493" fill="none" stroke="#167b9c" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="198" y="485" font-size="13" fill="#167b9c">Viterbi decode (exact inversion tried first)</text>
+    <text x="164" y="512" font-size="14"><tspan font-weight="700">Decoded frame · 18 bytes = 144 bits</tspan><tspan fill="#526975"> · bit indices are zero-based, MSB-first</tspan></text>
+
+    <!-- Roughly bit-proportional; short fields get room for legible labels.
+         8 + 20 + 8 + 92 + 8 + 8 = 144 bits. -->
+    <g stroke="#425e6c" stroke-width="1.5">
+      <rect x="164" y="526" width="1008" height="44" rx="6" fill="#fff"/>
+      <path d="M228 526H368V570H228Z" fill="#e3eef2"/>
+      <path d="M432 526H1028V570H432Z" fill="#b5e1ef"/>
+      <path d="M1100 526V570"/>
+    </g>
+    <g text-anchor="middle" font-size="13">
+      <text x="196" y="543">Sync</text><text x="196" y="560">0xC0</text>
+      <text x="298" y="543" font-weight="700">ID · 20 bits</text><text x="298" y="560">123456 / 0x1E240</text>
+      <text x="400" y="543">Header</text><text x="400" y="560">CRC-8</text>
+      <text x="730" y="553" font-size="15" font-weight="700">Body · 92 bits · hex nibbles 9–31</text>
+      <text x="1064" y="543">Frame</text><text x="1064" y="560">CRC-8</text>
+      <text x="1136" y="543">Tail</text><text x="1136" y="560">0x00</text>
+      <g fill="#526975">
+        <text x="196" y="590">0–7</text><text x="298" y="590">8–27</text><text x="400" y="590">28–35</text>
+        <text x="730" y="590">36–127</text><text x="1064" y="590">128–135</text><text x="1136" y="590">136–143</text>
+      </g>
+    </g>
+
+    <!-- Body expansion: 23 nibbles; extra label room for the format nibble. -->
+    <path d="M432 596V604H164V634M1028 596V604H1172V634" fill="none" stroke="#425e6c" stroke-width="1"/>
+    <text x="178" y="623" font-size="13" font-weight="700">Clear body expanded · hex nibble indices (nibble 9 = bits 36–39)</text>
+    <g stroke="#425e6c" stroke-width="1">
+      <rect x="164" y="634" width="1008" height="47" rx="5" fill="#fff"/>
+      <path d="M263.826 634H351.478V681H263.826Z" fill="#e3eef2"/>
+      <path d="M558.435 634H733.739V681H558.435Z M777.565 634H952.870V681H777.565Z M996.696 634H1172V676Q1172 681 1167 681H996.696Z" fill="#b5e1ef"/>
+      <path d="M220 634V681M514.609 634V681M733.739 634V681M952.870 634V681"/>
+    </g>
+    <g text-anchor="middle" font-size="13">
+      <g fill="#526975">
+        <text x="192" y="651">9</text><text x="241.913" y="651">10</text><text x="307.652" y="651">11–12</text>
+        <text x="433.043" y="651">13–16</text><text x="536.522" y="651">17</text><text x="646.087" y="651">18–21</text>
+        <text x="755.652" y="651">22</text><text x="865.217" y="651">23–26</text><text x="974.783" y="651">27</text><text x="1084.348" y="651">28–31</text>
+      </g>
+      <text x="192" y="671">Format</text><text x="241.913" y="671">?</text><text x="307.652" y="671">Sequence</text>
+      <text x="433.043" y="671">Unknown</text><text x="536.522" y="671">Flags</text><text x="646.087" y="671">Counter · newest</text>
+      <text x="755.652" y="671">Flags</text><text x="865.217" y="671">Counter · −1 h</text><text x="974.783" y="671">Flags</text><text x="1084.348" y="671">Counter · −2 h</text>
+    </g>
+    <text x="164" y="704" font-size="13" fill="#526975">? = unknown · sequence: 8-bit hourly · format + flags: uninterpreted · counters: 16-bit each; three recover two hourly deltas</text>
+    <text x="164" y="730" font-size="13" fill="#526975">CRC poly 0x07 (CRC-8/SMBUS params). 24-byte frames: body encrypted → ID + signal only.</text>
+
+    <!-- 3. Normal receive path: receiver.py orchestrates the decoder calls. -->
+    <g font-size="17" font-weight="700">
+      <text x="28" y="803" fill="#167b9c">3</text>
+      <text x="28" y="828">Application</text>
+    </g>
+    <text x="164" y="773" font-size="13" fill="#526975">Software on the host · read each row left → right</text>
+    <g fill="none" stroke="#167b9c" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M348 838H364"/><path d="M548 838H564"/>
+      <path d="M748 838H764"/><path d="M948 838H964"/>
+      <path d="M1148 838H1160V914H152V997H164"/>
+      <path d="M348 997H364"/><path d="M548 997H564"/>
+      <path d="M748 997H764"/><path d="M948 997H964"/>
+    </g>
+    <g stroke="#425e6c" stroke-width="1.5">
+      <rect x="164" y="785" width="184" height="106" rx="9" fill="#fff"/>
+      <rect x="364" y="785" width="184" height="106" rx="9" fill="#e3eef2"/>
+      <rect x="564" y="785" width="184" height="106" rx="9" fill="#e3eef2"/>
+      <rect x="764" y="785" width="184" height="106" rx="9" fill="#e3eef2"/>
+      <rect x="964" y="785" width="184" height="106" rx="9" fill="#b5e1ef"/>
+      <rect x="164" y="933" width="184" height="135" rx="9" fill="#fff"/>
+      <rect x="364" y="933" width="184" height="135" rx="9" fill="#e3eef2"/>
+      <rect x="564" y="933" width="184" height="135" rx="9" fill="#e3eef2"/>
+      <rect x="764" y="933" width="184" height="135" rx="9" fill="#fff"/>
+      <rect x="964" y="933" width="184" height="135" rx="9" fill="#d7e7df"/>
+    </g>
+    <g text-anchor="middle">
+      <g font-size="16" font-weight="700">
+        <text x="256" y="809">rtl_sdr</text><text x="456" y="809">receiver.py</text><text x="656" y="809">dsss.py</text>
+        <text x="856" y="809">coding.py</text><text x="1056" y="809">protocol.py</text>
+        <text x="256" y="957">store.py · filter</text><text x="456" y="957">store.py · state</text><text x="656" y="957">mqtt.py</text>
+        <text x="856" y="957">Home Assistant</text><text x="1056" y="957">taggle-card</text>
+      </g>
+      <g font-size="13">
+        <text x="256" y="834">IQ stream</text><text x="256" y="853">cu8 over stdout</text><text x="256" y="872" fill="#526975">Launched by cli.py</text>
+        <text x="456" y="834">Carrier screen</text><text x="456" y="853">PN correlation screen</text><text x="456" y="872">Coordinates decoding</text>
+        <text x="656" y="834">Timing + clock recovery</text><text x="656" y="853">Costas loop</text><text x="656" y="872">Despread → symbols</text>
+        <text x="856" y="834">Exact inverse first</text><text x="856" y="853">Viterbi fallback</text><text x="856" y="872">≤12 bit corrections*</text>
+        <text x="1056" y="834">Sync + zero tail</text><text x="1056" y="853">Header CRC + frame CRC</text><text x="1056" y="872">ID, sequence, counters</text>
+        <text x="256" y="984">Configured meter_ids only</text><text x="256" y="1005">Others dropped</text><text x="256" y="1038" fill="#526975">Before state / MQTT</text>
+        <text x="456" y="979">state.json</text><text x="456" y="995">Dedupe intervals</text><text x="456" y="1011">16-bit counter wraps</text><text x="456" y="1027">Hourly deltas</text><text x="456" y="1043">Today: local end dates</text><text x="456" y="1059">Cumulative counts / litres</text>
+        <text x="656" y="984">HA discovery</text><text x="656" y="1005">taggle/&lt;id&gt;/state</text><text x="656" y="1026" fill="#526975">e.g. taggle/123456/state</text><text x="656" y="1047">Via MQTT broker</text>
+        <text x="856" y="980">Sensors: last_hour, today</text><text x="856" y="999">meter_count</text><text x="856" y="1018">snr, signal_level</text><text x="856" y="1037">last_seen</text><text x="856" y="1056">Litres when calibrated</text>
+        <text x="1056" y="984">Usage + history</text><text x="1056" y="1009" font-size="16" font-weight="700">Energy dashboard</text><text x="1056" y="1033">Calibrated total_litres</text><text x="1056" y="1054" fill="#526975">Required for Energy</text>
+      </g>
+    </g>
+    <text x="164" y="1091" font-size="13" fill="#526975">*protocol.py enforces the coded-bit correction limit. Filter shown for normal receive mode; optional scan / log-all modes differ.</text>
+  </g>
+</svg>
