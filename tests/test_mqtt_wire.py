@@ -37,6 +37,7 @@ class Broker:
         self.port = self.listener.getsockname()[1]
         self.records = []
         self.connections = 0
+        self.subscriptions = []
         self.stopping = threading.Event()
         self.condition = threading.Condition()
         self.thread = threading.Thread(target=self.run, daemon=True)
@@ -61,6 +62,8 @@ class Broker:
                     header, body = packet(source)
                     kind = header >> 4
                     if kind == 8:
+                        size = int.from_bytes(body[2:4], 'big')
+                        self.subscriptions.append(body[4:4+size].decode())
                         source.sendall(b'\x90\x03' + body[:2] + b'\x01')
                     elif kind == 3:
                         size = int.from_bytes(body[:2], 'big')
@@ -88,6 +91,18 @@ class Broker:
                 remaining = deadline - time.monotonic()
                 assert remaining > 0, 'timed out waiting for MQTT publication'
                 self.condition.wait(min(.1, remaining))
+
+    def send(self, topic, payload, retain=False):
+        topic = topic.encode()
+        body = len(topic).to_bytes(2, 'big') + topic + payload.encode()
+        size = len(body)
+        encoded = bytearray()
+        while True:
+            byte, size = size % 128, size // 128
+            encoded.append(byte | (128 if size else 0))
+            if not size:
+                break
+        self.source.sendall(bytes([0x31 if retain else 0x30]) + encoded + body)
 
     def close(self):
         self.stopping.set()
@@ -122,6 +137,80 @@ def test_real_paho_discovery_state_reconnect_and_graceful_offline():
         broker.wait(lambda rows: any(topic.endswith('/last_seen/config') for topic, _ in rows[before:]))
         publisher.close()
         broker.wait(lambda rows: ('taggle/status', 'offline') in rows)
+    finally:
+        publisher.close()
+        broker.close()
+
+
+def test_guided_commands_over_real_mqtt_reconnect_birth_and_reset(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta
+
+    import taggle_rx.store as store_module
+    from taggle_rx.store import Store
+
+    from .test_guided_calibration import ID, START, radio
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return (START + timedelta(days=3)).astimezone(tz)
+
+    monkeypatch.setattr(store_module, 'datetime', Clock)
+    broker = Broker()
+    cfg = Config.from_dict({'meter_ids': [ID], 'data_dir': str(tmp_path),
+                            'mqtt': {'host': '127.0.0.1', 'port': broker.port}})
+    publisher = Publisher(cfg)
+    store = Store(cfg, publisher)
+    store.refresh(Clock.now())
+    radio(store, 0, (100, 100, 100))
+    radio(store, 1, (200, 100, 100))
+    try:
+        publisher.start()
+        broker.wait(lambda rows: ('taggle/status', 'online') in rows)
+
+        def command(action, payload, predicate):
+            before = len(broker.records)
+            broker.send(f'taggle/{ID}/{action}/set', payload)
+            broker.wait(lambda rows: any(topic == f'taggle/{ID}/state' and predicate(json.loads(value))
+                                         for topic, value in rows[before:]))
+
+        expected = {f'taggle/{ID}/{a}/set' for a in ('reading', 'reading_time', 'dial_unit', 'reset')}
+        assert expected <= set(broker.subscriptions)
+        command('dial_unit', 'L', lambda s: s['dial_unit'] == 'L')
+        command('reading_time', START.isoformat(), lambda s: bool(s['reading_time']))
+        command('reading', '100000', lambda s: s.get('enter_reading') == 100000 and s['reading_time'] == '')
+        command('reading', json.dumps({'litres': 100500, 'time': (START + timedelta(hours=1)).isoformat(),
+                                       'source': 'phone photo'}), lambda s: s.get('litres_per_count') == 5)
+        broker.wait(lambda rows: any(topic.endswith('/meter_reading/config') and value for topic, value in rows))
+        broker.wait(lambda rows: any(topic.endswith('/calibration') and json.loads(value).get('chosen_k') == 5
+                                     for topic, value in rows))
+        attrs = [json.loads(value) for topic, value in broker.records if topic.endswith('/calibration')][-1]
+        assert attrs['chosen_k'] == 5
+        assert attrs['readings'][1]['source'] == 'phone photo'
+        assert attrs['next_transmission_expected'].startswith('Next transmission expected ≈ ')
+        configs = {topic: json.loads(value) for topic, value in broker.records
+                   if topic.endswith('/config') and value}
+        number = configs['homeassistant/number/taggle_123456/enter_reading/config']
+        assert number['mode'] == 'box' and number['step'] == .001 and not number['retain']
+        assert number['default_entity_id'] == 'number.taggle_123456_enter_reading'
+        absolute = configs['homeassistant/sensor/taggle_123456/meter_reading/config']
+        assert absolute['device_class'] == 'water' and absolute['state_class'] == 'total_increasing'
+        assert absolute['suggested_display_precision'] == 0
+        # A retained reset must never erase readings during reconnect.
+        broker.send(f'taggle/{ID}/reset/set', 'RESET', retain=True)
+        broker.source.shutdown(socket.SHUT_RDWR)
+        broker.wait(lambda rows: broker.connections >= 2 and broker.subscriptions.count(f'taggle/{ID}/reading/set') >= 2)
+        assert len(store.meters[str(ID)]['calibration']['readings']) == 2
+        before = len(broker.records)
+        broker.send('homeassistant/status', 'online')
+        broker.wait(lambda rows: any(topic.endswith('/reading_time/config') for topic, _ in rows[before:]))
+        command('reading', '{"delete":2}', lambda s: 'litres_per_count' not in s)
+        command('reading', '{"litres":100500,"time":"2026-11-02T03:41+10:00"}',
+                lambda s: s.get('litres_per_count') == 5)
+        command('reset', 'RESET', lambda s: 'litres_per_count' not in s)
+        assert not store.meters[str(ID)]['calibration']['readings']
+        broker.wait(lambda rows: rows[-1:] and any(topic.endswith('/meter_reading/config') and value == ''
+                                                   for topic, value in rows[before:]))
     finally:
         publisher.close()
         broker.close()

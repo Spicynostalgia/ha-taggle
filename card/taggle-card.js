@@ -1,8 +1,8 @@
-/* Taggle card 0.2.1. MIT. Home Assistant states only; no external requests. */
+/* Taggle card 0.3.0. MIT. Home Assistant states only; no external requests. */
 (() => {
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',
-    'today', 'meter_count', 'snr', 'signal_level', 'last_seen'];
+    'today', 'meter_count', 'snr', 'signal_level', 'last_seen', 'calibration_status', 'meter_reading'];
   const esc = value => String(value ?? '').replace(/[&<>"']/g,
     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const number = entity => entity && !['unknown', 'unavailable', ''].includes(entity.state)
@@ -25,7 +25,7 @@
     dd small { font-size:14px; color:var(--muted); } .diagnostics { display:flex; gap:8px 20px; flex-wrap:wrap; font-size:14px; color:var(--muted); }
     details { margin-top:20px; } summary { font-size:14px; cursor:pointer; padding-block:10px; color:var(--water); }
     summary:hover { text-decoration:underline; text-underline-offset:3px; }
-    summary:focus-visible,button:focus-visible { outline:2px solid var(--water); outline-offset:3px; }
+    summary:focus-visible,button:focus-visible,a:focus-visible { outline:2px solid var(--water); outline-offset:3px; }
     .plot { display:flex; height:104px; align-items:flex-end; gap:3px; margin:16px 0 8px; border-bottom:1px solid var(--divider-color,#ddd); }
     .bar { display:block; flex:1; min-width:0; background:var(--water); height:var(--height); }
     .bar.zero { background:transparent; border-bottom:2px solid var(--water); }
@@ -37,6 +37,11 @@
     th { color:var(--muted); font-weight:400; } th:last-child,td:last-child { text-align:end; padding-inline-start:16px; }
     .empty { margin-top:16px; } .note { margin-top:12px; }
     .comparison { margin-bottom:12px; }
+    .calibration { margin-top:12px; } .calibration a { color:var(--water); text-underline-offset:3px; }
+    .calibration a:hover { text-decoration-thickness:2px; }
+    .calibration.warning { color:var(--error-color,#b3261e); }
+    .register { margin-top:16px; color:var(--primary-text-color,#171717); font-variant-numeric:tabular-nums; }
+    .register strong { font-size:24px; font-weight:500; }
     @container (max-width:480px) {
       ha-card { padding:16px; } dl { gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); }
       dd { font-size:24px; } dl div:last-child { grid-column:1/-1; display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
@@ -71,8 +76,7 @@
     getGridOptions() { return {columns: 12, min_columns: 6}; }
     set hass(hass) {
       this._hass = hass;
-      if ((this._config?.meters.some(m => m.device || m.neighbourhood?.device)
-          || this._config?.neighbourhood?.device) && !this._registryRequested && hass.callWS) {
+      if (this._config && !this._registryRequested && hass.callWS) {
         this._registryRequested = true;
         hass.callWS({type: 'config/entity_registry/list'}).then(registry => {
           this._registry = registry;
@@ -93,7 +97,7 @@
     }
     resolve(meter) {
       const result = {};
-      if (meter.entities && !Array.isArray(meter.entities)) return {...meter.entities};
+      if (meter.entities && !Array.isArray(meter.entities)) Object.assign(result, meter.entities);
       const registry = this.entityRegistry();
       const selected = meter.device ? registry.filter(e => e.device_id === meter.device) : [];
       const ids = Array.isArray(meter.entities) ? meter.entities : selected.map(e => e.entity_id);
@@ -104,7 +108,36 @@
         const key = KEYS.includes(uniqueKey) ? uniqueKey : entityKey;
         if (KEYS.includes(key)) result[key] = id;
       }
+      // Existing cards with explicit pulse mappings acquire calibration/litre entities too.
+      const anchor = Object.values(result).find(id => /^sensor\.taggle_\d+_/.test(id));
+      const base = anchor?.match(/^(sensor\.taggle_\d+_)/)?.[1];
+      const device = registry.find(e => Object.values(result).includes(e.entity_id) && e.device_id)?.device_id;
+      if (!meter.device) for (const key of ['calibration_status', 'meter_reading', 'last_hour_litres', 'today_litres', 'total_litres']) {
+        const found = device && registry.find(e => e.device_id === device && (e.unique_id || '').endsWith('_' + key));
+        if (!result[key] && found) result[key] = found.entity_id;
+        if (!result[key] && base && this._hass.states[base + key]) result[key] = base + key;
+      }
       return result;
+    }
+    calibration(meter, ids) {
+      const entity = this._hass.states[ids.calibration_status];
+      const attrs = entity?.attributes || {};
+      const valid = entity && !['unknown', 'unavailable', ''].includes(entity.state);
+      const warning = valid && /disagree|check|1000×|sequence changed|hide wraps/i.test(entity.state);
+      const calibrated = Number.isFinite(attrs.chosen_k);
+      const registry = this.entityRegistry();
+      const device = meter.device || registry.find(e => Object.values(ids).includes(e.entity_id) && e.device_id)?.device_id;
+      const link = device ? '/config/devices/device/' + encodeURIComponent(device) : '/config/devices';
+      const message = valid ? entity.state : 'Enter your dial reading to show litres';
+      let next = '';
+      if (attrs.next_transmission && Number.isFinite(Date.parse(attrs.next_transmission))) {
+        const clock = new Intl.DateTimeFormat(this._hass?.locale?.language || undefined, {
+          timeZone: this._hass?.config?.time_zone || 'UTC', hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+        }).format(new Date(attrs.next_transmission));
+        next = `Next transmission expected ≈ ${clock}. Read the dial within a few minutes after it.`;
+      }
+      return `<p class="calibration ${warning ? 'warning' : ''}" role="status">${esc(message)}${!calibrated || warning
+        ? ` · <a href="${esc(link)}">Open meter device</a>` : ''}${next ? '<br>'+esc(next) : ''}</p>`;
     }
     format(value) {
       return value === null ? '—' : new Intl.NumberFormat(this._hass?.locale?.language || undefined,
@@ -188,15 +221,18 @@
       if (!Object.values(ids).some(id => states[id])) {
         return `<section><h3>${esc(name)}</h3><p class="empty">${this._registryError ? 'Device lookup failed. Configure entity IDs to continue.' : 'Waiting for MQTT entities. Check the configured entities or device and receiver configuration.'}</p></section>`;
       }
+      const absolute = number(get('meter_reading'));
       const metrics = [[hour, 'Last hour'], [today, 'Today · observed'], [total, hasLitres ? 'Total · calibrated' : 'Meter count']];
       return `<section><div class="heading"><h3>${esc(name)}</h3>
         <span class="status ${!waiting && (stale || unavailable) ? 'stale' : ''}">${waiting ? 'Waiting for first reading (can take up to an hour)' : stale ? 'No recent signal' : unavailable ? 'Usage unavailable' : Number.isFinite(stamp) ? 'Last seen '+esc(this.time(seen.state)) : 'Waiting for a reading'}</span></div>
+        ${this.calibration(meter, ids)}
+        ${absolute !== null ? `<p class="register">Meter reading <strong>${esc(new Intl.NumberFormat(this._hass?.locale?.language || undefined, {maximumFractionDigits:0}).format(absolute))}</strong> L</p>` : ''}
         <dl>${metrics.map(([entity,label]) => `<div><dt>${label}</dt><dd>${esc(this.format(number(entity)))} <small>${esc(unit)}</small></dd></div>`).join('')}</dl>
         ${this.comparison(meter, today, unit)}
         <div class="diagnostics"><span>SNR ${esc(this.format(number(get('snr'))))} dB</span>
         <span>Signal ${esc(this.format(number(get('signal_level'))))} dBFS</span>
         ${Number.isFinite(attrs.hours_observed) ? `<span>${attrs.hours_observed} hourly intervals today</span>` : ''}</div>
-        <p class="note">${attrs.encrypted ? 'Encrypted transmitter. Only identity and signal diagnostics are available.' : hasLitres ? 'Today includes observed intervals only; missed intervals are not estimated.' : 'Raw pulses. Configure a calibrated litres-per-count scale to display litres.'}</p>
+        <p class="note">${attrs.encrypted ? 'Encrypted transmitter. Only identity and signal diagnostics are available.' : hasLitres ? 'Today includes observed intervals only; missed intervals are not estimated.' : 'Raw pulses. Enter two dial readings about a day apart to show litres.'}</p>
         ${!unavailable ? this.history(hour, hasLitres && Number.isFinite(attrs.litres_per_count) ? attrs.litres_per_count : 1) : ''}</section>`;
     }
     render() {

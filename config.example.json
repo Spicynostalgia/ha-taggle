@@ -21,5 +21,9 @@
   "jsonl_logging": false,
   "neighbourhood": true,
   "neighbourhood_min_meters": 3,
-  "neighbourhood_litres_per_count": null
+  "neighbourhood_litres_per_count": null,
+  "dial_unit": "m3",
+  "calibration_max_uncertainty": 0.02,
+  "calibration_min_litres": 200,
+  "meter_reading_offset": {}
 }

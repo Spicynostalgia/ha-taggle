@@ -37,8 +37,8 @@ def test_discovery_units_reconnect_and_availability():
     publisher.on_connect(client, None, None, 0)
     configs = [args.args[1] for args in client.publish.call_args_list if args.args[0].endswith('/config')]
     import json
-    configs = [json.loads(v) for v in configs]
-    assert len(configs) == 15
+    configs = [json.loads(v) for v in configs if v]
+    assert len(configs) == 20
     assert len({tuple(v['device']['identifiers']) for v in configs}) == 2
     water = next(c for c in configs if c['name'] == 'Total litres')
     assert water['device_class'] == 'water'
@@ -59,7 +59,7 @@ def test_unscaled_discovery_removes_litre_entities():
     client = Mock()
     Publisher(Config.from_dict({'meter_ids': [123456]}), client).announce()
     removals = [c for c in client.publish.call_args_list if c.args[1] == '']
-    assert len(removals) == 3
+    assert len(removals) == 4
 
 
 def test_two_readings_and_csv_fit(tmp_path, capsys):
@@ -162,10 +162,10 @@ def test_discovery_display_precision(calibrated):
     publisher = Publisher(cfg, Mock())
     for key, spec in ENTITIES.items():
         payload = publisher.discovery(123456, key, spec)
-        if key == 'last_seen':
+        if key in ('last_seen', 'calibration_status'):
             assert 'suggested_display_precision' not in payload
         else:
-            assert payload['suggested_display_precision'] == (0 if spec[1] == 'pulses' else 1)
+            assert payload['suggested_display_precision'] == (0 if spec[1] == 'pulses' or key == 'meter_reading' else 1)
     for key in NEIGHBOURHOOD_ENTITIES:
         payload = publisher.neighbourhood_discovery(key)
         assert payload['suggested_display_precision'] == (1 if calibrated and not key.startswith('meters_') else 0)
@@ -283,9 +283,35 @@ def test_file_cli_refreshes_wall_clock_state_after_flush(tmp_path, monkeypatch):
     source.write_bytes(b'')
     assert rx_main(['--config', str(config), '--input', str(source),
                     '--start-utc', '2026-01-01T23:30:00Z']) == 0
-    assert publisher.publish.call_args_list[0].args[1]['today'] == 16
+    assert next(c.args[1] for c in publisher.publish.call_args_list if 'today' in c.args[1])['today'] == 16
     final = publisher.publish.call_args.args[1]
     assert final['today'] == 0
     assert final['last_seen'] == '2026-01-01T23:30:00+00:00'
     assert publisher.publish_neighbourhood.call_args.args[0]['meters_heard'] == 3
     assert publisher.method_calls[-1][0] == 'close'
+
+
+def test_auto_calibrated_discovery_and_neighbour_units_survive_opaque_frames(tmp_path):
+    import json
+
+    from taggle_rx.store import Store
+
+    from .test_guided_calibration import START, add, radio
+    from .test_store import config, frame
+
+    cfg = config(tmp_path)
+    client = Mock()
+    publisher = Publisher(cfg, client)
+    store = Store(cfg, publisher)
+    radio(store, 0, (100, 100, 100))
+    add(store, 100000, START)
+    radio(store, 1, (200, 100, 100))
+    add(store, 100500, START + timedelta(hours=1))
+    store.frame(frame(size=24), START + timedelta(hours=2))
+    assert store.neighbourhood_factor == publisher.neighbourhood_factor == 5
+    client.publish.reset_mock()
+    publisher.announce()
+    configs = {c.args[0]: json.loads(c.args[1]) for c in client.publish.call_args_list
+               if c.args[0].endswith('/config') and c.args[1]}
+    assert configs['homeassistant/sensor/taggle_123456/total_litres/config']['unit_of_measurement'] == 'L'
+    assert configs['homeassistant/sensor/taggle_neighbourhood/average_today/config']['unit_of_measurement'] == 'L'

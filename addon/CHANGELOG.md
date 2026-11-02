@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0
+
+Released 2026-11-03.
+
+- Add guided calibration from manual dial readings: m³/kL/L selector, reading box, optional photo time and reset, with automatic standard pulse selection and an absolute meter reading for Energy.
+- Align readings to persisted counter intervals, resolve unambiguous missing-slot wraps, validate units/typos and pinned factors, and report bounds, weighted residuals and exclusions.
+- Show the next expected local transmission time and dial-reading guidance in Home Assistant and the card; publish litre entities automatically after calibration.
+- Persist calibration in versioned private state, migrate old checkpoints, and restore MQTT command subscriptions after reconnect and Home Assistant birth.
+- Make manual guided calibration the beginner path; document maths/CLI and advanced utility automation separately.
+
+- Limit MQTT sensor display precision and round published measurements without changing stored usage or calibration.
+- Log MQTT connections, receiver startup, configured-meter frames and a 15-minute listening heartbeat with counts only for other meters.
+- Add UTC frame timestamps and one-decimal signal measurements to scan JSON output.
+- Show a neutral first-reading message on fresh dashboard cards while preserving warnings for previously seen meters.
+- Docs: restructure the README for beginners, add real hardware screenshots and tested Docker/broker setup, and link technical detail in the wiki.
+
 ## 0.2.1
 
 - Fix MQTT discovery defaults for Home Assistant 2026.4+ and align sensor names with documented entity IDs.

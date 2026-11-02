@@ -31,7 +31,7 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; padding: 16px; background: var(--primary-background-color); }
-    #card-container { width: 520px; }
+    #card-container { width: 520px; max-width:100%; }
   </style>
 </head>
 <body>
@@ -41,7 +41,7 @@
     const params = new URLSearchParams(location.search);
     const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
     const scenario = params.get('scenario') || 'calibrated';
-    if (!['calibrated', 'raw', 'multi'].includes(scenario)) throw new Error('Unknown scenario');
+    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending'].includes(scenario)) throw new Error('Unknown scenario');
     const requestedWidth = Number(params.get('width') || 520);
     const width = Number.isInteger(requestedWidth) && requestedWidth >= 280 && requestedWidth <= 1600
       ? requestedWidth : 520;
@@ -56,8 +56,8 @@
     await import('../../dist/taggle-card.js');
 
     const states = {};
-    const keys = ['last_hour', 'today', 'meter_count', 'last_seen', 'snr', 'signal_level'];
-    const litreKeys = ['last_hour_litres', 'today_litres', 'total_litres'];
+    const keys = ['last_hour', 'today', 'meter_count', 'last_seen', 'snr', 'signal_level', 'calibration_status'];
+    const litreKeys = ['last_hour_litres', 'today_litres', 'total_litres', 'meter_reading'];
     const hourlyProfile = [0, 0, 0, 0, 0, 2, 16, 28, 9, 3, 0, 5, 12, 4, 0, 3, 8, 22, 36, 18, 7, 4, 0, 0];
     const zone = 'Australia/Brisbane';
     const localDay = stamp => new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(new Date(stamp));
@@ -80,7 +80,11 @@
         last_hour: history.at(-1).counts, today: countToday, meter_count: cumulative,
         last_seen: new Date(lastEnd).toISOString(), snr, signal_level: signal,
         last_hour_litres: history.at(-1).counts * factor, today_litres: countToday * factor,
-        total_litres: cumulative * factor,
+        total_litres: cumulative * factor, meter_reading: 1234567 + cumulative * factor,
+        calibration_status: scenario === 'disagreement' ? 'Readings disagree — check the last one: check the dial unit or digits'
+          : scenario === 'pending' ? 'Waiting for next transmission to line up your reading'
+          : calibrated ? 'Calibrated: 2.5 L per pulse — standard value, fits your readings'
+          : 'Needs 2 readings — enter your dial reading to show litres',
       };
       const entities = {};
       for (const key of [...keys, ...(calibrated ? litreKeys : [])]) {
@@ -91,13 +95,15 @@
         states[entityId] = {
           entity_id: entityId, state: String(values[key]), last_changed: new Date(lastEnd).toISOString(),
           attributes: {...attributes, friendly_name: `${name} ${key}`, unit_of_measurement: unit,
-            ...(calibrated ? {litres_per_count: factor} : {})},
+            ...(calibrated ? {litres_per_count: factor} : {}),
+            ...(key === 'calibration_status' ? {chosen_k:calibrated ? factor : null,
+              next_transmission:'2026-01-03T19:15:00+10:00'} : {})},
         };
       }
       return {name, entities};
     }
 
-    const meters = [meter(123456, 'House', scenario !== 'raw', 1, 12.4, -43.2)];
+    const meters = [meter(123456, 'House', !['raw', 'pending'].includes(scenario), 1, 12.4, -43.2)];
     if (scenario === 'multi') meters.push(meter(234567, 'Granny flat', true, 0.45, 9.8, -49.1));
     // Fictional aggregate only: no neighbour IDs or individual readings.
     const neighbourhood = {average_today: 410, median_today: 350, meters_counted: 14,

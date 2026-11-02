@@ -28,6 +28,10 @@ class Config:
     device: str = '0'
     timezone: str = 'UTC'
     litres_per_count: dict = field(default_factory=dict)
+    meter_reading_offset: dict = field(default_factory=dict)
+    dial_unit: str = 'm3'
+    calibration_max_uncertainty: float = .02
+    calibration_min_litres: float = 200
     mqtt: dict = field(default_factory=dict)
     data_dir: str = './data'
     jsonl_logging: bool = False
@@ -78,6 +82,25 @@ class Config:
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
                 raise ValueError('litres_per_count must be finite and positive')
             config.litres_per_count[key] = float(value)
+        if config.dial_unit not in ('m3', 'kl', 'litres', 'm³', 'kL', 'L'):
+            raise ValueError('dial_unit must be m3, kl or L')
+        for name, upper in (('calibration_max_uncertainty', 1), ('calibration_min_litres', 1e9)):
+            value = getattr(config, name)
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(value) or not 0 < value <= upper):
+                raise ValueError(f'{name} must be finite, positive and at most {upper:g}')
+        offsets = config.meter_reading_offset
+        if isinstance(offsets, list):
+            offsets = {item['meter_id']: item['value'] for item in offsets}
+        if not isinstance(offsets, dict):
+            raise ValueError('meter_reading_offset must be a mapping or list')
+        config.meter_reading_offset = {}
+        for key, value in offsets.items():
+            key = meter_id(key)
+            if (key not in config.litres_per_count or isinstance(value, bool)
+                    or not isinstance(value, (int, float)) or not math.isfinite(value)):
+                raise ValueError('meter_reading_offset requires a pinned factor and a finite offset')
+            config.meter_reading_offset[key] = float(value)
         defaults = dict(host='localhost', port=1883, username='', password='',
                         topic_prefix='taggle', discovery_prefix='homeassistant')
         if not isinstance(config.mqtt, dict) or set(config.mqtt) - set(defaults):

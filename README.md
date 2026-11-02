@@ -1,10 +1,13 @@
 # Taggle water meter → Home Assistant
 
-See your own water meter's hourly usage in Home Assistant. A USB radio receiver, called an SDR (software-defined radio), listens to supported Taggle transmitters and sends readings to your dashboard. Start with raw pulses; measure your meter's scale later to show litres.
+See your own water meter's hourly usage in Home Assistant. A USB radio receiver, called an SDR (software-defined radio), listens to supported Taggle transmitters and sends readings to your dashboard. Type two dial readings into Home Assistant about a day apart to turn raw pulses into litres and an absolute meter reading.
+
+> [!IMPORTANT]
+> The Taggle does **NOT** transmit your meter (dial) reading. It sends a **pulse counter with an unknown start value and unknown litres per pulse**. Typing two dial readings into Home Assistant about a day apart turns those pulses into litres and a real meter reading. Follow [Turn pulses into litres](#turn-pulses-into-litres).
 
 [Open the wiki](https://github.com/Spicynostalgia/ha-taggle/wiki) for step-by-step guides and technical references.
 
-**0.2.1 is experimental: only one transmitter has been verified**, in Gladstone, QLD, with an RTL-SDR Blog V4. Other models and areas are unverified. Automated tests use generated signals. Check readings against your physical meter; this is not billing-grade measurement, live flow monitoring or a leak alarm.
+**0.3.0 is experimental: only one transmitter has been verified**, in Gladstone, QLD, with an RTL-SDR Blog V4. Other models and areas are unverified. Automated tests use generated signals. Check readings against your physical meter; this is not billing-grade measurement, live flow monitoring or a leak alarm.
 
 <img src="docs/images/real-card-light.png" alt="Light theme card with real hourly usage in raw pulses" width="552">
 
@@ -103,7 +106,7 @@ mkdir -p data && chmod 700 data && chmod 600 config.json
 nano config.json
 ```
 
-Set `meter_ids` to your ID, `timezone` to your local timezone, and **`mqtt.host` to your broker computer's LAN IP**, for example `192.168.1.50`. Leave `data_dir` as `/data` and `litres_per_count` as `{}` until calibrated. Enter the broker username/password if required. In nano, save with **Ctrl+O → Enter**, then exit with **Ctrl+X**.
+Set `meter_ids` to your ID, `timezone` to your local timezone, and **`mqtt.host` to your broker computer's LAN IP**, for example `192.168.1.50`. Leave `data_dir` as `/data` and `litres_per_count` as `{}` to use guided calibration. Enter the broker username/password if required. In nano, save with **Ctrl+O → Enter**, then exit with **Ctrl+X**.
 
 The default host `mqtt` only works with a service named `mqtt` on the same Compose network. **Do not use `localhost`: inside Docker it means the receiver container itself.**
 
@@ -173,13 +176,36 @@ For a configured clear meter, the object also includes `"counts": [120, 110, 104
 
 More detail: [First scan and tap test](https://github.com/Spicynostalgia/ha-taggle/wiki/First-Scan-and-Tap-Test).
 
+## Turn pulses into litres
+
+![Illustration: mechanical meter dial with whole-kL digits, red fractions and pointer dials](docs/images/register-dial.svg)
+
+*Read the units and decimal positions printed on your own dial. In this illustration, `01234 | 567` means **1234.567 m³**, or **1,234,567 L**. The spinning star is a flow indicator, not the reading.*
+
+<img src="docs/images/tested-transmitter.jpg" alt="Real installation with the meter dial at upper right beside the cable-connected transmitter; ID and barcode blurred" width="360">
+
+*Real installation: the dial is at upper right. ID and barcode blurred. Take a clear close-up of your own dial for calibration.*
+
+1. **Read the dial.** Take a phone photo of the whole face. The card and **Calibration status** show **“Next transmission expected ≈ HH:MM”** in local time once the receiver has heard your meter. Read within a few minutes after it, ideally when nobody is using water. Readings at other times still work; they may need more usage to narrow the uncertainty.
+2. **Pick the unit.** Open **Settings → Devices & services → MQTT → Taggle [your ID]**. Set **Dial unit** to **m³** (the default), **kL** or **L**, matching the dial. **1 m³ = 1 kL = 1,000 L**.
+3. **Type what you see** into **Enter meter reading**, including its decimal places. If typing a photo later, set **Reading time** first: `18:00` means **today at 18:00 in your configured local timezone**; for another date use e.g. `2026-11-02T18:00:00+10:00`. Blank means now. This time applies to the next reading and then clears. **Calibration status** may wait for the next transmission to line it up.
+4. **Do it again tomorrow.** Use water normally; do not run water for calibration. Aim for at least **200 L or 40 pulses** between readings. When exactly one standard pulse size fits, it applies automatically. Otherwise the status explains why another reading is needed. Litres sensors and **Meter reading** appear without a restart. Later dial readings check the result.
+
+A real-meter check found that the radio counter matched no common pulse size applied to the dial reading, confirming its arbitrary start. Two readings find both the litres per pulse and the offset needed to match the dial.
+
+For **Settings → Dashboards → Energy → Water**, choose **`sensor.taggle_123456_meter_reading`**, replacing `123456` with your ID. This absolute reading matches the dial from calibration onward. The separate `total_litres` sensor counts future observed usage and keeps its existing baseline; it does not backfill older water use.
+
+If a reading is wrong, check the status attributes and use the deletion instructions in the [calibration guide](docs/CALIBRATION.md#correct-or-reset-readings). **Reset calibration** clears your readings and automatic calibration; confirm that you want to start again before pressing it. A configured manual factor remains pinned.
+
+Manual maths and the CSV/CLI route: [wiki Calibration](https://github.com/Spicynostalgia/ha-taggle/wiki/Calibration). More detail on guided calibration: [local guide](docs/CALIBRATION.md).
+
 ## Add the dashboard card
 
 **HACS route:** HACS is the Home Assistant Community Store, separate from the add-on Store. With [HACS installed](https://www.hacs.dev/docs/use/download/download/), open the button below, or add `https://github.com/Spicynostalgia/ha-taggle` under **HACS → ⋮ → Custom repositories → Dashboard**. Download **ha-taggle** and reload your browser.
 
 [![Open the card repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
 
-**Manual route:** create `www` inside Home Assistant's configuration folder (`config/www` for a typical Container mount). Copy [dist/taggle-card.js](dist/taggle-card.js) to `www/taggle-card.js`. **Restart Home Assistant after creating `www`; `/local/` can return 404 until the folder exists and HA restarts.** In **Settings → Dashboards → ⋮ → Resources** (enable Advanced Mode in your profile if hidden), add `/local/taggle-card.js?v=0.2.1` as a **JavaScript module**. Reload your browser.
+**Manual route:** create `www` inside Home Assistant's configuration folder (`config/www` for a typical Container mount). Copy [dist/taggle-card.js](dist/taggle-card.js) to `www/taggle-card.js`. **Restart Home Assistant after creating `www`; `/local/` can return 404 until the folder exists and HA restarts.** In **Settings → Dashboards → ⋮ → Resources** (enable Advanced Mode in your profile if hidden), add `/local/taggle-card.js?v=0.3.0` as a **JavaScript module**. Reload your browser.
 
 In your dashboard choose **Edit dashboard → Add card → Manual**. Paste this, replace fictional `123456` with your ID, and check the actual entity IDs on your MQTT device (existing names and renames are preserved):
 
@@ -193,6 +219,8 @@ entities:
   last_seen: sensor.taggle_123456_last_seen
   snr: sensor.taggle_123456_snr
   signal_level: sensor.taggle_123456_signal_level
+  calibration_status: sensor.taggle_123456_calibration_status
+  meter_reading: sensor.taggle_123456_meter_reading
 ```
 
 <img src="docs/images/real-card-dark.png" alt="Dark theme dashboard card showing real raw pulse data" width="480">
@@ -204,29 +232,6 @@ entities:
 *Synthetic preview: two fictional meters with calibrated litres; no real meter data.*
 
 More detail: [Dashboard card](https://github.com/Spicynostalgia/ha-taggle/wiki/Dashboard-Card) (multiple meters, mobile views and renamed entities).
-
-## Turn pulses into litres
-
-![Illustration: mechanical meter register with whole-kL digits, red fractions and pointer dials](docs/images/register-dial.svg)
-
-- [ ] Record a fresh radio `meter_count` and photograph the physical register, with no water use between them. Keep both timestamps. **1 m³ = 1 kL = 1,000 L**; read the units on your dial.
-- [ ] Repeat after a day or more of normal use, ideally at least 1,000 L. Do not waste water to reach that amount. Reject periods with missing hours or resets.
-- [ ] Calculate **litres per count = change in register litres ÷ change in `meter_count`**. Validate over independent days; a bucket check alone is insufficient. `meter_count` is an observed total, not the register reading.
-- [ ] Set your measured factor using the correct format below and restart. **2.5 is only an example; measure your own scale.**
-
-**Add-on options** use a list:
-
-```yaml
-litres_per_count:
-  - meter_id: 123456
-    value: 2.5
-```
-
-**Docker `config.json`** uses a map (an ID paired with a value): `"litres_per_count": {"123456": 2.5}`.
-
-Add `last_hour_litres`, `today_litres` and `total_litres` mappings to the card, using `sensor.taggle_123456_<key>` with your ID. For **Settings → Dashboards → Energy → Water**, choose `sensor.taggle_123456_total_litres`. Only future observed usage enters this total; past usage is not backfilled.
-
-More detail: [Calibration](https://github.com/Spicynostalgia/ha-taggle/wiki/Calibration) · [local calibration guide](docs/CALIBRATION.md) · [Energy dashboard](https://github.com/Spicynostalgia/ha-taggle/wiki/Energy-Dashboard).
 
 ## Neighbourhood comparison
 

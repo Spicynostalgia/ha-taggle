@@ -241,3 +241,70 @@ test('device lookup fetches stable unique IDs even when frontend entity map is p
   card.hass = ha;
   assert.equal(calls, 1);
 });
+
+test('manual calibration prompt includes the local expected transmission and device link', () => {
+  const card = new Card();
+  card.setConfig({device:'meter-device'});
+  const ha = hass();
+  ha.config.time_zone = 'Australia/Brisbane';
+  ha.entities = Object.fromEntries(['last_hour', 'calibration_status'].map(key => {
+    const id = 'sensor.taggle_123456_' + key;
+    return [id, {entity_id:id, device_id:'meter-device', unique_id:'taggle_123456_' + key}];
+  }));
+  ha.states['sensor.taggle_123456_calibration_status'] = state('Needs 2 readings — enter your dial reading', {
+    next_transmission:'2026-11-02T08:41:00+00:00', chosen_k:null
+  });
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Next transmission expected ≈ 18:41/);
+  assert.match(card.shadowRoot.innerHTML, /within a few minutes after it/);
+  assert.match(card.shadowRoot.innerHTML, /href="\/config\/devices\/device\/meter-device"/);
+  assert.match(card.shadowRoot.innerHTML, /enter your dial reading/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /class="register"/);
+});
+
+test('old pulse mappings acquire automatic litre entities and whole-litre absolute reading', () => {
+  const card = new Card();
+  card.setConfig({entities:{last_hour:'sensor.taggle_123456_last_hour'}});
+  const ha = hass();
+  ha.states['sensor.taggle_123456_calibration_status'] = state('Calibrated: 5 L per pulse — standard value', {chosen_k:5});
+  ha.states['sensor.taggle_123456_meter_reading'] = state(1597861.23, {unit_of_measurement:'L'});
+  ha.states['sensor.taggle_123456_last_hour_litres'] = state(50, {unit_of_measurement:'L'});
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Calibrated: 5 L per pulse/);
+  assert.match(card.shadowRoot.innerHTML, /Meter reading <strong>1,597,861<\/strong> L/);
+  assert.match(card.shadowRoot.innerHTML, />50 <small>L/);
+  ha.states['sensor.taggle_123456_meter_reading'].state = 'unavailable';
+  card.hass = ha;
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /class="register"/);
+});
+
+test('calibration disagreement is visible and hostile text is escaped', () => {
+  const card = new Card();
+  card.setConfig({entities:{calibration_status:'sensor.check'}});
+  const ha = hass();
+  ha.states['sensor.check'] = state('Readings disagree — check <img src=x>', {chosen_k:5,
+    next_transmission:'bad time'});
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="calibration warning"/);
+  assert.match(card.shadowRoot.innerHTML, /&lt;img src=x&gt;/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /<img|Invalid Date|Next transmission/);
+});
+
+test('renamed explicit pulse mapping discovers new calibration entities on the same device', () => {
+  const card = new Card();
+  card.setConfig({entities:{last_hour:'sensor.kitchen_pulses'}});
+  const ha = hass();
+  ha.entities = {
+    pulse: {entity_id:'sensor.kitchen_pulses', device_id:'meter', unique_id:'taggle_123456_last_hour'},
+    absolute: {entity_id:'sensor.kitchen_register', device_id:'meter', unique_id:'taggle_123456_meter_reading'},
+    calibration: {entity_id:'sensor.kitchen_check', device_id:'meter', unique_id:'taggle_123456_calibration_status'},
+    other: {entity_id:'sensor.other_register', device_id:'other', unique_id:'taggle_234567_meter_reading'},
+  };
+  ha.states['sensor.kitchen_pulses'] = state(10);
+  ha.states['sensor.kitchen_register'] = state(1234567);
+  ha.states['sensor.kitchen_check'] = state('Calibrated: 5 L per pulse', {chosen_k:5});
+  card.hass = ha;
+  assert.equal(card.resolve(card._config.meters[0]).meter_reading, 'sensor.kitchen_register');
+  assert.match(card.shadowRoot.innerHTML, /1,234,567/);
+  assert.match(card.shadowRoot.innerHTML, /Calibrated: 5 L per pulse/);
+});

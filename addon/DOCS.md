@@ -10,7 +10,7 @@ The receiver add-on needs **Home Assistant OS or Supervised**. **Home Assistant 
 
 [![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
 
-Open the add-on repository below, add it, then open **Taggle water meter**: **Install → set `meter_ids` → Start**. Connect the SDR and antenna; leave `litres_per_count: []` until calibrated and set your timezone. Supervisor supplies MQTT credentials. See Setup below for details.
+Open the add-on repository below, add it, then open **Taggle water meter**: **Install → set `meter_ids` → Start**. Connect the SDR and antenna; leave `litres_per_count: []` for guided calibration and set your timezone. Supervisor supplies MQTT credentials. See Setup below for details.
 
 [![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
 
@@ -62,7 +62,9 @@ In normal reception, INFO logs show the listening frequency and configured meter
 
 ## Entities and data
 
-One MQTT device is created per configured meter. Supported clear frames expose hourly usage, today's partial observed total and a cumulative observed count, plus SNR, signal level and last seen. Encrypted frames expose diagnostics only. Adding `litres_per_count` entries (`meter_id` and positive `value`) enables litre entities, including a persistent `total_increasing` water entity for Energy.
+One MQTT device is created per configured meter. Supported clear frames expose hourly usage, today's partial observed total and a cumulative observed count, plus SNR, signal level and last seen. Encrypted frames expose diagnostics only. On the device page, choose **Dial unit** (m³ default, kL or L) and type a physical dial reading into **Enter meter reading**. Repeat about a day later after at least 200 L or 40 pulses of normal use. Litres sensors appear automatically once calibrated, including an absolute **Meter reading** water entity for Energy. **Calibration status** and the card show the next expected local transmission time; read within a few minutes after it, ideally when nobody uses water. If typing a phone photo later, set **Reading time** first (HH:MM means today local; ISO-8601 with an offset can specify another date). It clears after the next entry. Blank means now.
+
+**Reset calibration** clears dial readings and automatic calibration; confirm you want to start again before pressing it. See the [calibration guide](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/CALIBRATION.md) for deleting a mistake, status attributes and troubleshooting. `dial_unit`, `calibration_max_uncertainty` (0.02) and `calibration_min_litres` (200) set defaults. Optional `litres_per_count` entries pin a manually verified factor; guided calibration then validates it and cannot change it. Optional `meter_reading_offset` entries pin the absolute offset in litres too.
 
 Discovery uses `default_entity_id`: meter IDs default to `sensor.taggle_<id>_<key>` (for example `sensor.taggle_123456_today` and `sensor.taggle_123456_total_litres`), and aggregate IDs to `sensor.taggle_neighbourhood_<key>`. Existing registry IDs and user renames are preserved; collisions may add a suffix. The card’s device mode uses stable registry unique IDs, including for older name-derived IDs.
 

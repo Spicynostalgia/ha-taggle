@@ -1,4 +1,5 @@
 """Private-by-default filtering and atomic, bounded usage checkpoints."""
+import copy
 import hashlib
 import hmac
 import json
@@ -7,17 +8,30 @@ import os
 import re
 import statistics
 import tempfile
+import threading
 import time
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+from . import calibration
 
 LOG = logging.getLogger(__name__)
 HEARTBEAT_SECONDS = 15 * 60
 
 
+def synchronized(method):
+    @wraps(method)
+    def locked(self, *args, **kwargs):
+        with self.lock:
+            return method(self, *args, **kwargs)
+    return locked
+
+
 class Store:
     def __init__(self, config, publisher=None, scan=None):
+        self.lock = threading.RLock()
         self.config = config
         self.publisher = publisher
         self.scan = scan
@@ -35,11 +49,11 @@ class Store:
             checkpoint_changed = False
             if checkpoint.exists():
                 state = json.loads(checkpoint.read_text())
-                if state.get('version') != 1:
+                if state.get('version') not in (1, 2):
                     raise ValueError('unsupported state version')
                 self.meters = {k: v for k, v in state['meters'].items()
                                if int(k) in config.meter_ids}
-                checkpoint_changed = self.meters != state['meters']
+                checkpoint_changed = self.meters != state['meters'] or state['version'] == 1
                 if config.neighbourhood:
                     self.neighbours = {k: v for k, v in state.get('neighbours', {}).items()
                                        if re.fullmatch('[0-9a-f]{16}', k)}
@@ -72,11 +86,70 @@ class Store:
                 if checkpoint.exists():
                     self.save()
 
+        if scan is None:
+            for key, meter in self.meters.items():
+                if 'calibration' not in meter:
+                    meter['calibration'] = calibration.migrate(meter, config.dial_unit)
+                cal = meter['calibration']
+                calibration.solve(cal, config, int(key))
+            if publisher:
+                publisher.command_handler = self.command
+            if checkpoint_changed:
+                self.save()
+
+    def factor(self, identifier):
+        meter = self.meters.get(str(identifier), {})
+        solution = meter.get('calibration', {}).get('solution') or {}
+        return self.config.litres_per_count.get(identifier, solution.get('factor'))
+
+    @property
+    def neighbourhood_factor(self):
+        explicit = self.config.neighbourhood_litres_per_count
+        return explicit if explicit is not None else self.factor(self.config.meter_ids[0]) if self.config.meter_ids else None
+
+    @synchronized
+    def command(self, identifier, action, payload, now=None):
+        if identifier not in self.config.meter_ids or self.scan is not None:
+            return
+        now = now or datetime.now(timezone.utc)
+        meter = self.meters.setdefault(str(identifier), {'hours': {}, 'meter_count': 0, 'total_litres': 0.0})
+        cal = meter.setdefault('calibration', calibration.initial(self.config.dial_unit))
+        try:
+            if action == 'dial_unit':
+                if payload not in ('m³', 'kL', 'L'):
+                    raise ValueError('Choose m³, kL or L for Dial unit')
+                cal['dial_unit'] = payload
+                result = 'unit changed'
+            elif action == 'reading_time':
+                calibration.timestamp(payload, now, self.zone)
+                cal['reading_time'] = payload
+                result = 'reading time set'
+            elif action in ('reading', 'reset'):
+                result = calibration.intake(cal, '{"reset":true}' if action == 'reset' else payload, now, self.zone)
+            else:
+                return
+            cal.pop('error', None)
+            calibration.solve(cal, self.config, identifier)
+            if result == 'accepted':
+                last = cal['readings'][-1]
+                result += (', pending' if not last.get('base_interval') else
+                           ', rejected (stored, excluded)' if not last['used'] else
+                           ', solved' if cal.get('solution') else '')
+            LOG.info('Meter %s calibration: %s; %s', identifier, result, cal['status'])
+        except (ValueError, TypeError, OverflowError) as error:
+            cal['error'] = f'Check your reading: {error}'
+            cal['status'] = cal['error']
+            LOG.info('Meter %s calibration: rejected; %s', identifier, error)
+        self.save()
+        if self.publisher:
+            self.publisher.publish(identifier, self.snapshot(identifier, now))
+
+    @synchronized
     def save(self):
         fd, temporary = tempfile.mkstemp(dir=self.path, prefix='.state-')
         try:
             with os.fdopen(fd, 'w') as target:
-                state = {'version': 1, 'meters': self.meters}
+                state = {'version': 2, 'meters': self.meters}
                 if self.config.neighbourhood:
                     state['neighbours'] = self.neighbours
                 json.dump(state, target, allow_nan=False)
@@ -92,6 +165,7 @@ class Store:
             if os.path.exists(temporary):
                 os.unlink(temporary)
 
+    @synchronized
     def frame(self, frame, stamp):
         identifier = frame['meter_id']
         configured = identifier in self.config.meter_ids
@@ -134,8 +208,14 @@ class Store:
             return
         meter.update(last_seen=stamp.isoformat(), snr=frame['snr_median_db'],
                      signal_level=frame['signal_level_dbfs'], encrypted=frame['encrypted'])
+        cal = meter.setdefault('calibration', calibration.initial(self.config.dial_unit))
         if 'counts' in frame:
-            self.counts(meter, frame, stamp, self.config.litres_per_count.get(identifier, 0))
+            self.counts(meter, frame, stamp, self.factor(identifier) or 0)
+            before = cal['status']
+            calibration.solve(cal, self.config, identifier)
+            if before != cal['status'] and cal['readings']:
+                outcome = 'solved' if cal.get('solution') else 'pending'
+                LOG.info('Meter %s calibration: %s; %s', identifier, outcome, cal['status'])
         else:
             # Opaque frames expose diagnostics only, even after a clear-format frame.
             meter.pop('latest', None)
@@ -157,10 +237,14 @@ class Store:
             # A backwards/reset sequence is ambiguous: wait for a consistent baseline.
             if advance < 0 or abs(advance - elapsed) > 0.5:
                 meter.pop('latest', None)
+                if 'calibration' in meter:
+                    meter['calibration']['blocked'] = True
                 return
             index = previous['index'] + advance
         else:
             index = round(stamp.timestamp() / 3600)
+        if 'calibration' in meter:
+            calibration.slots(meter['calibration'], frame, stamp, index)
         for age in (0, 1):
             identity = str(index - age)
             if identity in meter['hours']:
@@ -176,10 +260,17 @@ class Store:
         meter['hours'] = {k: v for k, v in meter['hours'].items()
                           if datetime.fromisoformat(v['end']) >= cutoff}
 
+    @synchronized
     def snapshot(self, identifier, now):
         meter = self.meters[str(identifier)]
-        result = {k: meter[k] for k in ('last_seen', 'snr', 'signal_level', 'encrypted')}
-        if meter['encrypted'] or 'latest' not in meter:
+        result = {k: meter[k] for k in ('last_seen', 'snr', 'signal_level', 'encrypted') if k in meter}
+        cal = meter.get('calibration', calibration.initial(self.config.dial_unit))
+        attrs = calibration.attributes(cal, now, self.zone)
+        result.update(calibration_status=cal['status'], calibration=copy.deepcopy(attrs), dial_unit=cal['dial_unit'],
+                      reading_time=cal['reading_time'])
+        if 'last_entered_litres' in cal:
+            result['enter_reading'] = cal['last_entered_litres'] / calibration.UNITS[cal['dial_unit']]
+        if meter.get('encrypted') or 'latest' not in meter:
             return result
         hours = sorted(meter['hours'].values(), key=lambda v: v['end'])
         today = [h for h in hours if datetime.fromisoformat(h['end']).astimezone(self.zone).date()
@@ -188,11 +279,17 @@ class Store:
                       hours_observed=len(today), meter_count=meter['meter_count'],
                       raw_count=meter['latest']['raw_count'],
                       history=[h for h in hours if datetime.fromisoformat(h['end']) >= now - timedelta(hours=48)])
-        factor = self.config.litres_per_count.get(identifier)
+        factor = self.factor(identifier)
         if factor is not None:
             result.update(last_hour_litres=result['last_hour'] * factor,
                           today_litres=result['today'] * factor,
                           total_litres=meter['total_litres'], litres_per_count=factor)
+        solution = cal.get('solution')
+        if solution and solution['offset'] is not None and cal['slots'] and not cal.get('unresolved_gap'):
+            edge = max(map(int, cal['slots']))
+            count = cal['slots'][str(edge)]['count']
+            count += 65536 * sum(int(w) for g, w in solution.get('wraps', {}).items() if int(g) <= edge)
+            result['meter_reading'] = solution['offset'] + factor * count
         return result
 
     def neighbour_key(self, identifier):
@@ -239,7 +336,7 @@ class Store:
                 last = max(hours, key=lambda h: h['end'])
                 if datetime.fromisoformat(last['end']) >= now - timedelta(hours=2):
                     recent.append(last['counts'])
-        factor = self.config.neighbourhood_factor
+        factor = self.neighbourhood_factor
         scale = factor if factor is not None else 1
         return {
             'meters_heard': heard if heard >= floor else None,
@@ -249,6 +346,7 @@ class Store:
             'average_last_hour': statistics.mean(recent) * scale if len(recent) >= floor else None,
         }
 
+    @synchronized
     def refresh(self, now):
         """Republish date-dependent totals without changing the radio last-seen time."""
         neighbourhood = None
@@ -257,6 +355,12 @@ class Store:
                 self.save()
             neighbourhood = self.neighbourhood_snapshot(now)
         if self.publisher:
+            for identifier in self.config.meter_ids:
+                if str(identifier) not in self.meters:
+                    cal = calibration.initial(self.config.dial_unit)
+                    calibration.solve(cal, self.config, identifier)
+                    self.meters[str(identifier)] = {'hours': {}, 'meter_count': 0, 'total_litres': 0.0,
+                                                    'calibration': cal}
             if neighbourhood is not None:
                 self.publisher.publish_neighbourhood(neighbourhood)
             for key in self.meters:
@@ -280,9 +384,9 @@ class Store:
         average = neighbourhood['average_today']
         if not average or 'today' not in state:
             return None
-        if self.config.neighbourhood_factor is None:
+        if self.neighbourhood_factor is None:
             today = state['today']
-        elif identifier in self.config.litres_per_count:
+        elif 'today_litres' in state:
             today = state['today_litres']
         else:
             return None

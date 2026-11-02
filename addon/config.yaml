@@ -1,5 +1,5 @@
 name: Taggle water meter
-version: "0.2.1"
+version: "0.3.0"
 slug: taggle_rx
 url: https://github.com/Spicynostalgia/ha-taggle
 image: ghcr.io/spicynostalgia/ha-taggle-addon-{arch}
@@ -23,6 +23,10 @@ options:
   device: "0"
   timezone: UTC
   litres_per_count: []
+  meter_reading_offset: []
+  dial_unit: m3
+  calibration_max_uncertainty: 0.02
+  calibration_min_litres: 200
   jsonl_logging: false
   scan_minutes: 0
 schema:
@@ -39,5 +43,11 @@ schema:
   litres_per_count:
     - meter_id: "int(0,1048575)"
       value: "float(0.000001,1000000)"
+  meter_reading_offset:
+    - meter_id: "int(0,1048575)"
+      value: float
+  dial_unit: "list(m3|kl|L)"
+  calibration_max_uncertainty: "float(0.000001,1)"
+  calibration_min_litres: "float(0.000001,1000000000)"
   jsonl_logging: bool
   scan_minutes: "int(0,1440)"
