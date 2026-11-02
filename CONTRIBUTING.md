@@ -44,6 +44,14 @@ Use the [issue forms](https://github.com/Spicynostalgia/ha-taggle/issues/new/cho
 
 Include your version, installation method, council/utility, USB receiver model and whether usage, ID only, or nothing was heard. Frame length and signal details are optional; **unknown is fine**. Normal scan/INFO output does not expose exact frame length, and missing counts for an unconfigured scan ID do not prove encryption. Do not enable broad logging just to fill that field. Cover transmitter IDs/barcodes in photos, replace quoted IDs with fictional **123456**, redact credentials and private settings, and never include radio captures.
 
+## Confirming compatibility reports
+
+Before adding the `confirmed` label, check that the report describes the reporter's own meter, that the council/state and reception result are clear, and that any photos have transmitter IDs, barcodes, serial numbers and addresses blurred. Remove identifying text or ask for a corrected report before confirming it. Check that **Can we list your council publicly?** is ticked; reports without that consent are excluded from the tables.
+
+Keep the `compatibility` label and add `confirmed` to publish the report in the next automated update. Closed reports still count. Remove either label or uncheck the public-consent box to withdraw a report from the next update. The workflow runs on issue edits/label changes, daily, and via **Run workflow**; it updates the README, [full compatibility table](docs/COMPATIBILITY.md) and badge. Duplicate councils share one row, showing the report count and best result (usage worked, then IDs only, then not received); the other fields come from that same best report.
+
+The seed file [data/compat-seed.json](data/compat-seed.json) preserves the maintainer's Gladstone test. To cite another project's report separately, add an entry with `council`, `state`, `transmitter`, `report: "reported elsewhere"` and `source_url`. These appear under **Reported by other projects**, explicitly untested with ha-taggle, and do not count towards the badge. The optional town/suburb, photos and signal details are never copied into generated tables. Review the generated diff for privacy before publishing.
+
 ## Publishing
 
 This checkout already uses image owner **`spicynostalgia`**. In a fork, edit the runtime image references explicitly:

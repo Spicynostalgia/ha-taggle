@@ -1,0 +1,12 @@
+[
+  {
+    "council": "Gladstone Regional Council",
+    "state": "QLD",
+    "transmitter": "cable-connected tube",
+    "frames": "18-byte",
+    "usage": "Usage worked",
+    "sdr": "RTL-SDR Blog V4",
+    "version": "0.2.1",
+    "report": "maintainer test"
+  }
+]

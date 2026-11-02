@@ -411,6 +411,20 @@ For HA OS, update **Taggle water meter** from its Info page. For Docker, keep yo
 | Card JavaScript | Update resource/cache as above, then reload the browser. |
 | Guided dial reading | Submit and check Calibration status; no receiver restart. |
 
+## Where it works
+
+![Councils reported](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/compat-badge.json)
+
+Share your setup through the [compatibility issue form](https://github.com/Spicynostalgia/ha-taggle/issues/new?template=compatibility.yml) to help others check their area.
+
+<!-- compat:start -->
+| Council/LGA | State | Transmitter style | Frames (18/21/24) | Usage worked? | SDR | Version | Report |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Gladstone Regional Council | QLD | cable-connected tube | 18 | Usage worked | RTL-SDR Blog V4 | 0.2.1 | maintainer test (1 report) |
+
+Confirmed reports describe individual setups; council-wide compatibility is not guaranteed.
+<!-- compat:end -->
+
 ## Troubleshooting
 
 | What you see | What to check |
