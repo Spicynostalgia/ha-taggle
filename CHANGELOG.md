@@ -11,6 +11,7 @@ Released 2026-11-03.
 - Persist calibration in versioned private state, migrate old checkpoints, and restore MQTT command subscriptions after reconnect and Home Assistant birth.
 - Make manual guided calibration the beginner path; document maths/CLI and advanced utility automation separately.
 - Add a possible-leak hint for configured meters from continuous hourly usage or local night flow, with configurable rules, MQTT binary sensor attributes and a dashboard badge.
+- Without an SDR, retry with a growing delay up to 60 s and log one clear hint every 10 minutes instead of two lines every 2 s.
 - Show tidier numbers in Home Assistant without changing stored usage or calibration.
 - Add startup and MQTT connection messages, configured-meter updates and a listening summary every 15 minutes to help check reception; other meters appear as counts only.
 - Add the radio message's UTC time and one-decimal signal measurements to scan output.

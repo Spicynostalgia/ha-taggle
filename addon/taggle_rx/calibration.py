@@ -50,6 +50,8 @@ def timestamp(value, now, zone):
     if re.fullmatch(r'\d{2}:\d{2}', value):
         hour, minute = map(int, value.split(':'))
         local = now.astimezone(zone).replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if local > now:  # 23:50 typed at 00:05 means last night's photo
+            local = (local - timedelta(days=1)).replace(hour=hour, minute=minute)
         # A clock time inside a DST jump cannot describe a photo.
         if local.astimezone(timezone.utc).astimezone(zone).replace(fold=0) != local.replace(fold=0):
             raise ValueError('This local time does not exist; use ISO-8601 with a UTC offset')
@@ -418,7 +420,8 @@ def attributes(cal, now, zone):
         steps = max(1, math.floor((now - last).total_seconds() / interval) + 1)
         next_time = (last + timedelta(seconds=steps * interval)).astimezone(zone)
     solution = cal.get('solution') or {}
-    return {'readings': cal['readings'], 'k_bounds': cal.get('bounds'),
+    # Last 10 only: Home Assistant stops recording attributes over 16 KB.
+    return {'readings': cal['readings'][-10:], 'reading_count': len(cal['readings']), 'k_bounds': cal.get('bounds'),
             'chosen_k': solution.get('factor'), 'method': solution.get('method'),
             'offset': solution.get('offset'), 'uncertainty': solution.get('uncertainty'),
             'dial_unit': cal['dial_unit'], 'transmit_interval_seconds': interval,

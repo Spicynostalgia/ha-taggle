@@ -1,6 +1,7 @@
 """Dial-to-radio integration, including the fictionalised 2 November hardware fixture."""
 import json
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 from taggle_rx import calibration
@@ -406,3 +407,16 @@ def test_offset_pin_without_dial_readings_still_withholds_new_gap(tmp_path):
     cal = add(store, 91000, START + timedelta(hours=10))
     assert cal['solution']['factor'] == 5
     assert store.snapshot(ID, START + timedelta(hours=10))['meter_reading'] == 91000
+
+
+def test_clock_time_later_than_now_means_yesterday():
+    zone = ZoneInfo('Australia/Brisbane')
+    now = datetime(2026, 11, 2, 14, 5, tzinfo=timezone.utc)  # 00:05 on 3 Nov in Brisbane
+    assert calibration.timestamp('23:50', now, zone) == datetime(2026, 11, 2, 13, 50, tzinfo=timezone.utc)
+
+
+def test_attributes_keep_only_recent_readings():
+    cal = calibration.initial()
+    cal['readings'] = [{'id': i} for i in range(1, 26)]
+    attrs = calibration.attributes(cal, datetime(2026, 11, 2, tzinfo=timezone.utc), ZoneInfo('Australia/Brisbane'))
+    assert [r['id'] for r in attrs['readings']] == list(range(16, 26)) and attrs['reading_count'] == 25
