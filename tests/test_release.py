@@ -49,29 +49,29 @@ def release_tree(tmp_path):
 
 def test_release_notes_stop_at_next_version(release_tree):
     (release_tree / 'CHANGELOG.md').write_text(
-        '# Changelog\n\n## Unreleased\n\n- Future\n\n## 0.1.0\n\n- Released\n\n## 0.0.1\n\n- Older\n')
-    assert prepare('v0.1.0', release_tree) == '- Released\n'
+        '# Changelog\n\n## Unreleased\n\n- Future\n\n## 0.2.0\n\n- Released\n\n## 0.0.1\n\n- Older\n')
+    assert prepare('v0.2.0', release_tree) == '- Released\n'
 
 
 @pytest.mark.parametrize('name', ['addon/config.yaml', 'pyproject.toml', 'addon/pyproject.toml'])
 def test_release_rejects_version_mismatch(release_tree, name):
     path = release_tree / name
-    path.write_text(path.read_text().replace('0.1.0', '0.1.1'))
+    path.write_text(path.read_text().replace('0.2.0', '0.2.1'))
     with pytest.raises(ValueError, match='does not match'):
-        prepare('v0.1.0', release_tree)
+        prepare('v0.2.0', release_tree)
 
 
-@pytest.mark.parametrize('tag', ['0.1.0', 'v0.1.0-rc1', 'v01.1.0', 'v0.1.0.1'])
+@pytest.mark.parametrize('tag', ['0.2.0', 'v0.2.0-rc1', 'v01.1.0', 'v0.2.0.1'])
 def test_release_rejects_invalid_tags(release_tree, tag):
     with pytest.raises(ValueError, match='Release tag'):
         prepare(tag, release_tree)
 
 
-@pytest.mark.parametrize('changelog', ['## 0.0.1\n- Older\n', '## 0.1.0\n\n## 0.0.1\n- Older\n'])
+@pytest.mark.parametrize('changelog', ['## 0.0.1\n- Older\n', '## 0.2.0\n\n## 0.0.1\n- Older\n'])
 def test_release_requires_notes(release_tree, changelog):
     (release_tree / 'CHANGELOG.md').write_text(changelog)
     with pytest.raises(ValueError, match='No CHANGELOG'):
-        prepare('v0.1.0', release_tree)
+        prepare('v0.2.0', release_tree)
 
 
 def test_owner_replacement_covers_tracked_and_untracked_files(tmp_path):

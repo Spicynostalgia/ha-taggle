@@ -38,8 +38,8 @@ def test_discovery_units_reconnect_and_availability():
     configs = [args.args[1] for args in client.publish.call_args_list if args.args[0].endswith('/config')]
     import json
     configs = [json.loads(v) for v in configs]
-    assert len(configs) == 9
-    assert len({tuple(v['device']['identifiers']) for v in configs}) == 1
+    assert len(configs) == 15
+    assert len({tuple(v['device']['identifiers']) for v in configs}) == 2
     water = next(c for c in configs if c['name'] == 'Water total litres')
     assert water['device_class'] == 'water'
     assert water['state_class'] == 'total_increasing'

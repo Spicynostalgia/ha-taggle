@@ -99,6 +99,15 @@
 
     const meters = [meter(123456, 'House', scenario !== 'raw', 1, 12.4, -43.2)];
     if (scenario === 'multi') meters.push(meter(234567, 'Granny flat', true, 0.45, 9.8, -49.1));
+    // Fictional aggregate only: no neighbour IDs or individual readings.
+    const neighbourhood = {average_today: 410, median_today: 350, meters_counted: 14,
+      meters_heard: 19, average_last_hour: 22};
+    for (const [key, value] of Object.entries(neighbourhood)) {
+      states[`sensor.taggle_neighbourhood_${key}`] = {
+        state: String(value), attributes: {unit_of_measurement: key.startsWith('meters_')
+          ? 'meters' : scenario === 'raw' ? 'pulses' : 'L'},
+      };
+    }
     const card = document.createElement('taggle-card');
     card.setConfig({type: 'custom:taggle-card', title: 'Water usage', meters});
     card.hass = {states, entities: {}, locale: {language: 'en-AU'}, config: {time_zone: zone}};

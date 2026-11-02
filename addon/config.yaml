@@ -1,5 +1,5 @@
 name: Taggle water meter
-version: "0.1.0"
+version: "0.2.0"
 slug: taggle_rx
 url: https://github.com/Spicynostalgia/ha-taggle
 image: ghcr.io/spicynostalgia/ha-taggle-addon-{arch}
@@ -16,6 +16,8 @@ services:
 options:
   meter_ids: []
   log_all_meters: false
+  neighbourhood: true
+  neighbourhood_min_meters: 3
   frequency: 922200000
   gain: 40
   device: "0"
@@ -27,6 +29,9 @@ schema:
   meter_ids:
     - "int(0,1048575)"
   log_all_meters: bool
+  neighbourhood: bool
+  neighbourhood_min_meters: "int(3,)"
+  neighbourhood_litres_per_count: "float(0.000001,1000000)?"
   frequency: "int(921700000,922490000)"
   gain: "float(0,50)"
   device: str

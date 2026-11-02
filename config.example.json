@@ -1,5 +1,7 @@
 {
-  "meter_ids": [123456],
+  "meter_ids": [
+    123456
+  ],
   "log_all_meters": false,
   "frequency": 922200000,
   "sample_rate": 2400000,
@@ -16,5 +18,8 @@
     "discovery_prefix": "homeassistant"
   },
   "data_dir": "/data",
-  "jsonl_logging": false
+  "jsonl_logging": false,
+  "neighbourhood": true,
+  "neighbourhood_min_meters": 3,
+  "neighbourhood_litres_per_count": null
 }

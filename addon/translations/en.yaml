@@ -5,6 +5,15 @@ configuration:
   log_all_meters:
     name: Accept all meter IDs
     description: Allow logging other heard IDs. Leave disabled for normal use.
+  neighbourhood:
+    name: Anonymous neighbourhood comparison
+    description: Compare with other heard meters. Disabling deletes anonymous neighbour state and its private salt on startup.
+  neighbourhood_min_meters:
+    name: Minimum neighbours
+    description: Privacy floor for each aggregate cohort. At least three, even if a lower value is supplied.
+  neighbourhood_litres_per_count:
+    name: Neighbourhood litres per count
+    description: Optional assumed pulse value for neighbours. If omitted, use the first configured meter's calibration, or raw pulses. Same council/model often shares a pulse value, but this is unverified.
   frequency:
     name: Centre frequency (Hz)
     description: Default 922200000. The supported channel must remain inside the sampled band.

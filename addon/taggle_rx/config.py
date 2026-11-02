@@ -19,6 +19,9 @@ def meter_id(value):
 class Config:
     meter_ids: list[int] = field(default_factory=list)
     log_all_meters: bool = False
+    neighbourhood: bool = True
+    neighbourhood_min_meters: int = 3
+    neighbourhood_litres_per_count: float | None = None
     frequency: int = 922_200_000
     sample_rate: int = 2_400_000
     gain: float = 40.0
@@ -36,12 +39,20 @@ class Config:
     @classmethod
     def from_dict(cls, raw, *, scan=False):
         config = cls(**raw)
-        for name in ('log_all_meters', 'jsonl_logging'):
+        for name in ('log_all_meters', 'jsonl_logging', 'neighbourhood'):
             if not isinstance(getattr(config, name), bool):
                 raise ValueError(f'{name} must be boolean')
         if not isinstance(config.meter_ids, list):
             raise ValueError('meter_ids must be a list')
-        config.meter_ids = sorted({meter_id(v) for v in config.meter_ids})
+        config.meter_ids = list(dict.fromkeys(meter_id(v) for v in config.meter_ids))
+        floor = config.neighbourhood_min_meters
+        if isinstance(floor, bool) or not isinstance(floor, int):
+            raise ValueError('neighbourhood_min_meters must be an integer')
+        config.neighbourhood_min_meters = max(3, floor)
+        factor = config.neighbourhood_litres_per_count
+        if factor is not None and (isinstance(factor, bool) or not isinstance(factor, (int, float))
+                                   or not math.isfinite(factor) or factor <= 0):
+            raise ValueError('neighbourhood_litres_per_count must be finite and positive')
         if not config.meter_ids and not config.log_all_meters and not scan:
             raise ValueError('configure meter_ids or explicitly enable log_all_meters')
         if config.sample_rate != 2_400_000:
@@ -85,3 +96,9 @@ class Config:
 
     def allows(self, identifier):
         return identifier in self.meter_ids or self.log_all_meters
+
+    @property
+    def neighbourhood_factor(self):
+        if self.neighbourhood_litres_per_count is not None:
+            return self.neighbourhood_litres_per_count
+        return self.litres_per_count.get(self.meter_ids[0]) if self.meter_ids else None

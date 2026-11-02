@@ -18,8 +18,16 @@ ENTITIES = {
     'last_hour_litres': ('Water last hour litres', 'L', 'water', None),
     'today_litres': ('Water today litres', 'L', 'water', None),
     'total_litres': ('Water total litres', 'L', 'water', 'total_increasing'),
+    'vs_neighbourhood_today': ('Vs neighbourhood today', '%', None, 'measurement'),
 }
 DIAGNOSTICS = {'snr', 'signal_level', 'last_seen'}
+NEIGHBOURHOOD_ENTITIES = {
+    'meters_heard': 'Meters heard',
+    'meters_counted': 'Meters counted',
+    'average_today': 'Average today',
+    'median_today': 'Median today',
+    'average_last_hour': 'Average last hour',
+}
 
 
 class Publisher:
@@ -28,6 +36,7 @@ class Publisher:
         self.prefix = config.mqtt['topic_prefix']
         self.discovery_prefix = config.mqtt['discovery_prefix']
         self.latest = {}
+        self.latest_neighbourhood = None
         self.lock = threading.RLock()
         self.client = client or mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                                             client_id=f'{self.prefix.replace("/", "_")}_receiver')
@@ -62,11 +71,22 @@ class Publisher:
             for identifier in self.config.meter_ids:
                 for key, spec in ENTITIES.items():
                     topic = f'{self.discovery_prefix}/sensor/{self.prefix.replace("/", "_")}_{identifier}/{key}/config'
-                    if key.endswith('_litres') and identifier not in self.config.litres_per_count:
+                    if (key.endswith('_litres') and identifier not in self.config.litres_per_count
+                            or key == 'vs_neighbourhood_today' and not self.config.neighbourhood):
                         # Remove stale calibration discovery after configuration changes.
                         self.send(topic, '')
                         continue
                     self.send(topic, self.discovery(identifier, key, spec))
+            for key in NEIGHBOURHOOD_ENTITIES:
+                topic = (f'{self.discovery_prefix}/sensor/'
+                         f'{self.prefix.replace("/", "_")}_neighbourhood/{key}/config')
+                self.send(topic, self.neighbourhood_discovery(key) if self.config.neighbourhood else '')
+            if self.config.neighbourhood:
+                self.send(f'{self.prefix}/neighbourhood/state', self.latest_neighbourhood or
+                          dict.fromkeys(NEIGHBOURHOOD_ENTITIES))
+            else:
+                # Remove retained aggregate data when the feature is disabled.
+                self.send(f'{self.prefix}/neighbourhood/state', '')
             for identifier, state in self.latest.items():
                 self._publish(identifier, state)
             self.send(f'{self.prefix}/status', 'online')
@@ -96,6 +116,32 @@ class Publisher:
         if key in ('last_hour', 'last_hour_litres'):
             result['json_attributes_topic'] = f'{base}/attributes'
         return result
+
+    def neighbourhood_discovery(self, key):
+        result = {
+            'name': NEIGHBOURHOOD_ENTITIES[key],
+            'unique_id': f'{self.prefix}_neighbourhood_{key}',
+            'object_id': f'taggle_neighbourhood_{key}',
+            'state_topic': f'{self.prefix}/neighbourhood/state',
+            'value_template': '{{ value_json.' + key + ' | default(none) }}',
+            'availability_topic': f'{self.prefix}/status',
+            'state_class': 'measurement',
+            'unit_of_measurement': ('meters' if key.startswith('meters_') else
+                                    'L' if self.config.neighbourhood_factor is not None else 'pulses'),
+            'device': {'identifiers': [f'{self.prefix}_neighbourhood'],
+                       'name': 'Taggle neighbourhood', 'manufacturer': 'Taggle Systems',
+                       'model': 'Anonymous receiver aggregate', 'sw_version': __version__},
+        }
+        return result
+
+    def publish_neighbourhood(self, state):
+        if not self.config.neighbourhood:
+            return
+        # Whitelist the aggregate surface; opaque neighbour keys stay in the store.
+        with self.lock:
+            self.latest_neighbourhood = {key: state.get(key) for key in NEIGHBOURHOOD_ENTITIES}
+            if self.client.is_connected():
+                self.send(f'{self.prefix}/neighbourhood/state', self.latest_neighbourhood)
 
     def publish(self, identifier, state):
         with self.lock:

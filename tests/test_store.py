@@ -23,7 +23,7 @@ def config(tmp_path, **kwargs):
 
 def test_filter_before_logging_persistence_or_publishing(tmp_path):
     publisher = Mock()
-    store = Store(config(tmp_path, jsonl_logging=True), publisher)
+    store = Store(config(tmp_path, jsonl_logging=True, neighbourhood=False), publisher)
     store.frame(frame(identifier=234567), START)
     assert not list(tmp_path.iterdir())
     publisher.publish.assert_not_called()

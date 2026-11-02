@@ -1,4 +1,4 @@
-/* Taggle card 0.1.0. MIT. Home Assistant states only; no external requests. */
+/* Taggle card 0.2.0. MIT. Home Assistant states only; no external requests. */
 (() => {
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',
@@ -36,6 +36,7 @@
     th,td { padding:10px 0; border-bottom:1px solid var(--divider-color,#ddd); text-align:start; }
     th { color:var(--muted); font-weight:400; } th:last-child,td:last-child { text-align:end; padding-inline-start:16px; }
     .empty { margin-top:16px; } .note { margin-top:12px; }
+    .comparison { margin-bottom:12px; }
     @container (max-width:480px) {
       ha-card { padding:16px; } dl { gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); }
       dd { font-size:24px; } dl div:last-child { grid-column:1/-1; display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
@@ -69,7 +70,8 @@
     getGridOptions() { return {columns: 12, min_columns: 6}; }
     set hass(hass) {
       this._hass = hass;
-      if (this._config?.meters.some(m => m.device) && !hass.entities && !this._registryRequested && hass.callWS) {
+      if ((this._config?.meters.some(m => m.device || m.neighbourhood?.device)
+          || this._config?.neighbourhood?.device) && !hass.entities && !this._registryRequested && hass.callWS) {
         this._registryRequested = true;
         hass.callWS({type: 'config/entity_registry/list'}).then(registry => {
           this._registry = registry;
@@ -98,6 +100,31 @@
     format(value) {
       return value === null ? '—' : new Intl.NumberFormat(this._hass?.locale?.language || undefined,
         {maximumFractionDigits: 2}).format(value);
+    }
+    comparison(meter, today, unit) {
+      const config = meter.neighbourhood ?? this._config.neighbourhood;
+      if (config === false) return '';
+      const registry = this._hass.entities ? Object.values(this._hass.entities) : this._registry;
+      const get = key => {
+        const selected = config?.device ? registry.filter(e => e.device_id === config.device) : registry;
+        const defaultId = 'sensor.taggle_neighbourhood_' + key;
+        const id = config?.[key] || (!config?.device && this._hass.states[defaultId] ? defaultId
+          : selected.find(e => (e.unique_id || '').endsWith('_neighbourhood_' + key))?.entity_id);
+        return this._hass.states[id];
+      };
+      const average = get('average_today'), median = get('median_today'), counted = get('meters_counted');
+      if (!average && !median && !counted) return '';
+      const avg = number(average), med = number(median), homes = number(counted);
+      if (avg === null || homes === null || homes < 3) {
+        return '<p class="note comparison">Neighbourhood comparison unknown · waiting for enough qualifying homes.</p>';
+      }
+      const neighbourUnit = average.attributes?.unit_of_measurement || 'pulses';
+      const own = number(today);
+      const ratio = own !== null && avg > 0 && unit === neighbourUnit ? (own / avg - 1) * 100 : null;
+      const difference = ratio === null ? '' : Math.round(Math.abs(ratio)) === 0 ? ' · Same as average'
+        : ` · ${this.format(Math.round(Math.abs(ratio)))}% ${ratio < 0 ? 'below' : 'above'}`;
+      return `<p class="note comparison">Today ${esc(this.format(own))} ${esc(unit)} · Neighbourhood avg ${esc(this.format(avg))} ${esc(neighbourUnit)}${esc(difference)}<br>
+        ${med === null ? '' : `Median ${esc(this.format(med))} ${esc(neighbourUnit)} · `}${esc(this.format(homes))} homes</p>`;
     }
     time(value, full = false) {
       const date = new Date(value);
@@ -150,6 +177,7 @@
       return `<section><div class="heading"><h3>${esc(name)}</h3>
         <span class="status ${stale || unavailable ? 'stale' : ''}">${stale ? 'No recent signal' : unavailable ? 'Usage unavailable' : Number.isFinite(stamp) ? 'Last seen '+esc(this.time(seen.state)) : 'Waiting for a reading'}</span></div>
         <dl>${metrics.map(([entity,label]) => `<div><dt>${label}</dt><dd>${esc(this.format(number(entity)))} <small>${esc(unit)}</small></dd></div>`).join('')}</dl>
+        ${this.comparison(meter, today, unit)}
         <div class="diagnostics"><span>SNR ${esc(this.format(number(get('snr'))))} dB</span>
         <span>Signal ${esc(this.format(number(get('signal_level'))))} dBFS</span>
         ${Number.isFinite(attrs.hours_observed) ? `<span>${attrs.hours_observed} hourly intervals today</span>` : ''}</div>

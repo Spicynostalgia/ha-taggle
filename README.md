@@ -2,7 +2,7 @@
 
 Receive your own Taggle-equipped water meter with an RTL-SDR. This project decodes supported hourly transmissions and publishes water usage and signal diagnostics through Home Assistant MQTT discovery. It runs as a Home Assistant add-on, a standalone Docker container, or a Python CLI.
 
-**0.1.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
+**0.2.0 is experimental. Only one transmitter has been verified so far**, in Gladstone, QLD; see [Tested hardware](#tested-hardware). The automated tests use generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
 <img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
 
@@ -186,6 +186,8 @@ For manual resource installation, calibrated entity mappings and device selectio
 
 *Synthetic dashboard preview: two fictional meters. No real meter data is shown.*
 
+The card automatically adds a [neighbourhood comparison](#neighbourhood-comparison) row once the aggregate entities exist; it waits for enough qualifying homes before showing values.
+
 ### 8. Calibrate to litres
 
 ![Illustration: mechanical register with black whole-kL wheels, red fractions, pointer dials and flow indicator](docs/images/register-dial.svg)
@@ -280,7 +282,7 @@ MQTT credentials come from Supervisor service discovery. To scan, set `scan_minu
 
 ## Standalone Docker
 
-Compose uses `ghcr.io/spicynostalgia/ha-taggle:latest` (amd64/aarch64); use a version such as `:0.1.0` to pin a release. A commented `build` block in [docker-compose.yml](docker-compose.yml) enables local builds.
+Compose uses `ghcr.io/spicynostalgia/ha-taggle:latest` (amd64/aarch64); use a version such as `:0.2.0` to pin a release. A commented `build` block in [docker-compose.yml](docker-compose.yml) enables local builds.
 
 ```sh
 cp config.example.json config.json
@@ -321,9 +323,38 @@ The package source lives under `addon/taggle_rx` so Home Assistant can build fro
 
 ## Configuration and privacy
 
-[config.example.json](config.example.json) lists the standalone configuration keys. `meter_ids` is required unless `log_all_meters` is explicitly enabled or scan mode is used. Frames from unconfigured IDs are dropped **before state, logs or MQTT** by default. Explicit `log_all_meters: true` permits JSONL logging of other heard IDs; only configured meters get MQTT entities. Keep it disabled for ordinary use.
+[config.example.json](config.example.json) lists the standalone configuration keys. `meter_ids` is required unless `log_all_meters` is explicitly enabled or scan mode is used. Anonymous neighbourhood comparison is **on by default**. Other meters are tracked only under install-specific HMAC keys; their IDs never enter normal logs, JSONL, state or MQTT. Only aggregate neighbourhood entities are created. Explicit `log_all_meters: true` still permits JSONL logging of other heard IDs when `jsonl_logging` is enabled; keep it disabled for ordinary use. Scan output is unchanged and still prints heard IDs.
 
-`jsonl_logging` defaults to false. When enabled, decoded summaries go to daily JSONL files under `data_dir`; raw radio frames and encrypted bodies are never written. Logs have no automatic rotation: manage their retention yourself. Persistent `state.json` contains your meter IDs and usage; keep it private and backed up. Configuration and local data are git-ignored. MQTT payloads contain usage and IDs, so use a trusted broker and network.
+`jsonl_logging` defaults to false. When enabled, decoded summaries go to daily JSONL files under `data_dir`; raw radio frames and encrypted bodies are never written. Logs have no automatic rotation: manage their retention yourself. Persistent `state.json` contains your meter IDs and usage; keep it private and backed up. Configuration and local data are git-ignored. MQTT payloads contain your configured meter IDs and usage, plus anonymous neighbourhood aggregates, so use a trusted broker and network.
+
+## Neighbourhood comparison
+
+Enabled by default with `neighbourhood: true`, this compares your configured meter(s) with every **other clear-format Taggle** the receiver hears. Your configured meters are always excluded. No per-neighbour entities exist. Encrypted 24-byte meters contribute to the heard count only, never usage.
+
+Neighbour IDs are replaced immediately for tracking by HMAC-SHA256 of the decimal ID with a random 32-byte installation salt, truncated to 16 hex characters. `state.json` stores neighbour entries under those opaque keys only. The salt lives in `data_dir/neighbourhood.salt` with mode `0600`, is never published, and differs across installs. Entries not heard for more than seven days are pruned at startup and during operation. Neighbour IDs are absent from normal logs, JSONL, MQTT topics/payloads/attributes and Home Assistant; the existing explicit `log_all_meters` and scan behaviours are the exceptions described above. Keep state and salt private; opaque tracking keys are not public identifiers.
+
+Set `neighbourhood: false` and restart to turn it off. Startup deletes the neighbour state and salt; MQTT reconnect removes neighbourhood discovery and retained aggregate state. Configured meter state is preserved.
+
+A neighbour qualifies for **today** only after at least **six observed hourly intervals ending on the current local date**, with the number observed also at least **75% of elapsed local clock hours** (including fractional hours). At 08:00, six intervals qualify; at 08:01 they need another observation. No missing usage is estimated or scaled: partial days stay partial, even after qualification. The receiver uses the same counter wraps, overlap deduplication, gap handling and local interval-end date as your meter, and recomputes every minute. At midnight the daily cohort resets and may remain unknown until enough intervals arrive.
+
+`neighbourhood_min_meters` defaults to **3**; lower values are clamped to 3. Each aggregate uses that privacy floor for its own cohort: heard in the last 24 hours; qualifying for today; or clear neighbours with a recent interval for last hour. Values below their cohort's floor are **unknown**, including the heard/counted count itself. Today’s average, median and counted count share one cohort. Last hour averages each clear neighbour’s most recent interval ending within the last two hours, independently of today’s coverage rule. MQTT discovery is retained under `homeassistant/sensor/`, with a **Taggle neighbourhood** device and default topic `taggle/neighbourhood/state`.
+
+Neighbours' litres per count is **unknown**. `neighbourhood_litres_per_count` sets an explicit assumed factor; when unset, the receiver uses the **first configured meter's factor if calibrated**, otherwise raw pulses. The first meter means the first ID in your `meter_ids` list. Same council and meter model usually means the same pulse value, but that assumption is **unverified**. Calibrating your meter therefore also changes the default neighbourhood display to assumed litres. An explicit factor overrides that fallback; it does not calibrate any individual neighbour. Comparison percentages require matching units and a nonzero neighbourhood average.
+
+Reception favours strong nearby signals: these are **heard meters, not a representative survey of the neighbourhood**. Coverage and partial days can bias the comparison. A leaking neighbour can raise the average; the median is more robust, so the card shows both. These are experimental comparisons, not billing or leak detection.
+
+Default suggested entities (HA may rename them):
+
+| Entity | Unit | Meaning |
+| --- | --- | --- |
+| `sensor.taggle_neighbourhood_meters_heard` | meters | Distinct other meters heard in the last 24 h, including encrypted |
+| `sensor.taggle_neighbourhood_meters_counted` | meters | Clear neighbours qualifying for today |
+| `sensor.taggle_neighbourhood_average_today` | L or pulses | Mean observed daily usage of qualifying neighbours |
+| `sensor.taggle_neighbourhood_median_today` | L or pulses | Median of the same daily totals |
+| `sensor.taggle_neighbourhood_average_last_hour` | L or pulses | Mean of each clear neighbour's most recent interval within 2 h |
+| `sensor.taggle_<id>_vs_neighbourhood_today` | % | Your observed today / neighbourhood average today × 100; 100% means equal |
+
+Averages and median use the `measurement` state class, never `total_increasing`; they are not Energy cumulative totals. An uncalibrated configured meter cannot be compared with an aggregate expressed in assumed litres, so its percentage is unknown.
 
 ## MQTT entities
 
@@ -351,7 +382,7 @@ The receiver recomputes today's observed total once a minute, including at local
 
 ## Dashboard card
 
-Add `https://github.com/Spicynostalgia/ha-taggle` as a **custom Dashboard repository** in HACS, or copy [dist/taggle-card.js](dist/taggle-card.js) to Home Assistant's `www/taggle-card.js`. Add a JavaScript module resource `/local/taggle-card.js?v=0.1.0` for manual installation. HACS installs the committed `dist` file; no frontend build or dependencies are needed. Publishing a GitHub release makes versioned installation available.
+Add `https://github.com/Spicynostalgia/ha-taggle` as a **custom Dashboard repository** in HACS, or copy [dist/taggle-card.js](dist/taggle-card.js) to Home Assistant's `www/taggle-card.js`. Add a JavaScript module resource `/local/taggle-card.js?v=0.2.0` for manual installation. HACS installs the committed `dist` file; no frontend build or dependencies are needed. Publishing a GitHub release makes versioned installation available.
 
 Configure entity IDs explicitly (including renamed entities):
 
@@ -375,6 +406,17 @@ device: your-home-assistant-device-registry-id
 ```
 
 For several meters, set `meters` to a list of objects, each containing `name` and `entities` or `device`. The card follows your Home Assistant theme, language and timezone, shows missing/unavailable readings explicitly, and provides a 48-hour chart with an accessible values table. It reads only authenticated Home Assistant states and its entity registry.
+
+The comparison row automatically finds `sensor.taggle_neighbourhood_average_today`, `median_today` and `meters_counted`. To map renamed entities, add this at card level (or inside each meter):
+
+```yaml
+neighbourhood:
+  average_today: sensor.my_neighbourhood_average
+  median_today: sensor.my_neighbourhood_median
+  meters_counted: sensor.my_neighbourhood_count
+```
+
+You can also use `neighbourhood: {device: your-neighbourhood-device-registry-id}`. Registry unique IDs resolve renamed neighbourhood sensors. Set `neighbourhood: false` on the card to hide the row; disabling collection requires the receiver option too. The row shows today's observed value, neighbourhood average, median, qualifying homes and percentage above/below when units match. The history chart remains your meter's observed intervals.
 
 ## Calibration
 
@@ -416,10 +458,10 @@ Tests generate fake frames and filtered PN-modulated IQ from the project's own e
 
 **Forking?** Before your first release, run `python scripts/set_owner.py your-github-name` with the GitHub user or organization hosting your fork (this repository is already set to `spicynostalgia`). It replaces the literal `GITHUB_OWNER` placeholder everywhere in the distributable files with the lowercase owner; commit the result once. In particular, `addon/config.yaml` must contain `image: ghcr.io/GITHUB_OWNER/ha-taggle-addon-{arch}` with your owner substituted. Keep `{arch}` literal: Home Assistant substitutes `amd64` or `aarch64`, and uses the add-on version as the image tag. The script also configures Compose and updates documentation.
 
-Keep `addon/config.yaml`, root `pyproject.toml` and `addon/pyproject.toml` versions equal, and add the matching `## <version>` section to `CHANGELOG.md` (also update `addon/CHANGELOG.md`). A pushed tag such as `v0.1.0` triggers [release.yml](.github/workflows/release.yml); it rejects version mismatches or missing release notes before publishing. You can validate locally with:
+Keep `addon/config.yaml`, root `pyproject.toml` and `addon/pyproject.toml` versions equal, and add the matching `## <version>` section to `CHANGELOG.md` (also update `addon/CHANGELOG.md`). A pushed tag such as `v0.2.0` triggers [release.yml](.github/workflows/release.yml); it rejects version mismatches or missing release notes before publishing. You can validate locally with:
 
 ```sh
-python scripts/prepare_release.py v0.1.0 --notes /tmp/taggle-release-notes.md
+python scripts/prepare_release.py v0.2.0 --notes /tmp/taggle-release-notes.md
 ```
 
 The workflow uses only the built-in `GITHUB_TOKEN`, with `packages: write` and `contents: write`. It publishes `ghcr.io/<owner>/ha-taggle-addon-amd64:<version>` and `ha-taggle-addon-aarch64:<version>`, plus the standalone `ghcr.io/<owner>/ha-taggle:<version>` and `:latest` manifest for `linux/amd64` and `linux/arm64` using Buildx/QEMU. Tags omit the leading `v`. After all images succeed, it creates a GitHub Release using that version's changelog section.

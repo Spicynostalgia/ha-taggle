@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Add anonymous neighbourhood comparison enabled by default, with salted HMAC identities, a minimum three-meter privacy floor, coverage qualification and seven-day pruning.
+- Publish aggregate average/median usage and per-meter comparisons; encrypted neighbours contribute only to the heard count.
+- Add a compact comparison row to the dashboard card and document calibration assumptions, partial days and privacy controls.
+
 ## 0.1.0
 
 - Package the bounded RTL-SDR receiver with clear-format decoding, FEC and CRC validation.
