@@ -24,6 +24,11 @@ def parse_time(value):
     return stamp.astimezone(timezone.utc)
 
 
+def retry_delay(previous, got_data):
+    """2 s after a working SDR drops out; doubling up to 60 s while none is found."""
+    return 2 if got_data else min(previous * 2, 60)
+
+
 def rtl_command(config):
     return ['rtl_sdr', '-d', config.device, '-f', str(config.frequency),
             '-s', str(config.sample_rate), '-g', str(config.gain), '-']
@@ -63,6 +68,7 @@ def main(argv=None):
     pump = None
     failed = False
     refresh = time.monotonic()
+    delay, hinted, announced = 1, None, False
     try:
         if publisher:
             publisher.start()
@@ -76,7 +82,8 @@ def main(argv=None):
                     source = producer.stdout
                 pump = InputPump(source, follow=False)
                 pump.thread.start()
-                if publisher:
+                if publisher and not announced:
+                    announced = True
                     LOG.info('Listening on %g MHz for meter(s): %d configured; '
                              'first reading can take up to an hour',
                              config.frequency / 1e6, len(config.meter_ids))
@@ -99,8 +106,16 @@ def main(argv=None):
                 source.close()
                 producer.wait(timeout=5)
                 producer = source = pump = None
-                LOG.warning('SDR stopped; reconnecting in 2 seconds')
-                retry = time.monotonic() + 2
+                delay = retry_delay(delay, not first)
+                now = time.monotonic()
+                if not first:
+                    LOG.warning('SDR stopped; reconnecting in %d seconds', delay)
+                elif hinted is None or now - hinted >= 600:
+                    hinted = now
+                    LOG.warning('No RTL-SDR found or it stopped at once. Check it is plugged in, that a VM has '
+                                'USB passthrough, and that no other SDR program or container is using it. '
+                                'Retrying every %d s (up to 60 s); this reminder repeats every 10 minutes.', delay)
+                retry = now + delay
                 while not stopping and time.monotonic() < min(retry, deadline):
                     time.sleep(.1)
                 continue
