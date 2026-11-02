@@ -353,6 +353,7 @@ def test_legacy_control_tombstones_reset_configuration_and_read_window_discovery
     for value in ('1597.765', '1597,765 1800', '1597.765 at 6:00', '1597.765@18:00'):
         assert re.fullmatch(reading['pattern'], value)
     assert not re.fullmatch(reading['pattern'], '1597.765 2500')
+    assert re.fullmatch(reading['pattern'], '')  # empty resting state must stay valid in HA
     window = json.loads(published[f'homeassistant/binary_sensor/{node}/read_dial_now/config'])
     assert window['name'] == 'Good time to read the dial'
     assert window['default_entity_id'] == 'binary_sensor.taggle_123456_read_dial_now'

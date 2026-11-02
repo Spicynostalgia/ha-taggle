@@ -160,7 +160,8 @@ class Publisher:
         if domain == 'select':
             result['options'] = ['m³', 'kL', 'L']
         elif domain == 'text':
-            result.update(mode='text', min=0, max=255, pattern=READING_PATTERN)
+            # HA validates the entity's own (empty) state against the pattern too.
+            result.update(mode='text', min=0, max=255, pattern=r'^\s*$|' + READING_PATTERN)
         else:
             result.pop('state_topic')
             result.pop('value_template')
