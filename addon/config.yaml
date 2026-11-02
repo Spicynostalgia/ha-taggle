@@ -7,8 +7,6 @@ description: Receive your own Taggle water meter with RTL-SDR and MQTT
 arch:
   - amd64
   - aarch64
-startup: application
-boot: auto
 init: false
 usb: true
 services:
