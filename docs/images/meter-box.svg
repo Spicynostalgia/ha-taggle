@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration of a water meter box and separate Taggle transmitter</title>
+  <desc id="desc">An open rectangular plastic box near a footpath contains a mechanical water meter and a transmitter connected by a cable. Callouts distinguish the register, the meter serial, and the fictional transmitter ID 123456.</desc>
+  <rect width="960" height="540" rx="16" fill="#f7fafb"/>
+  <g font-family="Arial, sans-serif" fill="#203744">
+    <text x="32" y="42" font-size="23" font-weight="700">Inside the meter box</text>
+    <text x="32" y="68" font-size="15" fill="#526975">Illustration · example arrangement · all IDs fictional</text>
+    <path d="M30 412H475V486H30Z" fill="#e5ecef"/>
+    <path d="M30 454H475M126 412V486M340 412V486" stroke="#bac9ce" stroke-width="2"/>
+    <text x="45" y="511" font-size="15" fill="#526975">Front boundary / footpath</text>
+    <path d="M55 292L97 251H428L465 292V425L428 460H97L55 425Z" fill="#c2d7ce" stroke="#42645a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M75 300H444V417L418 441H103L75 417Z" fill="#e5daca" stroke="#42645a" stroke-width="3"/>
+    <path d="M93 251L111 114H414L430 251Z" fill="#d7e7df" stroke="#42645a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M122 227L132 137H392L402 227ZM149 150L143 214M185 150L182 214M222 150V214M260 150V214M298 150L301 214M335 150L341 214M372 150L380 214" fill="none" stroke="#8ca99d" stroke-width="3"/>
+    <text x="204" y="190" font-size="18" fill="#42645a">WATER</text>
+    <path d="M79 370H170M291 370H439" stroke="#7b979a" stroke-width="22"/>
+    <path d="M79 366H170M291 366H439" stroke="#c3d5d6" stroke-width="5"/>
+    <rect x="157" y="348" width="145" height="62" rx="15" fill="#bd9c63" stroke="#765e36" stroke-width="3"/>
+    <circle cx="229" cy="328" r="57" fill="#d9e5e9" stroke="#425e6c" stroke-width="4"/>
+    <circle cx="229" cy="328" r="48" fill="#fff" stroke="#8ca5af" stroke-width="2"/>
+    <rect x="185" y="310" width="88" height="23" rx="3" fill="#edf3f5"/>
+    <text x="229" y="326" text-anchor="middle" font-size="13" font-family="monospace">00123.456</text>
+    <text x="229" y="347" text-anchor="middle" font-size="12">m³</text>
+    <circle cx="229" cy="360" r="7" fill="none" stroke="#cf684c" stroke-width="2"/>
+    <path d="M229 360L234 356" stroke="#cf684c" stroke-width="2"/>
+    <text x="229" y="396" text-anchor="middle" font-size="12">SERIAL 654321</text>
+    <path d="M292 350C313 314 353 317 366 344" fill="none" stroke="#425e6c" stroke-width="4"/>
+    <rect x="329" y="344" width="87" height="64" rx="17" fill="#eef2f3" stroke="#425e6c" stroke-width="3"/>
+    <rect x="340" y="355" width="65" height="38" rx="3" fill="#fff" stroke="#bac9ce"/>
+    <text x="372" y="369" text-anchor="middle" font-size="11">Taggle</text>
+    <text x="372" y="384" text-anchor="middle" font-size="10" font-weight="700">ID 123456</text>
+    <g fill="none" stroke="#167b9c" stroke-width="2.5" stroke-linejoin="round">
+      <path d="M255 298L480 165H515"/><path d="M260 394L475 283H515"/><path d="M402 377L477 393H515"/>
+    </g>
+    <g fill="#167b9c"><circle cx="255" cy="298" r="4"/><circle cx="260" cy="394" r="4"/><circle cx="402" cy="377" r="4"/></g>
+    <text x="530" y="159" font-size="20" font-weight="700">Meter register</text>
+    <text x="530" y="186" font-size="18">(litres / m³ — for calibration)</text>
+    <text x="530" y="214" font-size="15" fill="#526975">Photograph the reading and record the time.</text>
+    <text x="530" y="277" font-size="20" font-weight="700">Meter serial</text>
+    <text x="530" y="304" font-size="18">(NOT the Taggle ID)</text>
+    <text x="530" y="387" font-size="20" font-weight="700">Taggle transmitter label:</text>
+    <text x="530" y="417" font-size="23" font-weight="700" fill="#167b9c">ID 123456</text>
+    <text x="530" y="445" font-size="15" fill="#526975">Separate puck / box, connected by a cable.</text>
+    <text x="530" y="470" font-size="15" fill="#526975">Some transmitters are mounted on the meter.</text>
+  </g>
+</svg>

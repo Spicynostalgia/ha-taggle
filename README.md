@@ -4,6 +4,136 @@ Receive your own Taggle-equipped water meter with an RTL-SDR. This project decod
 
 **0.1.0 is experimental.** The test suite uses generated signals, not recordings. A fresh installation still needs confirmation against your transmitter and meter register. This is hourly usage, not an instantaneous flow or leak alarm.
 
+<img src="docs/images/card-light.png" alt="Taggle card in a light theme, showing fictional calibrated water usage and its expanded 48-hour history" width="552">
+
+*Dashboard preview using synthetic data and fictional meter IDs. The example calibration is not a recommended scale for your meter.*
+
+**What you get**
+
+- Hourly usage in raw pulses for supported clear-format transmitters, plus signal diagnostics.
+- Litres and a water total for Home Assistant Energy after you calibrate against the register.
+- A dashboard card with 48-hour history, visible gaps, light/dark themes and multiple meters.
+- Home Assistant add-on, Docker and Python installation options; reception stays local.
+
+## Getting started (beginner guide)
+
+An SDR (software-defined radio) is a USB radio receiver. It listens to your meter; it does not connect to or modify the meter. MQTT carries the decoded readings from the receiver to Home Assistant.
+
+![Illustration: meter box sends hourly radio to an antenna and RTL-SDR, then the HA host, MQTT broker and dashboard](docs/images/setup-diagram.svg)
+
+*Illustration: the receive-only setup. The MQTT broker can run on the same host. Energy needs calibrated litres.*
+
+### 1. Check you have a Taggle meter
+
+- [ ] Ask your council/water utility, or search its website for **smart water meter**, **Taggle** or **digital meter**. [Several Australian councils and utilities use Taggle](https://taggle.com/case-studies/), and it is also used elsewhere; a digital meter alone does not confirm compatibility.
+- [ ] Look in your meter box for a Taggle transmitter or label. This experimental receiver targets a known channel near 922 MHz; it does not support every smart meter or every Taggle deployment. See [transmitter support](#hardware-and-transmitter-support) before buying hardware.
+
+### 2. Open your meter box safely
+
+- [ ] Find the usually in-ground rectangular box near the front boundary or footpath. Wear gloves. Lift the lid carefully with a screwdriver at the lifting slot; don't stand on the lid or force it open.
+- [ ] In Australia, check for spiders (including redbacks), snakes, ants and wasps. If you cannot inspect it safely, close it and ask the utility for help.
+- [ ] **Do NOT remove, open, unplug or move the transmitter or meter. It belongs to the utility.** Just look and photograph, then replace the box lid.
+
+### 3. Identify the transmitter and its ID
+
+![Illustration: open in-ground meter box with callouts for the register, meter serial and transmitter ID 123456](docs/images/meter-box.svg)
+
+*Illustration: a typical arrangement, not a photo. Your box and transmitter may look different.*
+
+![Illustration: plain transmitter label with ID 123456 circled and a separate serial marked not this one](docs/images/transmitter-label.svg)
+
+*Illustration: simplified label with fictional numbers; no real product logo is reproduced.*
+
+- [ ] Take a phone photo of the **transmitter label**. Its decimal **ID** (often about six digits, e.g. fictional `123456`) is different from the mechanical meter's serial number or a separate barcode serial.
+- [ ] Photograph the **register reading**, including its units (litres or m³), and keep the timestamp. This is useful later for calibration; it is not the radio counter.
+- [ ] If the label is unreadable, use the scan and tap test in [step 6](#6-confirm-youre-receiving-your-meter). Ask the utility if you still cannot identify it confidently.
+
+### 4. Get the hardware
+
+- [ ] **RTL-SDR USB receiver:** the RTL-SDR Blog V4 is a recommended, driver-supported choice if you own one or find genuine remaining stock. Budget roughly **AUD 60** for a dongle as a starting estimate; kits, shipping and stock vary. [V4 production has ended](https://www.rtl-sdr.com/rtl-sdr-blog-v4-end-of-line/); use the [manufacturer's reseller list](https://www.rtl-sdr.com/buy-rtl-sdr-dvb-t-dongles/) to check availability. The Blog V3 is another option.
+- [ ] **915–928 MHz antenna:** a quarter-wave whip is about **8 cm** at 922 MHz. With the stock telescopic dipole kit, use the short elements at about **8 cm per side**. See the [manufacturer's antenna guide](https://www.rtl-sdr.com/using-our-new-dipole-antenna-kit/).
+- [ ] **USB extension cable:** move the dongle away from computer noise and closer to a window facing the meter.
+- [ ] **Host:** a Pi 4/5, mini PC, or NAS with Docker and SDR USB access. Use the machine running HA if suitable; this project provides amd64/aarch64 container images. A VM needs USB passthrough.
+
+### 5. Install
+
+For **Home Assistant OS**, use the add-on (called an *app* in newer HA menus). Non-HAOS users: follow [Standalone Docker](#standalone-docker), then return to step 6. On Docker/Linux, a DVB TV kernel driver can claim the dongle; release/blacklist that driver on the host if it causes “device busy”.
+
+1. [ ] In **Settings → Apps (Add-ons) → Store**, install and start **Mosquitto broker**, unless you already have a Supervisor-discoverable MQTT broker. Under **Settings → Devices & services**, configure the discovered **MQTT** integration. See [HA's MQTT setup](https://www.home-assistant.io/integrations/mqtt/).
+2. [ ] In the Store's **⋮ → Repositories**, add `https://github.com/Spicynostalgia/ha-taggle` and click **Add**. See [HA's app repository instructions](https://www.home-assistant.io/common-tasks/os/#installing-a-third-party-app-repository) if your menu differs.
+3. [ ] Refresh the Store, open **Taggle water meter**, and click **Install**. Connect the SDR and antenna.
+4. [ ] Open the add-on's **Configuration** tab. Set `meter_ids` to your own decimal transmitter ID, leave `litres_per_count: []`, and set your timezone (for example `Australia/Brisbane`). Save. The add-on gets MQTT credentials from Supervisor; you do not paste them into these options.
+5. [ ] Click **Start**, then open **Logs**. After a supported frame arrives, look under **Settings → Devices & services → MQTT** for the meter device. If you need to find the ID first, leave `meter_ids: []` and run the scan below.
+
+### 6. Confirm you're receiving your meter
+
+- [ ] Set **`scan_minutes: 65`**, save and restart the add-on. Watch **Logs** and wait the full 65 minutes: a transmitter may send only **once per hour**. Docker/CLI users can use [the scan commands](#find-your-meter-id). Scan mode publishes no MQTT entities and saves no usage state.
+- [ ] Look for lines like this **synthetic example** (all numbers are fictional):
+
+```json
+{"meter_id": 123456, "snr_median_db": 12.4, "signal_level_dbfs": -43.2}
+```
+
+`snr_median_db` is a **despread correlation SNR estimate**, not the raw antenna SNR. Higher is better when comparing antenna positions, but there is **no field-validated “good” cutoff** in this release. The [synthetic receiver tests](tests/test_receiver.py) check that decoded test frames exceed 5 dB; this is a test assertion, not a required reception threshold. Repeated valid hourly frames are the useful check. Scan output includes `counts` only for IDs already in `meter_ids` and only for clear-format frames; missing counts in an unconfigured scan do not establish encryption.
+
+- [ ] For the **tap test**, configure your ID (or a plausible candidate from an unreadable label), set `scan_minutes: 0`, save and restart. Wait for a normal reading and note the time and `last_hour`. With nothing else using water, fill a **10 L bucket twice**, note the time, then check that `last_hour` increases at the next transmission. Counts are still pulses, so do not expect the number `20`. Radio interval boundaries can split the draw; check the following update too if needed. Reuse the water.
+- [ ] If identifying a candidate, repeat the timed test to confirm its response matches your own meter. A strong signal alone does not identify your meter; do not keep someone else's ID configured. Encrypted transmitters cannot support a usage tap test; ask the utility to confirm the ID instead.
+- [ ] If nothing appears, move the antenna closer to the meter or a facing window, try a higher position and a USB extension, then try `gain: 40` → `49`. Higher gain can overload the receiver; lower it again if reception worsens. Wait another full scan after each change. This receiver does not search every Taggle channel.
+- [ ] Finish by setting **`scan_minutes: 0`**, configuring only your meter ID(s), saving and restarting for normal MQTT operation.
+
+### 7. Add the dashboard card
+
+1. [ ] If needed, [install HACS](https://www.hacs.dev/docs/use/download/download/) (the community store, separate from the add-on Store).
+2. [ ] Open **HACS → ⋮ → Custom repositories**, enter `https://github.com/Spicynostalgia/ha-taggle`, select **Dashboard**, and add it. Search for **ha-taggle**, open it and **Download**. Reload your browser when prompted. See [HACS custom repositories](https://www.hacs.dev/docs/faq/custom_repositories/).
+3. [ ] In your HA dashboard, choose **Edit dashboard → Add card → Manual** and paste the example below. Replace the fictional ID with yours; check the actual entity IDs under the MQTT device if HA renamed them. Save.
+
+```yaml
+type: custom:taggle-card
+title: Water usage
+entities:
+  last_hour: sensor.taggle_123456_last_hour
+  today: sensor.taggle_123456_today
+  meter_count: sensor.taggle_123456_meter_count
+  last_seen: sensor.taggle_123456_last_seen
+  snr: sensor.taggle_123456_snr
+  signal_level: sensor.taggle_123456_signal_level
+```
+
+<p>
+  <img src="docs/images/card-dark.png" alt="Dark theme card with fictional calibrated usage and expanded history" width="330">
+  <img src="docs/images/card-mobile.png" alt="Mobile width card with fictional calibrated usage and expanded history" width="260">
+</p>
+
+*Synthetic dashboard previews: dark theme and mobile width. The card starts in raw pulses until calibrated; these previews show litres.*
+
+For manual resource installation, calibrated entity mappings and device selection, see [Dashboard card reference](#dashboard-card). Multiple meters can share one card:
+
+<img src="docs/images/card-multi.png" alt="Two-meter card showing fictional House and Granny flat water usage" width="552">
+
+*Synthetic dashboard preview: two fictional meters. No real meter data is shown.*
+
+### 8. Calibrate to litres
+
+- [ ] Keep raw pulses until you measure your own scale. Take **two register photos at least a day apart**, and record `meter_count` at the **same radio interval endpoints**. Avoid water use between each endpoint and its photo; a photo and a counter captured at unrelated times are not aligned readings.
+- [ ] Use a period with **no missing receiver hours**, enough water use to exceed register rounding, and clear register units. Follow [docs/CALIBRATION.md](docs/CALIBRATION.md) to calculate litres per count and validate it over more days. Do not copy the fictional example factor.
+- [ ] Set the verified `litres_per_count` for your ID and restart. Add `last_hour_litres`, `today_litres` and `total_litres` entity mappings to the card's `entities` block, using `sensor.taggle_123456_<key>` with your own ID. In **Settings → Dashboards → Energy**, select the calibrated **total litres** sensor for water. Only future observed usage is added to that total; calibration does not backfill past Energy usage.
+
+### 9. Troubleshooting
+
+| What you see | What to check |
+| --- | --- |
+| No frames after 65 minutes | SDR USB access, antenna connection/position and host noise. Try a window, higher position, USB extension and gain changes as above. A different channel or unsupported deployment is possible. |
+| ID heard but counts unavailable | First configure the ID and leave scan mode. A **24-byte encrypted format** provides identity and diagnostics only: this receiver cannot report that meter's usage over the air or decrypt it. |
+| “Device busy” / cannot open SDR | On Docker/Linux, check the DVB kernel driver; also stop other SDR apps or containers holding the dongle. A VM must pass the USB device through to the receiver host. |
+| Entities unavailable after 3 hours | No valid frame for three hours makes the meter unavailable. Check receiver logs, antenna, USB and MQTT connection; confirm `scan_minutes: 0`. |
+| Usage too high or low | Pulses are not litres until calibrated. Check your scale, register units (m³ × 1000 = litres), aligned timestamps and reception gaps. Daily totals include observed intervals only. |
+
+- [ ] If still stuck, collect the software version and error text. Redact your actual ID and private configuration before sharing anything publicly.
+
+## Reference
+
+The sections below cover configuration, supported formats and operating limits in more detail.
+
 ## Hardware and transmitter support
 
 - An RTL-SDR with USB access. The container builds include the **RTL-SDR Blog driver**, including Blog V4 support.
@@ -173,6 +303,14 @@ The radio uses BPSK with a 4095-chip m-sequence per coded bit, approximately 4.8
 This implementation receives only part of the wideband spread signal. Antenna quality, noise, collisions, USB loss, radio clock drift and host CPU performance affect reception. Daily totals can be incomplete, counter resets are ambiguous, flag meanings remain unknown, and modulo counter differences cannot distinguish multiple wraps. It does not provide billing-grade accuracy. Test coverage validates synthetic signals, not compatibility with every transmitter.
 
 ## Development
+
+Regenerate the README screenshots with Python's standard library and an installed Chromium:
+
+```sh
+CHROME=/absolute/path/to/chromium python3 scripts/screenshots.py
+```
+
+The script serves the repository over loopback HTTP and writes four 2× PNGs into `docs/images/`. The [screenshot harness](docs/screenshots/harness.html) accepts `theme=light|dark`, `width=NNN` (card width in CSS pixels) and `scenario=calibrated|raw|multi`. It fixes the clock and uses only fictional IDs and synthetic 48-hour history, with missing and zero-use hours. Preview it through an HTTP server, not `file://`. Use the same Chromium version and fonts for repeatable pixels, and commit the generated PNGs after inspecting them.
 
 ```sh
 pip install -e '.[dev]'

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taggle card · fictional screenshot fixture</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --primary-color: #03a9f4;
+      --primary-text-color: #212121;
+      --secondary-text-color: #727272;
+      --text-primary-color: #ffffff;
+      --divider-color: #e0e0e0;
+      --primary-background-color: #fafafa;
+      --card-background-color: #ffffff;
+      --ha-card-background: #ffffff;
+      --error-color: #db4437;
+      --ha-card-border-radius: 12px;
+      --primary-font-family: Arial, sans-serif;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --primary-text-color: #e1e1e1;
+      --secondary-text-color: #9b9b9b;
+      --divider-color: #383838;
+      --primary-background-color: #111111;
+      --card-background-color: #1c1c1c;
+      --ha-card-background: #1c1c1c;
+      --error-color: #ff5252;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--primary-background-color); }
+    #card-container { width: 520px; }
+  </style>
+</head>
+<body>
+  <main id="card-container" aria-label="Synthetic water usage example"></main>
+  <script type="module">
+    // No network services, real meter data, external fonts or HA installation needed.
+    const params = new URLSearchParams(location.search);
+    const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
+    const scenario = params.get('scenario') || 'calibrated';
+    if (!['calibrated', 'raw', 'multi'].includes(scenario)) throw new Error('Unknown scenario');
+    const requestedWidth = Number(params.get('width') || 520);
+    const width = Number.isInteger(requestedWidth) && requestedWidth >= 280 && requestedWidth <= 1600
+      ? requestedWidth : 520;
+    document.documentElement.dataset.theme = theme;
+    const container = document.getElementById('card-container');
+    container.style.width = `${width}px`;
+
+    // The card uses Date.now() for its three-hour staleness check. Freeze that clock
+    // before importing it; all fixture timestamps and the HA timezone are fixed too.
+    const now = Date.parse('2026-01-03T08:30:00Z');
+    Date.now = () => now;
+    await import('../../dist/taggle-card.js');
+
+    const states = {};
+    const keys = ['last_hour', 'today', 'meter_count', 'last_seen', 'snr', 'signal_level'];
+    const litreKeys = ['last_hour_litres', 'today_litres', 'total_litres'];
+    const hourlyProfile = [0, 0, 0, 0, 0, 2, 16, 28, 9, 3, 0, 5, 12, 4, 0, 3, 8, 22, 36, 18, 7, 4, 0, 0];
+    const zone = 'Australia/Brisbane';
+    const localDay = stamp => new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(new Date(stamp));
+    const lastEnd = now - 15 * 60000;
+
+    function meter(id, name, calibrated, scale, snr, signal) {
+      // Omit two intervals entirely: a missing observation is not a zero reading.
+      const history = Array.from({length: 48}, (_, i) => {
+        const stamp = lastEnd - (47 - i) * 3600000;
+        const localHour = (new Date(stamp).getUTCHours() + 10) % 24;
+        return {end: new Date(stamp).toISOString(), counts: Math.round(hourlyProfile[localHour] * scale)};
+      }).filter((_, i) => i !== 9 && i !== 32);
+      const today = history.filter(row => localDay(row.end) === localDay(now));
+      const countToday = today.reduce((sum, row) => sum + row.counts, 0);
+      const cumulative = 10000 + history.reduce((sum, row) => sum + row.counts, 0);
+      // Fictional scale only; the receiver never assumes a litres-per-count value.
+      const factor = 2.5;
+      const attributes = {history, hours_observed: today.length, encrypted: false, raw_count: cumulative};
+      const values = {
+        last_hour: history.at(-1).counts, today: countToday, meter_count: cumulative,
+        last_seen: new Date(lastEnd).toISOString(), snr, signal_level: signal,
+        last_hour_litres: history.at(-1).counts * factor, today_litres: countToday * factor,
+        total_litres: cumulative * factor,
+      };
+      const entities = {};
+      for (const key of [...keys, ...(calibrated ? litreKeys : [])]) {
+        const entityId = `sensor.taggle_${id}_${key}`;
+        entities[key] = entityId;
+        const unit = litreKeys.includes(key) ? 'L' : ['snr', 'signal_level', 'last_seen'].includes(key)
+          ? {snr: 'dB', signal_level: 'dBFS'}[key] : 'pulses';
+        states[entityId] = {
+          entity_id: entityId, state: String(values[key]), last_changed: new Date(lastEnd).toISOString(),
+          attributes: {...attributes, friendly_name: `${name} ${key}`, unit_of_measurement: unit,
+            ...(calibrated ? {litres_per_count: factor} : {})},
+        };
+      }
+      return {name, entities};
+    }
+
+    const meters = [meter(123456, 'House', scenario !== 'raw', 1, 12.4, -43.2)];
+    if (scenario === 'multi') meters.push(meter(234567, 'Granny flat', true, 0.45, 9.8, -49.1));
+    const card = document.createElement('taggle-card');
+    card.setConfig({type: 'custom:taggle-card', title: 'Water usage', meters});
+    card.hass = {states, entities: {}, locale: {language: 'en-AU'}, config: {time_zone: zone}};
+    container.append(card);
+    card.shadowRoot.querySelectorAll('details').forEach(details => { details.open = true; });
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // scripts/screenshots.py measures first, then captures with the same width.
+    document.documentElement.dataset.screenshotWidth = String(width + 32);
+    document.documentElement.dataset.screenshotHeight = String(Math.ceil(container.getBoundingClientRect().height + 32));
+    document.documentElement.dataset.screenshotReady = 'true';
+  </script>
+</body>
+</html>

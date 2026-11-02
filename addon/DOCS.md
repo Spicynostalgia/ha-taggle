@@ -2,6 +2,16 @@
 
 Requires an RTL-SDR, an antenna for 915–928 MHz, and the Home Assistant MQTT integration with a Supervisor-discoverable MQTT broker. Supports amd64 and aarch64. The build includes the RTL-SDR Blog driver for Blog V4 support.
 
+New to SDR? Follow the [beginner walkthrough](https://github.com/Spicynostalgia/ha-taggle#getting-started-beginner-guide) for hardware, safe meter identification, reception checks, dashboard setup and calibration.
+
+![Illustration: receive-only path from the meter box through SDR and MQTT to Home Assistant](https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/images/setup-diagram.svg)
+
+*Illustration: the receiver setup. The broker can share the HA host; Energy requires calibration.*
+
+![Taggle dashboard card with fictional calibrated usage](https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/images/card-light.png)
+
+*Dashboard preview with synthetic data and fictional IDs; no default calibration is assumed.*
+
 ## Setup
 
 Enter your own decimal transmitter ID in `meter_ids`. The transmitter label is usually marked `ID:xxxxxx`. Do not substitute the mechanical register serial. Every sample ID in this project is fictional.

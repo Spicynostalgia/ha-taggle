@@ -27,7 +27,9 @@ def check(deny_file=None):
         if path.suffix.lower() in {'.cu8', '.iq', '.npy', '.npz', '.pcap', '.jsonl'}:
             failures.append(f'{path.relative_to(ROOT)}: forbidden data artifact')
             continue
-        content = path.read_text()
+        # Screenshots are binary. Latin-1 keeps ASCII metadata visible to the
+        # privacy guards without trying to interpret compressed PNG data as UTF-8.
+        content = path.read_bytes().decode('latin-1') if path.suffix.lower() == '.png' else path.read_text()
         if any(pattern.search(content) for pattern in patterns):
             failures.append(f'{path.relative_to(ROOT)}: privacy guard matched')
     source, bundle = ROOT / 'card/taggle-card.js', ROOT / 'dist/taggle-card.js'

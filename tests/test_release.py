@@ -16,6 +16,23 @@ def load_script(name):
 
 prepare = load_script('prepare_release').prepare
 set_owner_module = load_script('set_owner')
+check_release_module = load_script('check_release')
+
+
+def test_release_scans_png_metadata_without_decoding_as_utf8(tmp_path, monkeypatch, capsys):
+    subprocess.run(['git', 'init', '-q', str(tmp_path)], check=True)
+    for directory in ('card', 'dist'):
+        (tmp_path / directory).mkdir()
+        (tmp_path / directory / 'taggle-card.js').write_text('// fixture\n')
+    image = tmp_path / 'screenshot.png'
+    image.write_bytes(b'\x89PNG\r\n\x1a\n\xff\x00')
+    monkeypatch.setattr(check_release_module, 'ROOT', tmp_path)
+    assert check_release_module.check() == 0
+    # PNG text metadata must still be subject to the existing privacy guard.
+    private_header = b'-----BEGIN ' + b'PRIVATE KEY-----'
+    image.write_bytes(image.read_bytes() + private_header)
+    assert check_release_module.check() == 1
+    assert 'screenshot.png: privacy guard matched' in capsys.readouterr().out
 
 
 @pytest.fixture

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration of the receive-only Taggle setup</title>
+  <desc id="desc">Meter box to hourly 922 MHz radio, antenna, RTL-SDR USB stick, Home Assistant host running the add-on or Docker, MQTT broker, then Home Assistant dashboard and Energy. The broker may share the same host.</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#167b9c"/></marker></defs>
+  <rect width="1200" height="300" rx="16" fill="#f7fafb"/>
+  <g font-family="Arial, sans-serif" fill="#203744" text-anchor="middle">
+    <text x="28" y="38" text-anchor="start" font-size="23" font-weight="700">From the meter to your dashboard</text>
+    <text x="28" y="64" text-anchor="start" font-size="15" fill="#526975">Illustration · receive only · usage updates hourly</text>
+    <g fill="none" stroke="#167b9c" stroke-width="2.5" marker-end="url(#arrow)">
+      <path d="M166 152H226" stroke-dasharray="5 5"/><path d="M365 152H420"/><path d="M561 152H616"/><path d="M761 152H816"/><path d="M961 152H1016"/>
+    </g>
+    <text x="197" y="101" font-size="14" fill="#167b9c">922 MHz</text>
+    <text x="197" y="120" font-size="14" fill="#167b9c">hourly</text>
+    <g stroke="#425e6c" stroke-width="3" stroke-linejoin="round">
+      <path d="M32 139L54 123H143L158 139V189H32Z" fill="#d7e7df"/>
+      <path d="M32 139H158M54 123L63 105H139L143 123" fill="none"/>
+      <circle cx="96" cy="160" r="18" fill="#fff"/>
+      <path d="M96 160L105 152" fill="none"/>
+      <path d="M286 109V180M265 188H307M286 119L265 139M286 119L307 139" fill="none"/>
+      <path d="M249 112Q232 135 249 157M323 112Q340 135 323 157" fill="none" stroke="#8ca5af" stroke-width="2"/>
+      <rect x="434" y="125" width="103" height="53" rx="7" fill="#dce6e9"/>
+      <path d="M537 140H553V164H537" fill="#fff"/>
+      <rect x="632" y="112" width="114" height="79" rx="9" fill="#dce6e9"/>
+      <path d="M648 133H730M648 145H701" fill="none" stroke-width="2"/>
+      <circle cx="725" cy="174" r="4" fill="#167b9c" stroke="none"/>
+      <rect x="834" y="112" width="112" height="79" rx="9" fill="#e3eef2"/>
+      <path d="M851 133H929M851 152H929M851 171H929" fill="none" stroke-width="2"/>
+      <rect x="1034" y="106" width="137" height="88" rx="7" fill="#fff"/>
+      <path d="M1052 172V154H1071V172M1082 172V135H1101V172M1112 172V144H1131V172M1142 172V123H1154V172" fill="#b5e1ef" stroke="#167b9c" stroke-width="2"/>
+    </g>
+    <text x="94" y="222" font-size="17" font-weight="700">Meter box</text>
+    <text x="94" y="245" font-size="14" fill="#526975">Taggle transmitter</text>
+    <text x="286" y="222" font-size="17" font-weight="700">Antenna</text>
+    <text x="286" y="245" font-size="14" fill="#526975">915–928 MHz</text>
+    <text x="490" y="222" font-size="17" font-weight="700">RTL-SDR</text>
+    <text x="490" y="245" font-size="14" fill="#526975">USB stick</text>
+    <text x="689" y="222" font-size="17" font-weight="700">HA host</text>
+    <text x="689" y="245" font-size="14" fill="#526975">Add-on / Docker</text>
+    <text x="890" y="222" font-size="17" font-weight="700">MQTT broker</text>
+    <text x="890" y="245" font-size="14" fill="#526975">Can share the host</text>
+    <text x="1102" y="222" font-size="17" font-weight="700">Home Assistant</text>
+    <text x="1102" y="245" font-size="14" fill="#526975">Dashboard / Energy*</text>
+    <text x="28" y="280" text-anchor="start" font-size="14" fill="#526975">*Energy requires calibration to litres. A supported clear-format transmitter is needed for usage.</text>
+  </g>
+</svg>
