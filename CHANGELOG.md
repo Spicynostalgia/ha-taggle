@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Docs: restructure the README for beginners, add real hardware screenshots and tested Docker/broker setup, and link technical detail in the wiki.
+
 ## 0.2.1
 
 - Fix MQTT discovery defaults for Home Assistant 2026.4+ and align sensor names with documented entity IDs.

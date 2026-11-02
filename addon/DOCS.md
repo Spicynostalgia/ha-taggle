@@ -6,7 +6,7 @@ Requires an RTL-SDR, an antenna for 915–928 MHz, and the Home Assistant MQTT i
 
 ## Install
 
-The receiver add-on needs **Home Assistant OS or Supervised**. **Home Assistant Container/Core** users should use [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle#standalone-docker). A running **MQTT broker** and the Home Assistant MQTT integration are prerequisites; use Mosquitto below if you need a broker, then configure the discovered MQTT integration under **Settings → Devices & services**.
+The receiver add-on needs **Home Assistant OS or Supervised**. **Home Assistant Container/Core** users should use [Standalone Docker](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker). A running **MQTT broker** and the Home Assistant MQTT integration are prerequisites; use Mosquitto below if you need a broker, then configure the discovered MQTT integration under **Settings → Devices & services**.
 
 [![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_mosquitto)
 
@@ -14,7 +14,7 @@ Open the add-on repository below, add it, then open **Taggle water meter**: **In
 
 [![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FSpicynostalgia%2Fha-taggle)
 
-The optional dashboard card is installed separately through HACS. With HACS already installed, open its repository below, download the card and reload your browser. See the [dashboard card guide](https://github.com/Spicynostalgia/ha-taggle#7-add-the-dashboard-card) for configuration.
+The optional dashboard card is installed separately through HACS. With HACS already installed, open its repository below, download the card and reload your browser. See the [dashboard card guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Dashboard-Card) for configuration.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
 
@@ -24,11 +24,11 @@ The optional dashboard card is installed separately through HACS. With HACS alre
 
 The tested unit is a white cylindrical “baton” pulse transmitter hose-clamped to the supply pipe, with a thin cable to a pulse/Hall sensor on a V100-style mechanical meter (flip lid, black kL and red litre digits). The label has “taggle”, a barcode and an ID, **no model number**. SP-series / ADC-1 family identification is plausible but **unconfirmed**.
 
-See the [tested unit and identification guide](https://github.com/Spicynostalgia/ha-taggle#tested-hardware). Please [report other councils/models](https://github.com/Spicynostalgia/ha-taggle/issues) with whether usage worked, a label photo with the ID and identifying barcode blurred, frame length and SNR. Other Taggle generations may use different channels or encryption; NB-IoT/cellular models cannot be received by this project.
+See the [tested unit and identification guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware). Please [report other councils/models](https://github.com/Spicynostalgia/ha-taggle/issues) with whether usage worked, a label photo with the ID and identifying barcode blurred, frame length and SNR. Other Taggle generations may use different channels or encryption; NB-IoT/cellular models cannot be received by this project.
 
 ## Beginner guide
 
-New to SDR? Follow the [beginner walkthrough](https://github.com/Spicynostalgia/ha-taggle#getting-started-beginner-guide) for hardware, safe meter identification, reception checks, dashboard setup and calibration.
+New to SDR? Follow the [beginner walkthrough](https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started) for hardware, safe meter identification, reception checks, dashboard setup and calibration.
 
 ![Illustration: receive-only path from the meter box through SDR and MQTT to Home Assistant](https://raw.githubusercontent.com/Spicynostalgia/ha-taggle/main/docs/images/setup-diagram.svg)
 
