@@ -46,6 +46,20 @@ Start with `litres_per_count: []`: counts have no assumed water-volume unit. Set
 
 Supervisor supplies MQTT host, port, username and password automatically via the `mqtt:need` service. The startup script reads `/data/options.json`, writes a private runtime configuration under `/run`, and executes the receiver. It never prints broker credentials. USB plug-and-play access is requested with `usb: true`; another driver or SDR app must not hold the receiver.
 
+### Possible leak alert
+
+Enabled by default for configured meters only, never neighbours. Each gets a `problem` binary sensor, `binary_sensor.taggle_<id>_possible_leak`, available whenever its usage sensors are available. The dashboard card can show a small **Possible leak** badge with the reason; add `possible_leak` to explicit card entity mappings or lists. Device-based cards find it automatically.
+
+| Option | Default | Accepted values |
+| --- | --- | --- |
+| `leak_detection` | `true` | Boolean; false removes possible-leak discovery. |
+| `leak_continuous_hours` | `24` | Integer 1–168 hours; all observed intervals must have positive pulses with at least 80% coverage. A new observed zero clears this reason. |
+| `leak_night_start` | `"01:00"` | Inclusive local `HH:MM`, using `timezone`. |
+| `leak_night_end` | `"05:00"` | Exclusive local `HH:MM`, different from start; supports crossing midnight. |
+| `leak_night_min_pulses` | `1` | Integer 1–65535; every observed night interval must meet this threshold, with at least three observations. A later completed clean window with at least three observations clears this reason. |
+
+**A hint, not an alarm:** the receiver sees hourly totals only. A dripping tap below one pulse per hour is invisible. Irrigation schedules can trigger night flow; adjust the night window to suit your household. Missing intervals are neither flow nor zero and cannot establish recovery. Calibration is not required. See the [full rules, attributes and card mapping](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/LEAK-DETECTION.md) and wiki [Entities reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Entities-Reference).
+
 ## Scan
 
 Set `scan_minutes` to 65 and start. Watch the log for IDs and SNR. A scan allows an empty meter list, prints counts only for configured IDs, and writes no usage state/logs or MQTT messages. It exits when the duration elapses. Set `scan_minutes` back to zero, configure your ID and restart for normal operation.

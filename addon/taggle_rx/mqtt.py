@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import paho.mqtt.client as mqtt
 
 from . import __version__
+from .leak import ATTRIBUTES as LEAK_ATTRIBUTES
 
 LOG = logging.getLogger(__name__)
 
@@ -90,6 +91,12 @@ class Publisher:
                         self.send(topic, '')
                         continue
                     self.send(topic, self.discovery(identifier, key, spec))
+                # Separate binary-sensor discovery keeps usage entity specs unchanged.
+                topic = (f'{self.discovery_prefix}/binary_sensor/'
+                         f'{self.prefix.replace("/", "_")}_{identifier}/possible_leak/config')
+                self.send(topic, self.leak_discovery(identifier) if self.config.leak_detection else '')
+                if not self.config.leak_detection:
+                    self.send(f'{self.prefix}/{identifier}/leak', '')
             for key in NEIGHBOURHOOD_ENTITIES:
                 topic = (f'{self.discovery_prefix}/sensor/'
                          f'{self.prefix.replace("/", "_")}_neighbourhood/{key}/config')
@@ -150,6 +157,17 @@ class Publisher:
         }
         return result
 
+    def leak_discovery(self, identifier):
+        result = self.discovery(identifier, 'possible_leak', ('Possible leak', None, 'problem', None))
+        result.update(default_entity_id=f'binary_sensor.taggle_{identifier}_possible_leak',
+                      state_topic=f'{self.prefix}/{identifier}/leak',
+                      value_template='{{ value_json.state }}',
+                      payload_on='ON', payload_off='OFF',
+                      json_attributes_topic=f'{self.prefix}/{identifier}/leak',
+                      json_attributes_template='{{ dict(' + ', '.join(
+                          f'{key}=value_json.{key}' for key in LEAK_ATTRIBUTES) + ') | tojson }}')
+        return result
+
     def publish_neighbourhood(self, state):
         if not self.config.neighbourhood:
             return
@@ -171,9 +189,12 @@ class Publisher:
         self.send(f'{base}/available', 'online' if recent else 'offline')
         self.send(f'{base}/counts_available', 'online' if recent and 'meter_count' in state else 'offline')
         self.send(f'{base}/state', {k: state_value(v) if k in ENTITIES else v
-                                  for k, v in state.items() if k != 'history'})
+                                  for k, v in state.items() if k not in ('history', 'possible_leak')})
         self.send(f'{base}/attributes', {k: state[k] for k in (
             'history', 'hours_observed', 'litres_per_count', 'encrypted', 'raw_count') if k in state})
+        if self.config.leak_detection and identifier in self.config.meter_ids and 'possible_leak' in state:
+            leak = state['possible_leak']
+            self.send(f'{base}/leak', {key: leak[key] for key in ('state', *LEAK_ATTRIBUTES)})
 
     def close(self):
         if self.client.is_connected():

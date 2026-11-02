@@ -241,3 +241,53 @@ test('device lookup fetches stable unique IDs even when frontend entity map is p
   card.hass = ha;
   assert.equal(calls, 1);
 });
+
+test('possible leak badge renders only ON states with an escaped reason and clears on recovery', () => {
+  const id = 'binary_sensor.taggle_123456_possible_leak';
+  const card = new Card();
+  card.setConfig({entities:[...Object.keys(hass().states), id]});
+  const ha = hass();
+  for (const value of ['off', 'unknown', 'unavailable', 'ON']) {
+    ha.states[id] = state(value, {reason:'night flow'});
+    card.hass = ha;
+    assert.doesNotMatch(card.shadowRoot.innerHTML, /Possible leak/);
+  }
+  ha.states[id] = state('on', {reason:'night flow <img src=x>'});
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="leak-badge">Possible leak/);
+  assert.match(card.shadowRoot.innerHTML, /night flow &lt;img src=x&gt;/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /<img/);
+  ha.states[id].state = 'off';
+  card.hass = ha;
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /Possible leak/);
+});
+
+test('renamed possible leak resolves by device registry and explicit mapping', () => {
+  const card = new Card();
+  const ha = hass();
+  ha.entities = {'binary_sensor.renamed': {entity_id:'binary_sensor.renamed',
+    device_id:'meter', unique_id:'house/taggle_123456_possible_leak'}};
+  ha.states['binary_sensor.renamed'] = state('on', {reason:'continuous flow for 24 h'});
+  for (const config of [{device:'meter'}, {entities:{possible_leak:'binary_sensor.renamed'}}]) {
+    card.setConfig(config);
+    card.hass = ha;
+    assert.equal(card.resolve(card._config.meters[0]).possible_leak, 'binary_sensor.renamed');
+    assert.match(card.shadowRoot.innerHTML, /Possible leak<\/span>continuous flow for 24 h/);
+  }
+});
+
+test('possible leak badge is scoped to the selected meter and tolerates missing reasons', () => {
+  const card = new Card();
+  const ha = hass();
+  ha.states['binary_sensor.taggle_123456_possible_leak'] = state('on');
+  ha.states['binary_sensor.taggle_234567_possible_leak'] = state('off');
+  card.setConfig({meters:[
+    {name:'House', entities:['binary_sensor.taggle_123456_possible_leak']},
+    {name:'Flat', entities:['binary_sensor.taggle_234567_possible_leak']},
+  ]});
+  card.hass = ha;
+  assert.equal((card.shadowRoot.innerHTML.match(/Possible leak/g) || []).length, 1);
+  const flat = card.shadowRoot.innerHTML.split('<h3>Flat</h3>')[1];
+  assert.doesNotMatch(flat, /Possible leak/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /undefined|null/);
+});

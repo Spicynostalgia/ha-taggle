@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a possible-leak hint for configured meters from continuous hourly usage or local night flow, with configurable rules, MQTT binary sensor attributes and a dashboard badge.
 - Limit MQTT sensor display precision and round published measurements without changing stored usage or calibration.
 - Log MQTT connections, receiver startup, configured-meter frames and a 15-minute listening heartbeat with counts only for other meters.
 - Add UTC frame timestamps and one-decimal signal measurements to scan JSON output.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add configurable possible-leak hints from hourly usage for configured meters, with a `problem` binary sensor, coverage attributes and persistent recovery rules.
+
 ## 0.2.1
 
 - Fix MQTT discovery defaults for Home Assistant 2026.4+ and align sensor names with documented entity IDs.

@@ -3,6 +3,7 @@
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',
     'today', 'meter_count', 'snr', 'signal_level', 'last_seen'];
+  KEYS.push('possible_leak');
   const esc = value => String(value ?? '').replace(/[&<>"']/g,
     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const number = entity => entity && !['unknown', 'unavailable', ''].includes(entity.state)
@@ -37,6 +38,9 @@
     th { color:var(--muted); font-weight:400; } th:last-child,td:last-child { text-align:end; padding-inline-start:16px; }
     .empty { margin-top:16px; } .note { margin-top:12px; }
     .comparison { margin-bottom:12px; }
+    .leak { margin-top:12px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; }
+    .leak-badge { padding:2px 8px; border-radius:4px; font-size:13px; font-weight:500;
+      color:var(--primary-text-color,#171717); background:var(--secondary-background-color,var(--divider-color,#eee)); }
     @container (max-width:480px) {
       ha-card { padding:16px; } dl { gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); }
       dd { font-size:24px; } dl div:last-child { grid-column:1/-1; display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
@@ -100,7 +104,7 @@
       for (const id of ids) {
         const entry = registry.find(e => e.entity_id === id);
         const uniqueKey = entry?.unique_id?.match(/^.+_\d+_(.+)$/)?.[1];
-        const entityKey = id.match(/^sensor\.taggle_\d+_(?:water_)?(.+)$/)?.[1];
+        const entityKey = id.match(/^(?:sensor|binary_sensor)\.taggle_\d+_(?:water_)?(.+)$/)?.[1];
         const key = KEYS.includes(uniqueKey) ? uniqueKey : entityKey;
         if (KEYS.includes(key)) result[key] = id;
       }
@@ -189,8 +193,10 @@
         return `<section><h3>${esc(name)}</h3><p class="empty">${this._registryError ? 'Device lookup failed. Configure entity IDs to continue.' : 'Waiting for MQTT entities. Check the configured entities or device and receiver configuration.'}</p></section>`;
       }
       const metrics = [[hour, 'Last hour'], [today, 'Today · observed'], [total, hasLitres ? 'Total · calibrated' : 'Meter count']];
+      const leak = get('possible_leak');
       return `<section><div class="heading"><h3>${esc(name)}</h3>
         <span class="status ${!waiting && (stale || unavailable) ? 'stale' : ''}">${waiting ? 'Waiting for first reading (can take up to an hour)' : stale ? 'No recent signal' : unavailable ? 'Usage unavailable' : Number.isFinite(stamp) ? 'Last seen '+esc(this.time(seen.state)) : 'Waiting for a reading'}</span></div>
+        ${leak?.state === 'on' ? `<p class="leak" role="status"><span class="leak-badge">Possible leak</span>${esc(leak.attributes?.reason)}</p>` : ''}
         <dl>${metrics.map(([entity,label]) => `<div><dt>${label}</dt><dd>${esc(this.format(number(entity)))} <small>${esc(unit)}</small></dd></div>`).join('')}</dl>
         ${this.comparison(meter, today, unit)}
         <div class="diagnostics"><span>SNR ${esc(this.format(number(get('snr'))))} dB</span>

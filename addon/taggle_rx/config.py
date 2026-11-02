@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from .leak import validate_options as validate_leak_options
+
 
 def meter_id(value):
     if isinstance(value, bool) or not str(value).isdecimal():
@@ -31,6 +33,11 @@ class Config:
     mqtt: dict = field(default_factory=dict)
     data_dir: str = './data'
     jsonl_logging: bool = False
+    leak_detection: bool = True
+    leak_continuous_hours: int = 24
+    leak_night_start: str = '01:00'
+    leak_night_end: str = '05:00'
+    leak_night_min_pulses: int = 1
 
     @classmethod
     def load(cls, path, *, scan=False):
@@ -65,6 +72,7 @@ class Config:
         if not config.device or config.device.startswith('-'):
             raise ValueError('invalid RTL device index/serial')
         ZoneInfo(config.timezone)
+        validate_leak_options(config)
         scales = config.litres_per_count
         if isinstance(scales, list):
             scales = {item['meter_id']: item['value'] for item in scales}

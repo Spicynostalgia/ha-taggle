@@ -21,5 +21,10 @@
   "jsonl_logging": false,
   "neighbourhood": true,
   "neighbourhood_min_meters": 3,
-  "neighbourhood_litres_per_count": null
+  "neighbourhood_litres_per_count": null,
+  "leak_detection": true,
+  "leak_continuous_hours": 24,
+  "leak_night_start": "01:00",
+  "leak_night_end": "05:00",
+  "leak_night_min_pulses": 1
 }
