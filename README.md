@@ -143,6 +143,10 @@ docker compose up -d
 docker compose logs -f
 ```
 
+<img src="docs/images/real-terminal.png" alt="Terminal: docker compose pull, a scan detecting the RTL-SDR Blog V4 and printing two heard meters, then docker compose up" width="760">
+
+*The tested install: real output, meter IDs replaced with fictional ones.*
+
 The optional scan can show nearby meters before your own transmits. Stop it before starting normal reception. Do not run two receivers against one dongle. Compose pulls `latest`; change its image tag to `:0.2.1` to pin the tested release.
 
 More detail: [Installing with Docker](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker).
