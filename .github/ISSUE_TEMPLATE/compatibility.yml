@@ -1,0 +1,96 @@
+name: Does it work in my area?
+description: Share a safe compatibility report for your own Taggle water meter.
+title: "[Compatibility]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report only your own meter. Never paste your real meter ID, logs with IDs, or radio captures.
+        Give your council/utility and state/country only; do not include your address or exact location.
+  - type: input
+    id: council
+    attributes:
+      label: Council / utility
+    validations:
+      required: true
+  - type: input
+    id: region
+    attributes:
+      label: State / country
+    validations:
+      required: true
+  - type: dropdown
+    id: transmitter
+    attributes:
+      label: Transmitter style
+      options:
+        - clip-on
+        - cable tag
+        - integrated
+        - unsure
+    validations:
+      required: true
+  - type: textarea
+    id: photo
+    attributes:
+      label: Transmitter photo (optional)
+      description: Drag a photo here. Before uploading, blur the transmitter ID and barcode, plus any address, serial number or other identifying detail.
+  - type: checkboxes
+    id: photo-privacy
+    attributes:
+      label: Photo privacy
+      description: If you are not uploading a photo, confirm that no unredacted photo is included.
+      options:
+        - label: I blurred the transmitter ID and barcode
+          required: true
+  - type: dropdown
+    id: frame-length
+    attributes:
+      label: Frame length (bytes)
+      options:
+        - "18"
+        - "21"
+        - "24"
+        - unknown
+    validations:
+      required: true
+  - type: input
+    id: snr
+    attributes:
+      label: SNR (dB)
+      description: Enter the signal-to-noise ratio only, or unknown. Do not paste log lines.
+    validations:
+      required: true
+  - type: dropdown
+    id: usage
+    attributes:
+      label: Did usage counts appear?
+      options:
+        - "Yes"
+        - "No"
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ha-taggle software version
+    validations:
+      required: true
+  - type: dropdown
+    id: install-type
+    attributes:
+      label: Install type
+      options:
+        - add-on
+        - Docker
+        - CLI
+    validations:
+      required: true
+  - type: input
+    id: sdr
+    attributes:
+      label: SDR model
+      description: Model name only; no device serial number.
+    validations:
+      required: true

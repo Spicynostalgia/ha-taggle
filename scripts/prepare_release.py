@@ -10,6 +10,13 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def check_compose_version(version, root=ROOT):
+    compose = yaml.safe_load((root / 'docker-compose.yml').read_text())
+    image = compose['services']['taggle']['image']
+    if not image.endswith(f'/ha-taggle:{version}'):
+        raise ValueError(f'v{version} does not match docker-compose.yml image {image}')
+
+
 def prepare(tag, root=ROOT):
     if not re.fullmatch(r'v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)', tag):
         raise ValueError('Release tag must be vMAJOR.MINOR.PATCH')
@@ -35,6 +42,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         notes = prepare(args.tag)
+        check_compose_version(args.tag[1:])
     except ValueError as error:
         parser.exit(1, f'{error}\n')
     args.notes.write_text(notes)

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting
+    url: https://github.com/Spicynostalgia/ha-taggle/wiki/Troubleshooting
+    about: Check receiver, MQTT, installation and dashboard troubleshooting first.
+  - name: Frequently asked questions
+    url: https://github.com/Spicynostalgia/ha-taggle/wiki/FAQ
+    about: Read common questions about compatibility, setup and privacy.
