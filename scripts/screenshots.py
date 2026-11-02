@@ -14,10 +14,12 @@ import os
 import re
 import shutil
 import socket
+import struct
 import subprocess
 import sys
 import tempfile
 import time
+import zlib
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -26,12 +28,25 @@ ROOT = Path(__file__).resolve().parents[1]
 SHOTS = (
     ('card-light.png', 'light', 520, 'calibrated'),
     ('card-dark.png', 'dark', 520, 'calibrated'),
-    ('card-mobile.png', 'light', 380, 'calibrated'),
+    ('card-mobile.png', 'light', 328, 'calibrated'),
     ('card-multi.png', 'light', 520, 'multi'),
     ('card-calibration.png', 'light', 520, 'uncalibrated'),
     ('card-calibration-dark.png', 'dark', 520, 'uncalibrated'),
     ('card-calibration-mobile.png', 'light', 328, 'uncalibrated'),  # 360px viewport including gutters.
 )
+
+
+def write_provenance(source, target, theme, width, scenario):
+    """Keep the synthetic fixture's origin in the PNG without changing its pixels."""
+    png = source.read_bytes()
+    origin = (f'scripts/screenshots.py; docs/screenshots/harness.html; '
+              f'theme={theme}; card_width={width}; scenario={scenario}; fictional meter data')
+    chunk = b'tEXt'
+    data = b'Source\x00' + origin.encode('latin-1')
+    # IHDR is always the first chunk: length(4), type(4), data(13), CRC(4).
+    offset = 33
+    metadata = struct.pack('>I', len(data)) + chunk + data + struct.pack('>I', zlib.crc32(chunk + data))
+    target.write_bytes(png[:offset] + metadata + png[offset:])
 
 
 def main():
@@ -91,7 +106,7 @@ def main():
                             break
                     if not pending.is_file() or not pending.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'):
                         raise RuntimeError(f'Chromium did not write a PNG for {filename}')
-                    shutil.copyfile(pending, target)
+                    write_provenance(pending, target, theme, width, scenario)
                     print(f'{target.relative_to(ROOT)} ({width}px card, 2x pixels)')
             finally:
                 server.terminate()

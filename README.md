@@ -76,13 +76,13 @@ Optional background: [How it works](https://github.com/Spicynostalgia/ha-taggle/
 
 <table>
   <tr>
-    <td valign="top" width="33%"><a href="docs/images/real-card-light.png"><img src="docs/images/real-card-light.png" width="280" alt="Real usage · light: Historical 0.2.1 field data, before calibration; raw pulses."></a><br><strong>Real usage · light</strong><br>Historical 0.2.1 field data, before calibration; raw pulses.</td>
-    <td valign="top" width="33%"><a href="docs/images/real-card-dark.png"><img src="docs/images/real-card-dark.png" width="280" alt="Real usage · dark: The same historical pulse data in the dark theme."></a><br><strong>Real usage · dark</strong><br>The same historical pulse data in the dark theme.</td>
-    <td valign="top" width="33%"><a href="docs/images/real-device.png"><img src="docs/images/real-device.png" width="280" alt="MQTT device: Real device data and reception diagnostics."></a><br><strong>MQTT device</strong><br>Real device data and reception diagnostics.</td>
+    <td valign="top" width="33%"><a href="docs/images/card-light.png"><img src="docs/images/card-light.png" width="280" alt="Usage card in light theme: 550 L today, usual-day ring and hourly and seven-day charts."></a><br><strong>Usage · light</strong><br>Fictional calibrated usage and recorded history.</td>
+    <td valign="top" width="33%"><a href="docs/images/card-dark.png"><img src="docs/images/card-dark.png" width="280" alt="Usage card in dark theme with usual-day ring, peak hour and leak status."></a><br><strong>Usage · dark</strong><br>The same fictional day in the dark theme.</td>
+    <td valign="top" width="33%"><a href="docs/images/card-mobile.png"><img src="docs/images/card-mobile.png" width="280" alt="Usage card at a 360 px viewport with all three stats and both charts."></a><br><strong>Usage · mobile</strong><br>Fictional usage at a 360 px viewport.</td>
   </tr>
   <tr>
     <td valign="top" width="33%"><a href="docs/images/real-terminal.png"><img src="docs/images/real-terminal.png" width="280" alt="Receiver terminal: Historical 0.2.1 Docker test: USB detection, scan and startup."></a><br><strong>Receiver terminal</strong><br>Historical 0.2.1 Docker test: USB detection, scan and startup.</td>
-    <td valign="top" width="33%"><a href="docs/images/card-light.png"><img src="docs/images/card-light.png" width="280" alt="Calibrated card: Harness example: fictional calibrated litres."></a><br><strong>Calibrated card</strong><br>Harness example: fictional calibrated litres.</td>
+    <td valign="top" width="33%"><a href="docs/images/real-device.png"><img src="docs/images/real-device.png" width="280" alt="MQTT device: Real device data and reception diagnostics."></a><br><strong>MQTT device</strong><br>Real device data and reception diagnostics.</td>
     <td valign="top" width="33%"><a href="docs/images/card-multi.png"><img src="docs/images/card-multi.png" width="280" alt="Multiple meters: Harness example: fictional House and Granny flat."></a><br><strong>Multiple meters</strong><br>Harness example: fictional House and Granny flat.</td>
   </tr>
   <tr>
@@ -92,7 +92,7 @@ Optional background: [How it works](https://github.com/Spicynostalgia/ha-taggle/
   </tr>
 </table>
 
-Real screenshots use fictionalised transmitter ID **123456**. The field setup was Debian 13, Docker 26 + Compose v2, HA 2026.10.4 Container, Mosquitto 2 and receiver 0.2.1 with a Blog V4 via USB passthrough. Current scan output includes UTC timestamps. Harness images use synthetic data and do not claim a new 0.3.0 field test. Select an image for full size.
+Historical [0.2.1 card · light](docs/images/real-card-light.png) / [dark](docs/images/real-card-dark.png) show raw pulses before calibration. Real screenshots use fictionalised transmitter ID **123456**. The field setup was Debian 13, Docker 26 + Compose v2, HA 2026.10.4 Container, Mosquitto 2 and receiver 0.2.1 with a Blog V4 via USB passthrough. Current scan output includes UTC timestamps. Harness images use synthetic data and do not claim a new 0.3.0 field test. Select an image for full size.
 
 ## Will it work for me?
 
@@ -377,6 +377,10 @@ The manual-factor-only route can use **Total litres** for Energy before an absol
 ## Add the dashboard card
 
 The custom card is **optional**; standard HA sensor cards already work. A fresh custom card says **“Waiting for first reading (can take up to an hour)”**. A previously seen meter that loses reception keeps its warning.
+
+The ring compares Today with the mean of the previous seven complete local days’ recorded daily maxima. If fewer days have history, it uses those available; hover the usual-day line for the recorded-day count. The card caches this history for an hour and starts learning again when no history is available. Keep the `today_litres` (or uncalibrated `today`) sensor included in Home Assistant Recorder for this comparison and the seven-day strip. Missing days and hours are never filled with zero or estimated.
+
+**Live** means the transmitter was heard within 75 minutes; otherwise the header shows **Last heard**. Tap, hover or focus an hourly bar for its value and local hour; the values table includes both today and recent transmitter intervals. Meter shows the absolute dial estimate in kL to two decimals. Before calibration, usage and meter count stay in pulses, with the dial-reading guide open.
 
 <details>
 <summary>Install through the browser on Home Assistant OS, without HACS</summary>

@@ -3,14 +3,17 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 let Card;
+const motion = {matches:false, addEventListener() {}, removeEventListener() {}};
 class HTMLElement {
+  toggleAttribute(name, value) { if (value) this.attributes.set(name, ''); else this.attributes.delete(name); }
   attachShadow() {
+    this.attributes = new Map();
     this.shadowRoot = { innerHTML: '', querySelectorAll: () => [] };
   }
 }
 vm.runInNewContext(fs.readFileSync('card/taggle-card.js', 'utf8'), {
   HTMLElement, customElements: {get: () => false, define: (_, value) => { Card = value; }},
-  window: {}, Intl, Date, Number, setInterval, clearInterval,
+  window: {matchMedia: () => motion}, Intl, Date, Number, setInterval, clearInterval,
 });
 const state = (value, attributes = {}) => ({state: String(value), attributes});
 const hass = () => ({locale: {language: 'en'}, config: {time_zone: 'UTC'}, states: {
@@ -75,9 +78,10 @@ test('a previously seen meter keeps its warning when usage becomes unavailable',
   ha.states['sensor.taggle_123456_last_hour'] = state('unavailable');
   card.hass = ha;
   assert.match(card.shadowRoot.innerHTML, /class="status stale">Usage unavailable/);
+  ha.states['sensor.taggle_123456_last_hour'] = state(10);
   ha.states['sensor.taggle_123456_last_seen'] = state(new Date(Date.now()-4*3600000).toISOString());
   card.hass = ha;
-  assert.match(card.shadowRoot.innerHTML, /class="status stale">No recent signal/);
+  assert.match(card.shadowRoot.innerHTML, /class="status stale">Last heard/);
   for (const id of Object.keys(ha.states)) ha.states[id] = state('unavailable');
   card.hass = ha;
   assert.match(card.shadowRoot.innerHTML, /class="status stale">Usage unavailable/);
@@ -123,7 +127,7 @@ test('default neighbourhood row shows average, median, homes and percentage belo
   const card = new Card();
   card.setConfig({entities:Object.keys(hass().states)});
   card.hass = withNeighbourhood();
-  assert.match(card.shadowRoot.innerHTML, /Today 16 pulses · Neighbourhood avg 20 pulses · 20% below/);
+  assert.match(card.shadowRoot.innerHTML, /20% below your street/);
   assert.match(card.shadowRoot.innerHTML, /Median 18 pulses · 14 homes/);
 });
 test('explicit renamed neighbourhood entities are escaped and support above and zero', () => {
@@ -150,14 +154,14 @@ test('unknown, below-floor and absent neighbourhood states never fabricate compa
   const ha = withNeighbourhood();
   ha.states['sensor.taggle_neighbourhood_average_today'].state = 'unknown';
   card.hass = ha;
-  assert.match(card.shadowRoot.innerHTML, /comparison unknown/);
+  assert.match(card.shadowRoot.innerHTML, /average appears once 3 homes are heard/);
   assert.doesNotMatch(card.shadowRoot.innerHTML, /% below/);
   ha.states['sensor.taggle_neighbourhood_average_today'].state = '20';
   ha.states['sensor.taggle_neighbourhood_meters_counted'].state = '2';
   card.hass = ha;
-  assert.match(card.shadowRoot.innerHTML, /comparison unknown/);
+  assert.match(card.shadowRoot.innerHTML, /average appears once 3 homes are heard/);
   card.hass = hass();
-  assert.doesNotMatch(card.shadowRoot.innerHTML, /Neighbourhood/);
+  assert.match(card.shadowRoot.innerHTML, /average appears once 3 homes are heard/);
 });
 test('neighbourhood device resolves renamed registry entities and per-meter options override', () => {
   const card = new Card();
@@ -228,6 +232,7 @@ test('device lookup fetches stable unique IDs even when frontend entity map is p
   ha.entities = Object.fromEntries(records.map(({unique_id, ...entry}) => [entry.entity_id, entry]));
   let calls = 0;
   ha.callWS = async message => {
+    if (message.type === 'history/history_during_period') return {};
     assert.equal(message.type, 'config/entity_registry/list');
     calls++;
     return records;
@@ -262,7 +267,7 @@ test('manual calibration prompt includes the local expected transmission and dev
   assert.doesNotMatch(card.shadowRoot.innerHTML, /class="register"/);
 });
 
-test('old pulse mappings acquire automatic litre entities and whole-litre absolute reading', () => {
+test('old pulse mappings acquire automatic litre entities and an absolute kL reading', () => {
   const card = new Card();
   card.setConfig({entities:{last_hour:'sensor.taggle_123456_last_hour'}});
   const ha = hass();
@@ -271,7 +276,7 @@ test('old pulse mappings acquire automatic litre entities and whole-litre absolu
   ha.states['sensor.taggle_123456_last_hour_litres'] = state(50, {unit_of_measurement:'L'});
   card.hass = ha;
   assert.match(card.shadowRoot.innerHTML, /Calibrated: 5 L per pulse/);
-  assert.match(card.shadowRoot.innerHTML, /Meter reading <strong>1,597,861<\/strong> L/);
+  assert.match(card.shadowRoot.innerHTML, /1,597\.86<\/dd><div class="stat-note">kL on the dial/);
   assert.match(card.shadowRoot.innerHTML, />50 <small>L/);
   ha.states['sensor.taggle_123456_meter_reading'].state = 'unavailable';
   card.hass = ha;
@@ -305,7 +310,7 @@ test('renamed explicit pulse mapping discovers new calibration entities on the s
   ha.states['sensor.kitchen_check'] = state('Calibrated: 5 L per pulse', {chosen_k:5});
   card.hass = ha;
   assert.equal(card.resolve(card._config.meters[0]).meter_reading, 'sensor.kitchen_register');
-  assert.match(card.shadowRoot.innerHTML, /1,234,567/);
+  assert.match(card.shadowRoot.innerHTML, /1,234\.57<\/dd>/);
   assert.match(card.shadowRoot.innerHTML, /Calibrated: 5 L per pulse/);
 });
 
@@ -321,7 +326,7 @@ test('possible leak badge renders only ON states with an escaped reason and clea
   }
   ha.states[id] = state('on', {reason:'night flow <img src=x>'});
   card.hass = ha;
-  assert.match(card.shadowRoot.innerHTML, /class="leak-badge">Possible leak/);
+  assert.match(card.shadowRoot.innerHTML, /<strong>Possible leak\.<\/strong>/);
   assert.match(card.shadowRoot.innerHTML, /night flow &lt;img src=x&gt;/);
   assert.doesNotMatch(card.shadowRoot.innerHTML, /<img/);
   ha.states[id].state = 'off';
@@ -339,7 +344,7 @@ test('renamed possible leak resolves by device registry and explicit mapping', (
     card.setConfig(config);
     card.hass = ha;
     assert.equal(card.resolve(card._config.meters[0]).possible_leak, 'binary_sensor.renamed');
-    assert.match(card.shadowRoot.innerHTML, /Possible leak<\/span>continuous flow for 24 h/);
+    assert.match(card.shadowRoot.innerHTML, /Possible leak\.<\/strong>\s*<span>continuous flow for 24 h/);
   }
 });
 
@@ -419,7 +424,7 @@ test('reading history shows the last ten values, local times, used, pending and 
   assert.match(list, /1597\.009 m³<\/strong>\s*<br>Used/);
   assert.match(list, /Excluded · Less precise — &lt;img src=x&gt; wrong unit/);
   assert.match(list, /Pending · Less precise — Waiting for next transmission/);
-  assert.match(list, /09:00 PM/);
+  assert.match(list, /9:00 PM/);
   assert.doesNotMatch(list, /<img/);
 });
 
@@ -591,5 +596,277 @@ test('comma decimals and typed trailing zeros reach the text command intact', as
     assert.equal(calls.length, 2);
     assert.equal(calls[1][0], 'text');
     assert.equal(calls[1][2].value, reading + ' 18:00');
+  }
+});
+
+// Fixed local evening and fractional UTC offset exercise the chart's calendar semantics.
+const designNow = Date.parse('2026-11-02T22:40:00+10:00');
+const flushHistory = () => new Promise(resolve => setImmediate(resolve));
+function usageCard(options = {}) {
+  const ha = hass();
+  const litres = [null,null,null,null,null,null,25,55,null,null,null,30,40,30,45,25,25,20,175,25,35,10,10,null];
+  const history = litres.flatMap((v,h) => v === null ? [] : [{end:`2026-11-02T${String(h).padStart(2,'0')}:40:00+10:00`,counts:v / 5}]);
+  Object.assign(ha.states, {
+    'sensor.taggle_123456_last_hour_litres':state(10,{unit_of_measurement:'L',history,litres_per_count:5}),
+    'sensor.taggle_123456_today_litres':state(550,{unit_of_measurement:'L'}),
+    'sensor.taggle_123456_meter_reading':state(1597950),
+    'sensor.taggle_123456_calibration_status':state('Calibrated: 5 L per pulse',{chosen_k:5}),
+    'sensor.taggle_123456_last_seen':state(new Date(designNow - (options.age || 0)).toISOString()),
+    'binary_sensor.taggle_123456_possible_leak':state('off'),
+  });
+  ha.locale = {language:'en-AU',time_format:'12'};
+  ha.config.time_zone = 'Australia/Brisbane';
+  const calls = [];
+  const id = 'sensor.taggle_123456_today_litres';
+  ha.callWS = async request => {
+    calls.push(request);
+    if (request.type === 'config/entity_registry/list') return [];
+    if (options.fail) throw Error('recorder disabled');
+    return {[id]:options.rows || []};
+  };
+  const card = new Card();
+  card.setConfig({entities:Object.keys(ha.states)});
+  card.hass = ha;
+  return {card,ha,calls,id};
+}
+const recordedDays = () => [510,560,480,580,525,549,534].flatMap((total,i) => {
+  const day = new Date(Date.UTC(2026,9,26+i)).toISOString().slice(0,10);
+  // Mixed full and compressed HA rows, not just one favourable value per day.
+  return [{state:'0',last_updated:`${day}T00:00:00+10:00`},
+    {s:String(total/2),lu:Date.parse(`${day}T12:00:00+10:00`)/1000},
+    {s:String(total),lu:Date.parse(`${day}T23:40:00+10:00`)/1000}];
+});
+function frozen(task) {
+  return async () => {
+    const original = Date.now;
+    Date.now = () => designNow;
+    try { await task(); } finally { Date.now = original; motion.matches = false; }
+  };
+}
+
+test('live dot uses the HA clock and becomes a neutral Last heard chip at exactly 75 minutes', frozen(async () => {
+  const {card,ha} = usageCard();
+  assert.match(card.shadowRoot.innerHTML, /class="dot live"/);
+  assert.match(card.shadowRoot.innerHTML, /Live · 10:40 pm/);
+  ha.states['sensor.taggle_123456_last_seen'].state = new Date(designNow - 75 * 60000 + 1).toISOString();
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="dot live"/);
+  ha.states['sensor.taggle_123456_last_seen'].state = new Date(designNow - 75 * 60000).toISOString();
+  card.hass = ha;
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /class="dot live"/);
+  assert.match(card.shadowRoot.innerHTML, /class="status stale">Last heard/);
+  ha.locale.time_format = '24';
+  ha.states['sensor.taggle_123456_last_seen'].state = new Date(designNow).toISOString();
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Live · 22:40/);
+  await flushHistory();
+}));
+
+test('usual day averages seven complete daily maxima, draws overflow, and renders yesterday', frozen(async () => {
+  const rows = recordedDays();
+  rows.push({s:'99999',lu:designNow/1000}, {s:'unavailable',lu:designNow/1000-86400},
+    {s:'-2',lu:designNow/1000-86400}, {s:'99999',lu:designNow/1000-10*86400}, {s:'99',lu:'bad'});
+  const {card,ha,calls,id} = usageCard({rows});
+  await flushHistory();
+  const markup = card.shadowRoot.innerHTML;
+  assert.match(markup, /Usual day 534 L/);
+  assert.match(markup, /103%/);
+  assert.match(markup, /class="overflow"/);
+  assert.match(markup, /Yesterday 534 L/);
+  assert.equal((markup.match(/role="listitem"/g) || []).length,7);
+  assert.match(markup, /2026-10-26: 510 L/);
+  assert.match(markup, /Yesterday, 2026-11-01: 534 L/);
+  const request = calls.find(r => r.type === 'history/history_during_period');
+  assert.deepEqual(Array.from(request.entity_ids),[id]);
+  assert.equal(request.start_time,'2026-10-25T14:00:00.000Z');
+  assert.equal(request.end_time,'2026-11-01T14:00:00.000Z');
+  assert.equal(request.include_start_time_state,false);
+  assert.equal(request.no_attributes,true);
+  assert.equal(request.significant_changes_only,false);
+  card.hass = ha;
+  await flushHistory();
+  assert.equal(calls.filter(r => r.type === 'history/history_during_period').length,1);
+}));
+
+test('no history or disabled recorder learns without a percentage or fabricated daily zeros', frozen(async () => {
+  for (const options of [{},{fail:true},{rows:[{s:'unavailable',lu:designNow/1000-86400}]}]) {
+    const {card,calls} = usageCard(options);
+    await flushHistory();
+    assert.match(card.shadowRoot.innerHTML, /Learning your usual day/);
+    assert.doesNotMatch(card.shadowRoot.innerHTML, /class="progress"|class="overflow"|\d+%<\/strong>/);
+    assert.match(card.shadowRoot.innerHTML, /Yesterday not heard/);
+    assert.equal((card.shadowRoot.innerHTML.match(/class="day missing/g) || []).length,7);
+    card.render();
+    await flushHistory();
+    assert.equal(calls.filter(r => r.type === 'history/history_during_period').length,1);
+  }
+}));
+
+test('history cache refreshes hourly, at local midnight and after configuration changes', frozen(async () => {
+  const {card,ha,calls} = usageCard({rows:recordedDays()});
+  await flushHistory();
+  Date.now = () => designNow + 3599999;
+  card.hass = ha;
+  await flushHistory();
+  assert.equal(calls.filter(r => r.type === 'history/history_during_period').length,1);
+  Date.now = () => designNow + 3600000;
+  card.render();
+  card.render(); // A pending request must not launch another fetch.
+  await flushHistory();
+  assert.equal(calls.filter(r => r.type === 'history/history_during_period').length,2);
+  Date.now = () => Date.parse('2026-11-03T00:00:00+10:00');
+  card.render();
+  await flushHistory();
+  assert.equal(calls.filter(r => r.type === 'history/history_during_period').length,3);
+  card.setConfig({entities:{today_litres:'sensor.different', last_hour_litres:'sensor.taggle_123456_last_hour_litres'}});
+  await flushHistory();
+  assert.equal(calls.filter(r => r.type === 'history/history_during_period').length,4);
+  assert.equal(calls.at(-1).entity_ids[0],'sensor.different');
+}));
+
+test('today has 24 keyboard buttons, a 175 L peak at 6 pm, observed coverage, and a kL dial', frozen(async () => {
+  const {card} = usageCard();
+  await flushHistory();
+  const markup = card.shadowRoot.innerHTML;
+  assert.equal((markup.match(/type="button" class="bar /g) || []).length,24);
+  assert.match(markup, /aria-label="6 pm hour: 175 L"/);
+  assert.match(markup, /<dt>Peak<\/dt><dd>175 <small>L/);
+  assert.match(markup, /6 pm hour<\/div>/);
+  assert.match(markup, /14 of 23 hours heard/);
+  assert.match(markup, /1,597\.95<\/dd>/);
+  assert.match(markup, /kL on the dial/);
+  assert.match(markup, /aria-label="8 am hour: Not heard · No observation"/);
+  assert.match(markup, /Today by hour · L. Missing observations are not zero/);
+  assert.match(markup, /<th scope="row">8 am<\/th><td>Not heard/);
+}));
+
+test('observed zero differs from missing; other days, future rows and invalid counts cannot supply a peak', frozen(async () => {
+  const {card,ha} = usageCard();
+  ha.states['sensor.taggle_123456_last_hour_litres'].attributes.history = [
+    {end:'2026-11-02T06:40:00+10:00',counts:0},
+    {end:'2026-11-01T18:40:00+10:00',counts:999},
+    {end:'2026-11-02T23:40:00+10:00',counts:999},
+    {end:'bad',counts:999},{end:'2026-11-02T07:40:00+10:00',counts:-1},
+  ];
+  card.hass = ha;
+  await flushHistory();
+  assert.match(card.shadowRoot.innerHTML, /class="bar zero"/);
+  assert.match(card.shadowRoot.innerHTML, /aria-label="6 am hour: 0 L"/);
+  assert.match(card.shadowRoot.innerHTML, /<dt>Peak<\/dt><dd>0 <small>L/);
+  assert.match(card.shadowRoot.innerHTML, /1 of 23 hours heard/);
+}));
+
+test('partial recorded weeks average only heard days and preserve a recorded zero', frozen(async () => {
+  const {card} = usageCard({rows:[{s:'0',lu:Date.parse('2026-10-30T23:40:00+10:00')/1000},
+    {s:'100',lu:Date.parse('2026-11-01T23:40:00+10:00')/1000}]});
+  await flushHistory();
+  assert.match(card.shadowRoot.innerHTML, /Usual day 50 L/);
+  assert.equal((card.shadowRoot.innerHTML.match(/class="day missing/g) || []).length,5);
+  assert.match(card.shadowRoot.innerHTML, /2026-10-30: 0 L/);
+}));
+
+test('DST calendar boundaries, repeated hours and half-hour zones use the HA timezone', frozen(async () => {
+  const {card,ha} = usageCard();
+  ha.config.time_zone = 'America/New_York';
+  card.hass = ha;
+  const day = '2026-11-01';
+  assert.equal(new Date(card.dayStart(day)).toISOString(),'2026-11-01T04:00:00.000Z');
+  assert.equal(new Date(card.dayStart('2026-11-02')).toISOString(),'2026-11-02T05:00:00.000Z');
+  Date.now = () => Date.parse('2026-11-01T23:00:00-05:00');
+  const data = card.hourlyData({attributes:{history:[{end:'2026-11-01T01:40:00-04:00',counts:3},
+    {end:'2026-11-01T01:40:00-05:00',counts:4}]}},5);
+  assert.equal(data.hours[1],35);
+  assert.equal(data.observed,1);
+  ha.config.time_zone = 'Asia/Kolkata';
+  card.hass = ha;
+  assert.equal(new Date(card.dayStart('2026-11-02')).toISOString(),'2026-11-01T18:30:00.000Z');
+  await flushHistory();
+}));
+
+test('uncalibrated usage keeps pulses, guidance and reading form; encrypted meters show diagnostics only', frozen(async () => {
+  const ha = hass();
+  ha.states['sensor.taggle_123456_last_hour'].attributes.history = [{end:'2026-11-02T12:00:00Z',counts:10}];
+  const card = new Card();
+  card.setConfig({entities:Object.keys(ha.states)});
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Not calibrated/);
+  assert.match(card.shadowRoot.innerHTML, /Not litres yet/);
+  assert.match(card.shadowRoot.innerHTML, /Meter count/);
+  assert.match(card.shadowRoot.innerHTML, /Read your dial/);
+  assert.match(card.shadowRoot.innerHTML, /class="reading-form"/);
+  ha.states['sensor.taggle_123456_last_hour'].attributes.encrypted = true;
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Encrypted transmitter/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /class="hero"|class="stats"|Today by hour|Not litres yet|Read your dial/);
+}));
+
+test('reduced motion flag follows media preference and CSS disables all animations', frozen(async () => {
+  motion.matches = true;
+  const {card} = usageCard();
+  assert.equal(card.attributes.has('data-reduced-motion'),true);
+  assert.match(card.shadowRoot.innerHTML, /@media \(prefers-reduced-motion:reduce\)/);
+  assert.match(card.shadowRoot.innerHTML, /animation:none !important/);
+  motion.matches = false;
+  card.render();
+  assert.equal(card.attributes.has('data-reduced-motion'),false);
+  await flushHistory();
+}));
+
+test('leak OFF is green, ON includes the escaped reason, and an unavailable entity never claims safety', frozen(async () => {
+  const {card,ha} = usageCard();
+  assert.match(card.shadowRoot.innerHTML, /class="status-row leak-ok"/);
+  assert.match(card.shadowRoot.innerHTML, /No leak signs/);
+  ha.states['binary_sensor.taggle_123456_possible_leak'] = state('on',{reason:'Night flow <test>'});
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="status-row leak-warning"/);
+  assert.match(card.shadowRoot.innerHTML, /Night flow &lt;test&gt;/);
+  ha.states['binary_sensor.taggle_123456_possible_leak'].state = 'unavailable';
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Leak status unavailable/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /<strong>No leak signs/);
+  await flushHistory();
+}));
+
+test('each meter caches its own daily maxima and an obsolete response cannot replace new configuration', frozen(async () => {
+  const card = new Card(), ha = hass();
+  const pending = [];
+  ha.callWS = async request => request.type === 'config/entity_registry/list' ? [] : new Promise(resolve => pending.push({request,resolve}));
+  card.setConfig({meters:[{name:'House',entities:{today:'sensor.house_today',last_hour:'sensor.house_hour'}},
+    {name:'Flat',entities:{today:'sensor.flat_today',last_hour:'sensor.flat_hour'}}]});
+  ha.states['sensor.house_today'] = state(80);
+  ha.states['sensor.house_hour'] = state(5);
+  ha.states['sensor.flat_today'] = state(40);
+  ha.states['sensor.flat_hour'] = state(5);
+  card.hass = ha;
+  await flushHistory();
+  assert.equal(pending.length,2);
+  for (const task of pending) {
+    const id = task.request.entity_ids[0];
+    task.resolve({[id]:[{s:id.includes('house') ? '100' : '50',lu:Date.parse('2026-11-01T23:00:00Z') / 1000}]});
+  }
+  await flushHistory();
+  const markup = card.shadowRoot.innerHTML;
+  assert.match(markup.split('<h3>House</h3>')[1].split('<h3>Flat</h3>')[0], /Usual day 100 pulses/);
+  assert.match(markup.split('<h3>Flat</h3>')[1], /Usual day 50 pulses/);
+  Date.now = () => designNow + 3600000;
+  card.render();
+  await flushHistory();
+  assert.equal(pending.length,4);
+  card.setConfig({entities:{today:'sensor.new_today'}});
+  ha.states['sensor.new_today'] = state(15);
+  card.hass = ha;
+  await flushHistory();
+  const old = pending[2], fresh = pending[4];
+  old.resolve({[old.request.entity_ids[0]]:[{s:'9999',lu:Date.parse('2026-11-01T23:00:00Z')/1000}]});
+  fresh.resolve({[fresh.request.entity_ids[0]]:[{s:'20',lu:Date.parse('2026-11-01T23:00:00Z')/1000}]});
+  pending[3].resolve({});
+  await flushHistory();
+  assert.match(card.shadowRoot.innerHTML, /Usual day 20 pulses/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /Usual day 9,999/);
+}));
+
+test('invalid empty and malformed meter configurations retain an actionable HA error', () => {
+  for (const config of [null, {}, {meters:[]}, {meters:'house'}, {meters:[null]}, {meters:[3]}]) {
+    assert.throws(() => new Card().setConfig(config), /Configure entities or a device/);
   }
 });

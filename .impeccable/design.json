@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T13:14:24.453480Z",
+  "title": "Design System: Taggle water meter card",
+  "extensions": {
+    "colorMeta": {
+      "water": {
+        "role": "primary",
+        "displayName": "Water accent",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 20%,black)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 40%,black)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 60%,black)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 80%,black)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 80%,white)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 60%,white)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 40%,white)",
+          "color-mix(in oklch,var(--primary-color,#2bb3d6) 10%,white)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Primary ink",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 20%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 40%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 60%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 80%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 80%,white)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 60%,white)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 40%,white)",
+          "color-mix(in oklch,var(--primary-text-color,#0d2233) 10%,white)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Supporting ink",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 20%,black)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 40%,black)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 60%,black)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 80%,black)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 80%,white)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 60%,white)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 40%,white)",
+          "color-mix(in oklch,var(--secondary-text-color,#5a6f7e) 10%,white)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Theme surface",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 20%,black)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 40%,black)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 60%,black)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 80%,black)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 80%,white)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 60%,white)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 40%,white)",
+          "color-mix(in oklch,var(--ha-card-background,var(--card-background-color,#fff)) 10%,white)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Quiet divider",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 20%,black)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 40%,black)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 60%,black)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 80%,black)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 80%,white)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 60%,white)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 40%,white)",
+          "color-mix(in oklch,var(--divider-color,#e3eaee) 10%,white)"
+        ]
+      },
+      "card-border": {
+        "role": "neutral",
+        "displayName": "Theme card border",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 20%,black)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 40%,black)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 60%,black)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 80%,black)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 80%,white)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 60%,white)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 40%,white)",
+          "color-mix(in oklch,var(--ha-card-border-color,var(--divider-color,#e3eaee)) 10%,white)"
+        ]
+      },
+      "chip": {
+        "role": "primary",
+        "displayName": "Water tint",
+        "tonalRamp": [
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 20%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 40%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 60%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 80%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 80%,white)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 60%,white)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 40%,white)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff))) 10%,white)"
+        ]
+      },
+      "chip-ink": {
+        "role": "primary",
+        "displayName": "Water ink",
+        "tonalRamp": [
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 20%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 40%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 60%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 80%,black)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 80%,white)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 60%,white)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 40%,white)",
+          "color-mix(in oklch,color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233)) 10%,white)"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Leak clear",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 20%,black)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 40%,black)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 60%,black)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 80%,black)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 80%,white)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 60%,white)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 40%,white)",
+          "color-mix(in oklch,var(--success-color,#1d8a4a) 10%,white)"
+        ]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Leak warning and overflow",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 20%,black)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 40%,black)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 60%,black)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 80%,black)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 80%,white)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 60%,white)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 40%,white)",
+          "color-mix(in oklch,var(--warning-color,#e07b1f) 10%,white)"
+        ]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Calibration error",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--error-color,#b3261e) 20%,black)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 40%,black)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 60%,black)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 80%,black)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 80%,white)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 60%,white)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 40%,white)",
+          "color-mix(in oklch,var(--error-color,#b3261e) 10%,white)"
+        ]
+      },
+      "control-ink": {
+        "role": "neutral",
+        "displayName": "Control ink",
+        "tonalRamp": [
+          "color-mix(in oklch,var(--primary-text-color,#171717) 20%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 40%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 60%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 80%,black)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 80%,white)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 60%,white)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 40%,white)",
+          "color-mix(in oklch,var(--primary-text-color,#171717) 10%,white)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Today",
+        "purpose": "Dominant usage number; tabular numerals. Shrinks at the 400px container breakpoint."
+      },
+      "metric": {
+        "displayName": "Supporting metric",
+        "purpose": "Ring percentage and stat values; ring value and stats shrink at compact widths."
+      }
+    },
+    "shadows": [
+      {
+        "name": "theme-card",
+        "value": "var(--ha-card-box-shadow,none)",
+        "purpose": "Home Assistant owns card elevation."
+      },
+      {
+        "name": "selected-unit",
+        "value": "inset 0 -3px var(--primary-color,#2bb3d6)",
+        "purpose": "Selected dial unit; structural state marker."
+      },
+      {
+        "name": "live-halo",
+        "value": "0 0 0 0 color-mix(in srgb,var(--primary-color,#2bb3d6) 45%,transparent)",
+        "purpose": "Pulse starts and ends at zero spread, reaches 0 0 0 10px transparent at 70%."
+      }
+    ],
+    "motion": [
+      {
+        "name": "wave",
+        "value": "tg-wave 9s linear infinite",
+        "purpose": "200%-width, 120px-high wave at .12 opacity translates from 0 to -50%."
+      },
+      {
+        "name": "live-dot",
+        "value": "tg-pulse 2s infinite",
+        "purpose": "10px live dot uses the browser default ease and an expanding halo."
+      },
+      {
+        "name": "bars-enter",
+        "value": "tg-grow .8s cubic-bezier(.2,.8,.2,1) both; animation-delay: hour * 25ms",
+        "purpose": "ScaleY(0) to scaleY(1), transform-origin bottom; entry class only during the first 1500ms of a meter render."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation:none !important; transition:none !important",
+        "purpose": "Applied under prefers-reduced-motion:reduce and host data-reduced-motion. No other CSS transitions are defined."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-card",
+        "value": "400px",
+        "query": "@container (max-width:400px)",
+        "purpose": "Card inline size, not viewport width; host establishes container-type:inline-size."
+      }
+    ],
+    "focus": [
+      {
+        "name": "interactive-focus",
+        "value": "outline:2px solid var(--primary-color,#2bb3d6);outline-offset:3px;",
+        "purpose": "summary, button, link, input and unit radio adjacent span; visible focus survives HA rerenders."
+      },
+      {
+        "name": "bar-fill-feedback",
+        "value": "outline:1px solid color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233));outline-offset:2px;",
+        "purpose": "Hourly fill on hover and focus-visible, in addition to button focus."
+      }
+    ],
+    "stateRecipes": {
+      "success-background": "color-mix(in srgb,var(--success-color,#1d8a4a) 12%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "warning-background": "color-mix(in srgb,var(--warning-color,#e07b1f) 14%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "read-now-background": "color-mix(in srgb,var(--primary-color,#2bb3d6) 18%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "selected-unit-background": "color-mix(in srgb,var(--primary-color,#2bb3d6) 15%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "hover-unit-background": "color-mix(in srgb,var(--primary-color,#2bb3d6) 10%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "save-backgrounds": {
+        "rest": "color-mix(in srgb,var(--primary-color,#2bb3d6) 18%,var(--ha-card-background,var(--card-background-color,#fff)))",
+        "hover": "color-mix(in srgb,var(--primary-color,#2bb3d6) 26%,var(--ha-card-background,var(--card-background-color,#fff)))",
+        "active": "color-mix(in srgb,var(--primary-color,#2bb3d6) 34%,var(--ha-card-background,var(--card-background-color,#fff)))"
+      },
+      "observed-bar-background": "color-mix(in srgb,var(--primary-color,#2bb3d6) 40%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "missing-background": "repeating-linear-gradient(135deg,var(--divider-color,#e3eaee) 0 3px,transparent 3px 7px)",
+      "stale-background": "color-mix(in srgb,var(--secondary-text-color,#5a6f7e) 10%,var(--ha-card-background,var(--card-background-color,#fff)))",
+      "form-divider": "var(--divider-color,#ddd)",
+      "dial-illustration": {
+        "red": "var(--taggle-dial-red,#b3261e)",
+        "whole-digit-panel": "#203744",
+        "digits": "#fff",
+        "note": "Local inline SVG example only; not a brand palette."
+      }
+    },
+    "sourceRefs": [
+      {
+        "path": "card/taggle-card.js",
+        "role": "Normative shipped implementation",
+        "symbols": [
+          "css",
+          "TaggleCard.ring",
+          "TaggleCard.history",
+          "TaggleCard.week",
+          "TaggleCard.meter",
+          "TaggleCard.readPanel",
+          "TaggleCard.render",
+          "TaggleCard.format",
+          "TaggleCard.time",
+          "TaggleCard.dayStart"
+        ]
+      },
+      {
+        "path": "dist/taggle-card.js",
+        "role": "Shipping distribution loaded by screenshot harness; maintained identical to card source"
+      },
+      {
+        "path": ".card-mockup.html",
+        "role": "Historical user-approved composition reference, removed after implementation at user request; current code governs actual theme bindings and states"
+      },
+      {
+        "path": "PRODUCT.md",
+        "role": "Durable product constraints and approved hierarchy"
+      },
+      {
+        "path": ".impeccable/review/direction.md",
+        "role": "Recorded design contract and verification context"
+      },
+      {
+        "path": "docs/screenshots/harness.html",
+        "role": "Fictional light/dark fixtures; not normative theme tokens"
+      },
+      {
+        "path": "scripts/screenshots.py",
+        "role": "Synthetic browser screenshot generator and PNG Source metadata writer"
+      },
+      {
+        "path": "docs/images/card-light.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      },
+      {
+        "path": "docs/images/card-dark.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      },
+      {
+        "path": "docs/images/card-mobile.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      },
+      {
+        "path": "docs/images/card-multi.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      },
+      {
+        "path": "docs/images/card-calibration.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      },
+      {
+        "path": "docs/images/card-calibration-dark.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      },
+      {
+        "path": "docs/images/card-calibration-mobile.png",
+        "role": "Synthetic browser screenshot with embedded Source metadata"
+      }
+    ],
+    "previewNotes": [
+      "Component snippets are HTML/CSS previews without Home Assistant or JavaScript; labels, numbers and timestamps are fictional.",
+      "Color ramps are synthesized, theme-bound panel aids, not application tokens or fixed light/dark palettes.",
+      "No stock or AI-generated imagery is used; shipping raster evidence is generated from the local browser harness."
+    ]
+  },
+  "components": [
+    {
+      "name": "Save reading",
+      "kind": "button",
+      "refersTo": "save-reading",
+      "description": "The calibration submit control; states mirror the shipped form.",
+      "html": "<button class=\"ds-save\" type=\"button\">Save reading</button>",
+      "css": ".ds-save{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);font-size:14px;min-height:44px;padding:10px 20px;border:1px solid var(--primary-color,#2bb3d6);border-radius:6px;background:color-mix(in srgb,var(--primary-color,#2bb3d6) 18%,var(--ha-card-background,var(--card-background-color,#fff)));color:var(--primary-text-color,#171717);cursor:pointer;}.ds-save:hover{background:color-mix(in srgb,var(--primary-color,#2bb3d6) 26%,var(--ha-card-background,var(--card-background-color,#fff)));}.ds-save:active{background:color-mix(in srgb,var(--primary-color,#2bb3d6) 34%,var(--ha-card-background,var(--card-background-color,#fff)));}.ds-save:focus-visible{outline:2px solid var(--primary-color,#2bb3d6);outline-offset:3px;}.ds-save:disabled,.ds-save[aria-disabled=true]{opacity:.6;cursor:default;}"
+    },
+    {
+      "name": "Meter reading field",
+      "kind": "input",
+      "refersTo": "reading-input",
+      "description": "Permanent label, decimal entry and invalid-border support.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-reading\">Meter reading</label><input id=\"ds-reading\" type=\"text\" inputmode=\"decimal\" required aria-invalid=\"false\" value=\"1597.765\"></div>",
+      "css": ".ds-field{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);font-size:14px;}.ds-field label{display:block;margin-bottom:8px;}.ds-field input{width:100%;min-width:0;min-height:44px;padding:10px 8px;border:1px solid var(--secondary-text-color,#5a6f7e);border-radius:6px;background:var(--ha-card-background,var(--card-background-color,#fff));color:var(--primary-text-color,#171717);font:inherit;caret-color:var(--primary-color,#2bb3d6);}.ds-field input:focus-visible{outline:2px solid var(--primary-color,#2bb3d6);outline-offset:3px;}.ds-field input[aria-invalid=true]{border-color:var(--error-color,#b3261e);}"
+    },
+    {
+      "name": "Dial unit selector",
+      "kind": "input",
+      "refersTo": "unit-selector",
+      "description": "Native radios with contiguous surfaces and selected accent underline.",
+      "html": "<fieldset class=\"ds-unit-field\"><legend>Dial unit</legend><div class=\"ds-units\"><label><input type=\"radio\" name=\"ds-unit\" value=\"m³\" checked><span>m³</span></label><label><input type=\"radio\" name=\"ds-unit\" value=\"kL\"><span>kL</span></label><label><input type=\"radio\" name=\"ds-unit\" value=\"L\"><span>L</span></label></div></fieldset>",
+      "css": ".ds-unit-field{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);font-size:14px;border:0;padding:0;margin:0;min-width:0;}.ds-unit-field legend{padding:0;margin-bottom:8px;}.ds-units{display:flex;width:100%;max-width:320px;}.ds-units label{position:relative;flex:1;cursor:pointer;}.ds-units input{position:absolute;width:1px;height:1px;opacity:0;}.ds-units span{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--divider-color,#ddd);background:var(--ha-card-background,var(--card-background-color,#fff));}.ds-units label+label span{border-inline-start:0;}.ds-units label:first-child span{border-radius:6px 0 0 6px;}.ds-units label:last-child span{border-radius:0 6px 6px 0;}.ds-units input:checked+span{color:var(--primary-text-color,#171717);font-weight:600;background:color-mix(in srgb,var(--primary-color,#2bb3d6) 15%,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:inset 0 -3px var(--primary-color,#2bb3d6);}.ds-units label:hover span{background:color-mix(in srgb,var(--primary-color,#2bb3d6) 10%,var(--ha-card-background,var(--card-background-color,#fff)));}.ds-units input:focus-visible+span{outline:2px solid var(--primary-color,#2bb3d6);outline-offset:3px;}"
+    },
+    {
+      "name": "Calibration chip",
+      "kind": "chip",
+      "refersTo": "calibration-chip",
+      "description": "A quiet calibration label, not an action.",
+      "html": "<span class=\"ds-chip\">5 L per pulse</span>",
+      "css": ".ds-chip{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);display:inline-block;padding:5px 10px;border-radius:999px;background:color-mix(in srgb,var(--primary-color,#2bb3d6) 12%,var(--ha-card-background,var(--card-background-color,#fff)));color:color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233));font-size:12px;font-weight:700;white-space:nowrap;}"
+    },
+    {
+      "name": "Meter card surface",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Theme-governed surface; sample identity and three-column stats use the incumbent proportions.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-header\"><h3>House</h3><p>Live · 10:40 pm</p></div><dl class=\"ds-stats\"><div><dt>Last hour</dt><dd>10 <small>L</small></dd></div><div><dt>Peak</dt><dd>175 <small>L</small></dd></div><div><dt>Meter</dt><dd>1,597.95</dd></div></dl></article>",
+      "css": ".ds-card{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);container-type:inline-size;display:block;overflow:hidden;background:var(--ha-card-background,var(--card-background-color,#fff));border:var(--ha-card-border-width,1px) solid var(--ha-card-border-color,var(--divider-color,#e3eaee));border-radius:var(--ha-card-border-radius,24px);box-shadow:var(--ha-card-box-shadow,none);}.ds-header{padding:24px 24px 28px;}.ds-header h3{margin:0;font-size:16px;font-weight:700;line-height:1.4;}.ds-header p{margin:0;color:var(--secondary-text-color,#5a6f7e);font-size:13px;}.ds-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;border-block:1px solid var(--divider-color,#e3eaee);font-variant-numeric:tabular-nums;}.ds-stats>div{padding:16px 20px;min-width:0;}.ds-stats>div+div{border-inline-start:1px solid var(--divider-color,#e3eaee);}.ds-stats dt{font-size:12px;color:var(--secondary-text-color,#5a6f7e);line-height:1.5;}.ds-stats dd{margin:2px 0 0;font-size:22px;font-weight:800;overflow-wrap:anywhere;}.ds-stats small{font-size:14px;font-weight:600;}@container(max-width:400px){.ds-header{padding:20px 16px 24px;}.ds-stats>div{padding:14px 12px;}.ds-stats dd{font-size:19px;}.ds-stats>div:last-child dd{font-size:16px;white-space:nowrap;}}"
+    },
+    {
+      "name": "Usual-day ring and Today",
+      "kind": "custom",
+      "refersTo": "usage-hero",
+      "description": "Signature usage hierarchy; 103% is fictional preview data.",
+      "html": "<div class=\"ds-hero-wrap\"><div class=\"ds-hero\"><div class=\"ds-ring\"><svg viewBox=\"0 0 132 132\" role=\"img\" aria-label=\"Today is 103 percent of your usual day\"><circle cx=\"66\" cy=\"66\" r=\"56\" fill=\"none\" stroke=\"var(--divider-color,#e3eaee)\" stroke-width=\"12\"/><circle cx=\"66\" cy=\"66\" r=\"56\" fill=\"none\" stroke=\"var(--primary-color,#2bb3d6)\" stroke-width=\"12\" stroke-linecap=\"round\" stroke-dasharray=\"352 352\" transform=\"rotate(-90 66 66)\"/><circle cx=\"66\" cy=\"66\" r=\"56\" fill=\"none\" stroke=\"var(--warning-color,#e07b1f)\" stroke-width=\"12\" stroke-linecap=\"round\" stroke-dasharray=\"11 352\" transform=\"rotate(-90 66 66)\"/></svg><div class=\"ds-ring-label\" aria-hidden=\"true\"><strong>103%</strong><span>of usual</span></div></div><div class=\"ds-today\"><div class=\"ds-today-label\">Today</div><div class=\"ds-today-value\">550<small>L</small></div><p>Usual day 534 L · 14 of 17 hours heard</p></div></div></div>",
+      "css": ".ds-hero-wrap{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);container-type:inline-size;}.ds-hero{display:flex;align-items:center;gap:24px;margin-top:22px;}.ds-ring{position:relative;width:132px;height:132px;flex:none;}.ds-ring svg{width:100%;height:100%;overflow:visible;}.ds-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}.ds-ring-label strong{font-size:22px;font-weight:800;}.ds-ring-label span{font-size:11px;color:var(--secondary-text-color,#5a6f7e);}.ds-today{min-width:0;}.ds-today-label{color:var(--secondary-text-color,#5a6f7e);font-size:13px;font-weight:600;}.ds-today-value{font-size:52px;font-weight:800;line-height:1.05;letter-spacing:-.03em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}.ds-today-value small{font-size:22px;font-weight:700;margin-inline-start:4px;letter-spacing:0;}.ds-today p{margin:6px 0 0;color:var(--secondary-text-color,#5a6f7e);font-size:14px;line-height:1.5;overflow-wrap:anywhere;}@container(max-width:400px){.ds-hero{gap:16px;}.ds-ring{width:104px;height:104px;}.ds-ring-label strong{font-size:20px;}.ds-today-value{font-size:44px;}.ds-today-value small{font-size:18px;}.ds-today p{font-size:12px;}}"
+    },
+    {
+      "name": "Hourly history bars",
+      "kind": "custom",
+      "refersTo": "hourly-history",
+      "description": "A compact sample of missing, observed, peak and zero states. Native labels work without runtime; the shipping card also updates its tooltip on focus, hover and tap.",
+      "html": "<div class=\"ds-plot\" role=\"group\" aria-label=\"Sample hourly water use\"><button class=\"ds-bar ds-missing\" type=\"button\" aria-label=\"8 am hour: Not heard · No observation\" title=\"8 am hour: Not heard · No observation\"><span></span></button><button class=\"ds-bar\" style=\"--height:31%\" type=\"button\" aria-label=\"9 am hour: 55 L\" title=\"9 am hour: 55 L\"><span></span></button><button class=\"ds-bar ds-peak\" style=\"--height:100%\" type=\"button\" aria-label=\"10 am hour: 175 L\" title=\"10 am hour: 175 L\"><span></span></button><button class=\"ds-bar ds-zero\" type=\"button\" aria-label=\"11 am hour: 0 L\" title=\"11 am hour: 0 L\"><span></span></button></div>",
+      "css": ".ds-plot{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);display:flex;height:140px;align-items:stretch;gap:4px;}.ds-bar{position:relative;display:flex;flex:1 1 0;min-width:0;align-items:flex-end;padding:0;border:0;background:transparent;color:var(--primary-text-color,#0d2233);cursor:pointer;touch-action:manipulation;}.ds-bar span{display:block;width:100%;height:var(--height);min-height:3px;border-radius:4px;background:color-mix(in srgb,var(--primary-color,#2bb3d6) 40%,var(--ha-card-background,var(--card-background-color,#fff)));transform-origin:bottom;}.ds-peak span,.ds-zero span{background:var(--primary-color,#2bb3d6);}.ds-zero span{height:3px;}.ds-missing span{height:18%;background:repeating-linear-gradient(135deg,var(--divider-color,#e3eaee) 0 3px,transparent 3px 7px);}.ds-bar:hover span,.ds-bar:focus-visible span{outline:1px solid color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233));outline-offset:2px;}.ds-bar:focus-visible{outline:2px solid var(--primary-color,#2bb3d6);outline-offset:3px;}"
+    },
+    {
+      "name": "Leak status row",
+      "kind": "custom",
+      "refersTo": "status-row",
+      "description": "Icon, explicit text and success tint communicate the same status.",
+      "html": "<div class=\"ds-status\" role=\"status\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 6L9 17l-5-5\"/></svg><div><strong>No leak signs.</strong> <span>Water stopped between uses today.</span></div></div>",
+      "css": ".ds-status{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--success-color,#1d8a4a) 12%,var(--ha-card-background,var(--card-background-color,#fff)));color:var(--success-color,#1d8a4a);font-size:14px;line-height:1.5;}.ds-status svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}.ds-status strong{color:var(--primary-text-color,#0d2233);}.ds-status span{color:var(--secondary-text-color,#5a6f7e);}"
+    },
+    {
+      "name": "Calibration disclosure",
+      "kind": "custom",
+      "refersTo": "calibration-disclosure",
+      "description": "Native details keeps support compact for calibrated meters; expanded instruction text is illustrative.",
+      "html": "<details class=\"ds-disclosure\"><summary>Add a check reading</summary><p>Read your dial just after a transmission, before anyone uses water.</p></details>",
+      "css": ".ds-disclosure{font-family:var(--primary-font-family,Manrope,system-ui,sans-serif);color:var(--primary-text-color,#0d2233);margin-top:16px;padding-top:4px;border-top:1px solid var(--divider-color,#ddd);}.ds-disclosure summary{font-size:14px;cursor:pointer;padding-block:10px;color:color-mix(in srgb,var(--primary-color,#2bb3d6) 38%,var(--primary-text-color,#0d2233));}.ds-disclosure summary:hover{text-decoration:underline;text-underline-offset:3px;}.ds-disclosure summary:focus-visible{outline:2px solid var(--primary-color,#2bb3d6);outline-offset:3px;}.ds-disclosure p{margin:0;font-size:14px;line-height:1.5;color:var(--secondary-text-color,#5a6f7e);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Water use at a glance",
+    "overview": "This documents the user-approved dashboard card, not the repository's wider brand or README artwork. The wave, usual-day ring and dominant Today value frame a compact, calm reading of household water use. Observed data and reception gaps stay explicit; dial calibration remains available within the same card.",
+    "keyCharacteristics": [
+      "Theme-led water accent and quiet surface divisions.",
+      "Large numeric hierarchy with compact supporting context.",
+      "Visible observation gaps, progressive disclosure and practical dial controls."
+    ],
+    "rules": [
+      {
+        "name": "The Theme Authority Rule",
+        "body": "The frontmatter's CSS expressions are normative. Home Assistant variables override every fallback; screenshot fixture hex values illustrate themes and do not define a separate palette.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preserve the approved hierarchy and compact layout in both themes.",
+      "Do retain visible focus, semantic labels, table alternatives and reduced-motion behavior.",
+      "Do preserve raw pulses, missing observations and unavailable diagnostics."
+    ],
+    "donts": [
+      "Don't replace Home Assistant theme, locale or timezone with fixture settings.",
+      "Don't infer zero use from missed reception or invent a usual-day percentage while learning.",
+      "Don't add external fonts, image services or unrelated brand rules to this dashboard card."
+    ]
+  }
+}

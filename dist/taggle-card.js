@@ -1,4 +1,4 @@
-/* Taggle card 0.3.0. MIT. Home Assistant states only; no external requests. */
+/* Taggle card 0.3.0. MIT. Home Assistant states and recorder history; no external requests. */
 (() => {
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',
@@ -7,53 +7,107 @@
   const CONTROLS = {dial_unit:'select', dial_reading:'text'};
   const esc = value => String(value ?? '').replace(/[&<>"']/g,
     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-  const number = entity => entity && !['unknown', 'unavailable', ''].includes(entity.state)
+  const number = entity => entity && entity.state != null && !['unknown', 'unavailable', ''].includes(entity.state)
     && Number.isFinite(Number(entity.state)) ? Number(entity.state) : null;
   const css = `
-    :host { container-type:inline-size; display:block; color:var(--primary-text-color,#171717); font-family:var(--primary-font-family,Roboto,system-ui,sans-serif); }
+    :host { container-type:inline-size; display:block; color:var(--primary-text-color,#0d2233);
+      font-family:var(--primary-font-family,Manrope,system-ui,sans-serif); }
     * { box-sizing:border-box; }
-    ha-card { display:block; padding:24px; background:var(--ha-card-background,var(--card-background-color,#fff));
-      border:1px solid var(--divider-color,#ddd); border-radius:var(--ha-card-border-radius,12px); box-shadow:none;
-      --muted:var(--secondary-text-color,#606060); --water:var(--primary-color,#1769aa); }
+    ha-card { display:block; overflow:hidden; background:var(--ha-card-background,var(--card-background-color,#fff));
+      border:var(--ha-card-border-width,1px) solid var(--ha-card-border-color,var(--divider-color,#e3eaee));
+      border-radius:var(--ha-card-border-radius,24px); box-shadow:var(--ha-card-box-shadow,none);
+      --ink:var(--primary-text-color,#0d2233); --muted:var(--secondary-text-color,#5a6f7e);
+      --water:var(--primary-color,#2bb3d6); --line:var(--divider-color,#e3eaee);
+      --surface:var(--ha-card-background,var(--card-background-color,#fff));
+      --chip:color-mix(in srgb,var(--water) 12%,var(--surface));
+      --chip-ink:color-mix(in srgb,var(--water) 38%,var(--ink));
+      --ok:var(--success-color,#1d8a4a); --warn:var(--warning-color,#e07b1f); }
     ::selection { background:var(--water); color:var(--text-primary-color,#fff); }
-    h2,h3,p { margin:0; overflow-wrap:anywhere; } h2 { font-size:22px; font-weight:500; line-height:1.3; }
-    h3 { font-size:17px; font-weight:500; } p { font-size:14px; line-height:1.5; color:var(--muted); }
-    section { margin-top:24px; } section+section { padding-top:24px; border-top:1px solid var(--divider-color,#ddd); }
-    .heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 16px; }
-    .status { font-size:14px; color:var(--muted); } .stale { color:var(--error-color,#b3261e); }
-    dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:20px 0; }
-    dl div { min-width:0; } dt { color:var(--muted); font-size:14px; line-height:1.5; }
-    dd { margin:6px 0 0; font-size:28px; line-height:1.3; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
-    dd small { font-size:14px; color:var(--muted); } .diagnostics { display:flex; gap:8px 20px; flex-wrap:wrap; font-size:14px; color:var(--muted); }
-    details { margin-top:20px; } summary { font-size:14px; cursor:pointer; padding-block:10px; color:var(--water); }
+    h2,h3,h4,p { margin:0; overflow-wrap:anywhere; }
+    h2 { padding:20px 24px 0; font-size:18px; font-weight:700; }
+    h3 { font-size:16px; font-weight:700; line-height:1.4; }
+    p { font-size:14px; line-height:1.5; color:var(--muted); }
+    .meter+ .meter { border-top:1px solid var(--line); }
+    .header { position:relative; overflow:hidden; padding:24px 24px 28px; }
+    .wave { position:absolute; left:0; bottom:0; width:200%; height:120px; opacity:.12;
+      fill:var(--water); animation:tg-wave 9s linear infinite; pointer-events:none; }
+    .heading,.hero { position:relative; }
+    .heading { display:flex; align-items:center; justify-content:space-between; gap:10px 12px; flex-wrap:wrap; }
+    .identity { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; min-width:0; }
+    .dot { width:10px; height:10px; flex:none; border-radius:50%; background:var(--muted); }
+    .dot.live { background:var(--water); animation:tg-pulse 2s infinite; }
+    .status { font-size:13px; color:var(--muted); }
+    .status.stale { background:color-mix(in srgb,var(--muted) 10%,var(--surface)); padding:4px 8px; border-radius:20px; }
+    .chip { padding:5px 10px; border-radius:999px; background:var(--chip); color:var(--chip-ink);
+      font-size:12px; font-weight:700; white-space:nowrap; }
+    .hero { display:flex; align-items:center; gap:24px; margin-top:22px; }
+    .ring { position:relative; width:132px; height:132px; flex:none; }
+    .ring svg { width:100%; height:100%; overflow:visible; }
+    .track { stroke:var(--line); } .progress { stroke:var(--water); } .overflow { stroke:var(--warn); }
+    .ring-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .ring-label strong { font-size:22px; font-weight:800; } .ring-label span { font-size:11px; color:var(--muted); }
+    .today { min-width:0; } .today-label { color:var(--muted); font-size:13px; font-weight:600; }
+    .today-value { font-size:52px; font-weight:800; line-height:1.05; letter-spacing:-.03em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .today-value small { font-size:22px; font-weight:700; margin-inline-start:4px; letter-spacing:0; }
+    .usual { margin-top:6px; line-height:1.5; }
+    .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:0;
+      border-block:1px solid var(--line); font-variant-numeric:tabular-nums; }
+    .stats>div { padding:16px 20px; min-width:0; } .stats>div+div { border-inline-start:1px solid var(--line); }
+    dt,.stat-note { font-size:12px; color:var(--muted); line-height:1.5; }
+    dd { margin:2px 0 0; font-size:22px; font-weight:800; overflow-wrap:anywhere; }
+    dd small { font-size:14px; font-weight:600; }
+    .chart { padding:20px 24px 8px; }
+    .chart-heading { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:12px; }
+    .chart-heading h4 { font-size:15px; font-weight:700; } .chart-heading span { font-size:12px; color:var(--muted); }
+    .plot { display:flex; height:140px; align-items:stretch; gap:4px; }
+    .bar { position:relative; display:flex; flex:1 1 0; min-width:0; align-items:flex-end;
+      padding:0; border:0; background:transparent; color:var(--ink); cursor:pointer; touch-action:manipulation; }
+    .bar-fill { display:block; width:100%; height:var(--height); min-height:3px; border-radius:4px;
+      background:color-mix(in srgb,var(--water) 40%,var(--surface)); transform-origin:bottom; }
+    .enter .bar-fill { animation:tg-grow .8s cubic-bezier(.2,.8,.2,1) both; animation-delay:var(--delay); }
+    .bar.peak .bar-fill { background:var(--water); }
+    .bar.zero .bar-fill { height:3px; background:var(--water); }
+    .bar.missing .bar-fill,.day.missing .day-fill { height:18%; background:repeating-linear-gradient(135deg,
+      var(--line) 0 3px,transparent 3px 7px); }
+    .bar:hover .bar-fill,.bar:focus-visible .bar-fill { outline:1px solid var(--chip-ink); outline-offset:2px; }
+    .axis { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:6px; }
+    .chart-tip { min-height:22px; margin-top:6px; font-size:12px; color:var(--muted); }
+    .week { padding:8px 24px 16px; }
+    .week h4 { margin-bottom:10px; font-size:12px; font-weight:600; color:var(--muted); }
+    .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; }
+    .day { display:flex; flex-direction:column; gap:4px; align-items:center; min-width:0; font-size:11px; color:var(--muted); }
+    .day-plot { width:100%; height:30px; display:flex; align-items:flex-end; }
+    .day-fill { width:100%; height:var(--height); min-height:2px; border-radius:3px; background:var(--chip); }
+    .day.yesterday { color:var(--ink); font-weight:700; } .yesterday .day-fill { background:var(--water); }
+    .day-value { font-variant-numeric:tabular-nums; }
+    .statuses { padding:0 24px; display:grid; gap:10px; }
+    .status-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:var(--chip); font-size:14px; line-height:1.5; }
+    .status-row svg { width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .status-row strong { color:var(--ink); } .status-row span { color:var(--muted); }
+    .leak-ok { background:color-mix(in srgb,var(--ok) 12%,var(--surface)); color:var(--ok); }
+    .leak-warning { background:color-mix(in srgb,var(--warn) 14%,var(--surface)); color:var(--warn); }
+    .comparison { color:var(--chip-ink); }
+    .comparison-details { margin-top:3px; font-size:12px; }
+    .footer { padding:14px 24px 20px; font-size:12px; color:var(--muted); text-align:end; }
+    .support { padding:0 24px; }
+    .support>details.read-panel { margin-top:16px; padding-top:4px; } .support:empty { display:none; }
+    .empty,.uncalibrated { margin-top:16px; }
+    .uncalibrated { padding:12px 14px; border-radius:14px; background:var(--chip); }
+    .calibration { margin-top:12px; } .calibration a { color:var(--chip-ink); text-underline-offset:3px; }
+    .calibration.warning,.form-feedback.error { color:var(--error-color,#b3261e); }
+    details { margin-top:12px; } summary { font-size:14px; cursor:pointer; padding-block:10px; color:var(--chip-ink); }
     summary:hover { text-decoration:underline; text-underline-offset:3px; }
     summary:focus-visible,button:focus-visible,a:focus-visible,input:focus-visible,
     .units input:focus-visible+span { outline:2px solid var(--water); outline-offset:3px; }
-    .plot { display:flex; height:104px; align-items:flex-end; gap:3px; margin:16px 0 8px; border-bottom:1px solid var(--divider-color,#ddd); }
-    .bar { display:block; flex:1; min-width:0; background:var(--water); height:var(--height); }
-    .bar.zero { background:transparent; border-bottom:2px solid var(--water); }
-    .bar.missing { background:transparent; border-bottom:1px dashed var(--muted); }
-    .axis { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:14px; }
-    .scroll { overflow-x:auto; max-height:240px; scrollbar-color:var(--muted) transparent; }
+    .scroll { overflow:auto; max-height:240px; scrollbar-color:var(--muted) transparent; }
     table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
-    th,td { padding:10px 0; border-bottom:1px solid var(--divider-color,#ddd); text-align:start; }
+    th,td { padding:10px 0; border-bottom:1px solid var(--line); text-align:start; }
     th { color:var(--muted); font-weight:400; } th:last-child,td:last-child { text-align:end; padding-inline-start:16px; }
-    .empty { margin-top:16px; } .note { margin-top:12px; }
-    .comparison { margin-bottom:12px; }
-    .calibration { margin-top:12px; } .calibration a { color:var(--water); text-underline-offset:3px; }
-    .calibration a:hover { text-decoration-thickness:2px; }
-    .calibration.warning { color:var(--error-color,#b3261e); }
-    .uncalibrated { margin:12px 0 0; padding:8px 12px; border-left:3px solid var(--water); border-radius:6px;
-      background:color-mix(in srgb, var(--water) 12%, transparent); }
-    .register { margin-top:16px; color:var(--primary-text-color,#171717); font-variant-numeric:tabular-nums; }
-    .register strong { font-size:24px; font-weight:500; }
-    .leak { margin-top:12px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; }
-    .leak-badge { padding:2px 8px; border-radius:4px; font-size:13px; font-weight:500;
-      color:var(--primary-text-color,#171717); background:var(--secondary-background-color,var(--divider-color,#eee)); }
+    .note { margin-top:12px; }
     .read-panel { margin-top:20px; padding-top:20px; border-top:1px solid var(--divider-color,#ddd); }
     .read-now { padding:12px; color:var(--primary-text-color,#171717);
       background:color-mix(in srgb,var(--water) 18%,var(--ha-card-background,var(--card-background-color,#fff)));
-      border-left:4px solid var(--water); margin-bottom:12px; }
+      border-radius:10px; margin-bottom:12px; }
     .read-now strong { font-size:20px; }
     .routine-step { margin-bottom:8px; color:var(--primary-text-color,#171717); font-weight:600; }
     .routine { padding-left:20px; font-size:14px; line-height:1.5; color:var(--muted); }
@@ -100,10 +154,21 @@
     .reading-list li { padding-block:8px; border-top:1px solid var(--divider-color,#ddd); }
     .reading-list strong { color:var(--primary-text-color,#171717); font-weight:500; font-variant-numeric:tabular-nums; }
     .reading-list time { display:block; }
-    @container (max-width:480px) {
-      ha-card { padding:16px; } dl { gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); }
-      dd { font-size:24px; } dl div:last-child { grid-column:1/-1; display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
-      dl div:last-child dd { margin-top:0; white-space:nowrap; }
+
+    @keyframes tg-wave { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+    @keyframes tg-grow { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+    @keyframes tg-pulse { 0%,100% { box-shadow:0 0 0 0 color-mix(in srgb,var(--water) 45%,transparent); }
+      70% { box-shadow:0 0 0 10px transparent; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+    :host([data-reduced-motion]) *, :host([data-reduced-motion]) *::before { animation:none !important; transition:none !important; }
+    @container (max-width:400px) {
+      .header { padding:20px 16px 24px; } .hero { gap:16px; }
+      .ring { width:104px; height:104px; } .ring-label strong { font-size:20px; }
+      .today-value { font-size:44px; } .today-value small { font-size:18px; } .usual { font-size:12px; }
+      .stats>div { padding:14px 12px; } dd { font-size:19px; } .stats>div:last-child dd { font-size:16px; white-space:nowrap; }
+      .chart { padding-inline:16px; } .plot { gap:3px; } .chart-heading span { font-size:11px; }
+      .week { padding-inline:16px; } .days { gap:5px; } .day { font-size:10px; }
+      .statuses { padding-inline:16px; } .support { padding:0 16px; } .footer { padding-inline:16px; }
     }
   `;
 
@@ -112,33 +177,42 @@
       super();
       this.attachShadow({mode: 'open'});
       this._registry = [];
+      this._historyCache = new Map();
+      this._entrances = new WeakMap();
+      this._motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+      this._motionChanged = () => this.render();
       this._seenMeters = new WeakSet();
       this._drafts = new WeakMap();
     }
     setConfig(config) {
-      const meters = config.meters || [config];
-      if (!Array.isArray(meters) || !meters.length || meters.some(m => !m.entities && !m.device)) {
+      const meters = config?.meters || [config];
+      if (!Array.isArray(meters) || !meters.length || meters.some(m => !m || typeof m !== 'object' || (!m.entities && !m.device))) {
         throw new Error('Configure entities or a device for each Taggle meter.');
       }
       this._config = {...config, meters};
       this._registryRequested = false;
+      this._historyCache.clear();
       this._lastMarkup = '';
       this.render();
     }
     connectedCallback() {
       clearInterval(this._timer);
+      this._motion?.addEventListener('change', this._motionChanged);
       this._timer = setInterval(() => this.render(), 60000);
       this.render();
     }
-    disconnectedCallback() { clearInterval(this._timer); }
-    getCardSize() { return 4 * (this._config?.meters.length || 1); }
+    disconnectedCallback() {
+      clearInterval(this._timer);
+      this._motion?.removeEventListener('change', this._motionChanged);
+    }
+    getCardSize() { return 16 * (this._config?.meters.length || 1); }
     getGridOptions() { return {columns: 12, min_columns: 6}; }
     set hass(hass) {
       this._hass = hass;
       if (this._config && !this._registryRequested && hass.callWS) {
         this._registryRequested = true;
         hass.callWS({type: 'config/entity_registry/list'}).then(registry => {
-          this._registry = registry;
+          this._registry = Array.isArray(registry) ? registry : [];
           this.render();
         }).catch(() => {
           this._registryRequested = false;
@@ -171,9 +245,9 @@
       const anchor = Object.values(result).find(id => /^(?:sensor|select|text|binary_sensor)\.taggle_\d+_/.test(id));
       const base = anchor?.match(/^[^.]+\.(taggle_\d+_)/)?.[1];
       const device = registry.find(e => Object.values(result).includes(e.entity_id) && e.device_id)?.device_id;
-      if (!meter.device) for (const key of ['calibration_status', 'meter_reading', 'last_hour_litres', 'today_litres', 'total_litres', 'read_dial_now', ...Object.keys(CONTROLS)]) {
+      if (!meter.device) for (const key of ['calibration_status', 'meter_reading', 'last_hour_litres', 'today_litres', 'total_litres', 'possible_leak', 'read_dial_now', ...Object.keys(CONTROLS)]) {
         const found = device && registry.find(e => e.device_id === device && (e.unique_id || '').endsWith('_' + key));
-        const fallback = (CONTROLS[key] || (key === 'read_dial_now' ? 'binary_sensor' : 'sensor')) + '.' + base + key;
+        const fallback = (CONTROLS[key] || (['read_dial_now', 'possible_leak'].includes(key) ? 'binary_sensor' : 'sensor')) + '.' + base + key;
         if (!result[key] && found) result[key] = found.entity_id;
         if (!result[key] && base && this._hass.states[fallback]) result[key] = fallback;
       }
@@ -345,63 +419,177 @@
         return this._hass.states[id];
       };
       const average = get('average_today'), median = get('median_today'), counted = get('meters_counted');
-      if (!average && !median && !counted) return '';
-      const avg = number(average), med = number(median), homes = number(counted);
-      if (avg === null || homes === null || homes < 3) {
-        return '<p class="note comparison">Neighbourhood comparison unknown · waiting for enough qualifying homes.</p>';
-      }
-      const neighbourUnit = average.attributes?.unit_of_measurement || 'pulses';
-      const own = number(today);
-      const ratio = own !== null && avg > 0 && unit === neighbourUnit ? (own / avg - 1) * 100 : null;
-      const difference = ratio === null ? '' : Math.round(Math.abs(ratio)) === 0 ? ' · Same as average'
-        : ` · ${this.format(Math.round(Math.abs(ratio)))}% ${ratio < 0 ? 'below' : 'above'}`;
-      return `<p class="note comparison">Today ${esc(this.format(own))} ${esc(unit)} · Neighbourhood avg ${esc(this.format(avg))} ${esc(neighbourUnit)}${esc(difference)}<br>
-        ${med === null ? '' : `Median ${esc(this.format(med))} ${esc(neighbourUnit)} · `}${esc(this.format(homes))} homes</p>`;
+      const avg = number(average), med = number(median), homes = number(counted), own = number(today);
+      const neighbourUnit = average?.attributes?.unit_of_measurement || 'pulses';
+      const ready = avg !== null && homes !== null && homes >= 3;
+      const ratio = ready && own !== null && avg > 0 && unit === neighbourUnit ? (own / avg - 1) * 100 : null;
+      const difference = ratio === null ? '' : Math.round(Math.abs(ratio)) === 0 ? 'Same as your street'
+        : `${this.format(Math.round(Math.abs(ratio)))}% ${ratio < 0 ? 'below' : 'above'} your street`;
+      return `<div class="status-row comparison">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg>
+        <div><strong>${difference ? esc(difference) : 'Your street'}</strong>${!ready
+          ? '<span> · average appears once 3 homes are heard</span>'
+          : `<p class="comparison-details">Neighbourhood avg ${esc(this.format(avg))} ${esc(neighbourUnit)}${med === null ? '' : ` · Median ${esc(this.format(med))} ${esc(neighbourUnit)}`} · ${esc(this.format(homes))} homes${ratio === null ? ' · Comparable usage unavailable' : ''}</p>`}</div></div>`;
+    }
+    timeOptions() {
+      const format = this._hass?.locale?.time_format;
+      return format === '24' ? {hour12:false} : format === '12' ? {hour12:true} : {};
     }
     time(value, full = false) {
       const date = new Date(value);
       if (!Number.isFinite(date.getTime())) return 'No reading yet';
       return new Intl.DateTimeFormat(this._hass?.locale?.language || undefined, {
-        timeZone: this._hass?.config?.time_zone || 'UTC',
-        ...(full ? {month: 'short', day: 'numeric'} : {}), hour: '2-digit', minute: '2-digit'
+        timeZone: this._hass?.config?.time_zone || 'UTC', ...this.timeOptions(),
+        ...(full ? {month:'short', day:'numeric'} : {}), hour:'numeric', minute:'2-digit'
       }).format(date);
     }
-    history(entity, factor, index) {
+    localParts(stamp, zone = this._hass?.config?.time_zone || 'UTC') {
+      return Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+        timeZone:zone, year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'
+      }).formatToParts(new Date(stamp)).filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
+    }
+    dayKey(stamp, zone) {
+      const p = this.localParts(stamp, zone);
+      return `${p.year}-${p.month}-${p.day}`;
+    }
+    shiftDay(day, amount) {
+      const date = new Date(day + 'T12:00:00Z');
+      date.setUTCDate(date.getUTCDate() + amount);
+      return date.toISOString().slice(0,10);
+    }
+    dayStart(day) {
+      // Convert a local calendar boundary to UTC, including offset changes at DST.
+      const target = Date.parse(day + 'T00:00:00Z');
+      let stamp = target;
+      for (let i = 0; i < 4; i++) {
+        const p = this.localParts(stamp);
+        const wall = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+        const delta = target - wall;
+        stamp += delta;
+        if (!delta) break;
+      }
+      return stamp;
+    }
+    dailyHistory(id) {
+      const today = this.dayKey(Date.now());
+      const zone = this._hass?.config?.time_zone || 'UTC';
+      const key = `${id}|${zone}`;
+      let entry = this._historyCache.get(key);
+      if (id && this._hass.callWS && (!entry || (!entry.pending && (entry.day !== today || Date.now() - entry.updated >= 3600000)))) {
+        entry = {day:today, updated:Date.now(), pending:true, totals:entry?.totals || new Map()};
+        this._historyCache.set(key, entry);
+        const start = this.dayStart(this.shiftDay(today, -7)), end = this.dayStart(today);
+        const request = {type:'history/history_during_period', entity_ids:[id],
+          start_time:new Date(start).toISOString(), end_time:new Date(end).toISOString(),
+          include_start_time_state:false, significant_changes_only:false, minimal_response:false, no_attributes:true};
+        // Include attribute-only updates so a heard zero-use day remains an observed zero.
+        // No synthetic start state: carrying yesterday's value into a missing day is misleading.
+        Promise.resolve().then(() => this._hass.callWS(request)).then(result => {
+          const totals = new Map();
+          for (const row of Array.isArray(result?.[id]) ? result[id] : []) {
+            if (!row || typeof row !== 'object') continue;
+            const rawStamp = row.lu ?? row.last_updated ?? row.last_changed;
+            const stamp = typeof rawStamp === 'number' ? rawStamp * 1000 : Date.parse(rawStamp);
+            const value = number({state:row.s ?? row.state});
+            if (!Number.isFinite(stamp) || stamp < start || stamp >= end || value === null || value < 0) continue;
+            const day = this.dayKey(stamp, zone);
+            totals.set(day, Math.max(totals.get(day) ?? 0, value));
+          }
+          entry.totals = totals;
+        }).catch(() => { /* Recorder may be disabled, excluded, or not yet have history. */ })
+          .finally(() => {
+            entry.pending = false;
+            if (this._historyCache.get(key) === entry) this.render();
+          });
+      }
+      const days = Array.from({length:7}, (_, i) => {
+        const day = this.shiftDay(today, i - 7);
+        return {day, value:entry?.totals.get(day) ?? null};
+      });
+      const known = days.filter(d => d.value !== null);
+      return {days, usual:known.length ? known.reduce((sum,d) => sum + d.value, 0) / known.length : null, count:known.length};
+    }
+    hourLabel(hour) {
+      return new Intl.DateTimeFormat(this._hass?.locale?.language || undefined, {
+        timeZone:'UTC', hour:'numeric', ...this.timeOptions()
+      }).format(new Date(Date.UTC(2026, 0, 1, hour)));
+    }
+    hourlyData(entity, factor) {
       const rows = entity?.attributes?.history;
-      if (!Array.isArray(rows) || !rows.length) return '';
-      const valid = rows.filter(r => Number.isFinite(Date.parse(r.end)) && Number.isFinite(r.counts) && r.counts >= 0)
-        .slice(-48).sort((a, b) => Date.parse(a.end) - Date.parse(b.end));
-      if (!valid.length) return '';
-      const end = Date.parse(valid[valid.length-1].end);
-      const slots = new Map(valid.map(r => [Math.round((end-Date.parse(r.end))/3600000), r]));
-      const max = Math.max(1, ...valid.map(r => r.counts * factor));
-      const unit = entity.attributes.unit_of_measurement || 'pulses';
-      const bars = Array.from({length:48}, (_, i) => {
-        const row = slots.get(47-i), value = row ? row.counts * factor : null;
-        const label = `${this.time(end-(47-i)*3600000, true)}: ${row ? this.format(value)+' '+unit : 'No observation'}`;
-        return `<span class="bar ${!row ? 'missing' : value === 0 ? 'zero' : ''}" style="--height:${row ? Math.max(2,value/max*100) : 2}%" title="${esc(label)}"></span>`;
+      const day = this.dayKey(Date.now());
+      const hours = Array(24).fill(null);
+      const valid = Array.isArray(rows) ? rows.filter(r => r && Number.isFinite(Date.parse(r.end))
+        && Date.parse(r.end) <= Date.now() && Number.isFinite(r.counts) && r.counts >= 0)
+        .sort((a,b) => Date.parse(a.end) - Date.parse(b.end)) : [];
+      const unique = new Map(valid.map(r => [Date.parse(r.end), r]));
+      for (const [stamp, row] of unique) {
+        if (this.dayKey(stamp) !== day) continue;
+        const hour = +this.localParts(stamp).hour;
+        // A repeated DST hour shares one local-hour bar; both observed intervals count.
+        hours[hour] = (hours[hour] ?? 0) + row.counts * factor;
+      }
+      const observed = hours.filter(v => v !== null).length;
+      const max = observed ? Math.max(...hours.filter(v => v !== null)) : null;
+      return {hours, observed, elapsed:+this.localParts(Date.now()).hour + 1,
+        peak:max, peakHour:max === null ? null : hours.indexOf(max), valid:[...unique.values()]};
+    }
+    ring(value, usual) {
+      const ratio = value !== null && usual > 0 ? value / usual : null;
+      const arc = 2 * Math.PI * 56;
+      const label = ratio === null ? 'Learning your usual day' : `Today is ${this.format(Math.round(ratio * 100))} percent of your usual day`;
+      return `<div class="ring"><svg viewBox="0 0 132 132" role="img" aria-label="${esc(label)}">
+        <circle class="track" cx="66" cy="66" r="56" fill="none" stroke-width="12"/>
+        ${ratio === null ? '' : `<circle class="progress" cx="66" cy="66" r="56" fill="none" stroke-width="12" stroke-linecap="round"
+          stroke-dasharray="${Math.min(1,ratio) * arc} ${arc}" transform="rotate(-90 66 66)"/>
+        ${ratio > 1 ? `<circle class="overflow" cx="66" cy="66" r="56" fill="none" stroke-width="12" stroke-linecap="round"
+          stroke-dasharray="${Math.min(1,ratio - 1) * arc} ${arc}" transform="rotate(-90 66 66)"/>` : ''}`}</svg>
+        <div class="ring-label" aria-hidden="true"><strong>${ratio === null ? '—' : esc(this.format(Math.round(ratio * 100)))+'%'}</strong><span>${ratio === null ? 'usual day' : 'of usual'}</span></div></div>`;
+    }
+    history(data, unit, factor, index, animate) {
+      const max = Math.max(1, data.peak || 0);
+      const bars = data.hours.map((value, hour) => {
+        const label = `${this.hourLabel(hour)} hour: ${value === null ? 'Not heard · No observation' : this.format(value)+' '+unit}`;
+        return `<button type="button" class="bar ${value === null ? 'missing' : value === 0 ? 'zero' : hour === data.peakHour ? 'peak' : ''}"
+          data-focus="bar-${index}-${hour}" data-chart="${index}" aria-label="${esc(label)}" title="${esc(label)}"
+          style="--height:${value === null ? 18 : Math.max(2,value/max*100)}%;--delay:${hour * 25}ms"><span class="bar-fill"></span></button>`;
       }).join('');
-      return `<details data-disclosure="history-${index}"><summary data-focus="history-${index}">Hourly history · ${valid.length} observations</summary>
-        <div class="plot" role="img" aria-label="48 hourly intervals. Missing readings appear as dashed marks; values are in the table below.">${bars}</div>
-        <div class="axis"><span>${esc(this.time(end-47*3600000,true))}</span><span>${esc(this.time(end,true))}</span></div>
-        <div class="scroll"><table><thead><tr><th scope="col">Interval ending</th><th scope="col">${esc(unit)}</th></tr></thead>
-        <tbody>${valid.slice().reverse().map(r => `<tr><td>${esc(this.time(r.end,true))}</td><td>${esc(this.format(r.counts*factor))}</td></tr>`).join('')}</tbody></table></div>
-        <p class="note">Intervals follow the transmitter’s hourly cycle. Gaps are missing observations.</p></details>`;
+      return `<div class="chart"><div class="chart-heading"><h4>Today by hour</h4><span>Hatched = not heard</span></div>
+        <div class="plot ${animate ? 'enter' : ''}" role="group" aria-label="Hourly water use today in ${esc(unit)}">${bars}</div>
+        <div class="axis" aria-hidden="true">${[0,6,12,18].map(h => `<span>${esc(this.hourLabel(h))}</span>`).join('')}<span>${esc(this.hourLabel(23))}</span></div>
+        <p class="chart-tip" data-tooltip="${index}" role="status">Tap a bar for usage and time</p>
+        <details data-disclosure="history-${index}"><summary data-focus="history-${index}">Hourly history · values table</summary>
+        <div class="scroll"><table><caption>Today by hour · ${esc(unit)}. Missing observations are not zero.</caption>
+          <thead><tr><th scope="col">Hour</th><th scope="col">${esc(unit)}</th></tr></thead><tbody>
+          ${data.hours.map((v,h) => `<tr><th scope="row">${esc(this.hourLabel(h))}</th><td>${v === null ? 'Not heard' : esc(this.format(v))}</td></tr>`).join('')}</tbody></table></div>
+        ${data.valid.length ? `<div class="scroll"><table><caption>Recent transmitter intervals</caption><thead><tr><th scope="col">Interval ending</th><th scope="col">${esc(unit)}</th></tr></thead>
+          <tbody>${data.valid.slice().reverse().map(r => `<tr><td>${esc(this.time(r.end,true))}</td><td>${esc(this.format(r.counts*factor))}</td></tr>`).join('')}</tbody></table></div>` : ''}
+        <p class="note">Intervals follow the transmitter’s hourly cycle. Gaps are missing observations. Today includes observed intervals only; missed intervals are not estimated.</p></details></div>`;
+    }
+    week(history, unit) {
+      const max = Math.max(1,...history.days.map(d => d.value || 0));
+      const yesterday = history.days[6].value;
+      return `<div class="week"><h4>Previous 7 days · Yesterday ${yesterday === null ? 'not heard' : esc(this.format(yesterday))+' '+esc(unit)}</h4>
+        <div class="days" role="list" aria-label="Daily totals from recorded history">${history.days.map(({day,value},i) => {
+          const date = new Date(day + 'T12:00:00Z');
+          const weekday = new Intl.DateTimeFormat(this._hass?.locale?.language || undefined,{timeZone:'UTC',weekday:'short'}).format(date);
+          const label = `${i === 6 ? 'Yesterday, ' : ''}${day}: ${value === null ? 'Not heard' : this.format(value)+' '+unit}`;
+          return `<div role="listitem" class="day ${value === null ? 'missing' : ''} ${i === 6 ? 'yesterday' : ''}" aria-label="${esc(label)}" title="${esc(label)}">
+            <div class="day-plot" aria-hidden="true"><span class="day-fill" style="--height:${value === null ? 18 : Math.max(3,value/max*100)}%"></span></div>
+            <span aria-hidden="true">${i === 6 ? 'Yest.' : esc(weekday)}</span><span class="day-value" aria-hidden="true">${value === null ? '—' : esc(this.format(value))}</span></div>`;
+        }).join('')}</div></div>`;
     }
     meter(meter, index) {
       const ids = this.resolve(meter), states = this._hass.states;
       const get = key => states[ids[key]];
-      const hasLitres = !!get('last_hour_litres');
+      const hasLitres = !!(get('last_hour_litres') || get('today_litres') || get('total_litres'));
       const hour = get(hasLitres ? 'last_hour_litres' : 'last_hour');
-      const today = get(hasLitres ? 'today_litres' : 'today');
-      const total = get(hasLitres ? 'total_litres' : 'meter_count');
-      const seen = get('last_seen');
-      const stamp = Date.parse(seen?.state);
-      const stale = Number.isFinite(stamp) && Date.now()-stamp > 3*3600000;
+      const todayKey = hasLitres ? 'today_litres' : 'today';
+      const today = get(todayKey), total = get(hasLitres ? 'total_litres' : 'meter_count');
+      const seen = get('last_seen'), stamp = Date.parse(seen?.state);
+      const live = Number.isFinite(stamp) && Date.now() - stamp < 75 * 60000 && stamp <= Date.now();
       const unavailable = hour?.state === 'unavailable';
       const attrs = hour?.attributes || {};
-      // HA can mark last_seen unavailable too. Retained frame attributes and
-      // observations in this session still distinguish an outage from first use.
       if (Number.isFinite(stamp) || [hour, today, total, get('snr'), get('signal_level')]
           .some(entity => number(entity) !== null) || typeof attrs.encrypted === 'boolean'
           || attrs.history?.length) this._seenMeters.add(meter);
@@ -409,30 +597,48 @@
       const unit = hour?.attributes?.unit_of_measurement || (hasLitres ? 'L' : 'pulses');
       const name = meter.name || 'Water meter';
       if (!Object.values(ids).some(id => states[id])) {
-        return `<section><h3>${esc(name)}</h3><p class="empty">${this._registryError ? 'Device lookup failed. Configure entity IDs to continue.' : 'Waiting for MQTT entities. Check the configured entities or device and receiver configuration.'}</p></section>`;
+        return `<section class="meter"><div class="header"><h3>${esc(name)}</h3><p class="empty">${this._registryError ? 'Device lookup failed. Configure entity IDs to continue.' : 'Waiting for MQTT entities. Check the configured entities or device and receiver configuration.'}</p></div></section>`;
       }
       const absolute = number(get('meter_reading'));
-      const {calibrated, warning} = this.calibrationState(ids);
-      const metrics = [[hour, 'Last hour'], [today, 'Today · observed'], [total, hasLitres ? 'Total · calibrated' : 'Meter count']];
+      const {calibrated, attrs:calibration} = this.calibrationState(ids);
+      const factor = hasLitres ? (Number.isFinite(attrs.litres_per_count) ? attrs.litres_per_count
+        : calibrated ? calibration.chosen_k : 1) : 1;
+      const dialReady = calibrated || hasLitres;
+      const data = this.hourlyData(hour, factor);
+      const past = attrs.encrypted ? null : this.dailyHistory(ids[todayKey]);
+      const status = waiting ? 'Waiting for first reading (can take up to an hour)' : unavailable ? 'Usage unavailable'
+        : live ? 'Live · '+this.time(seen.state) : Number.isFinite(stamp) ? 'Last heard '+this.time(seen.state,true) : 'Waiting for a reading';
       const leak = get('possible_leak');
-      return `<section><div class="heading"><h3>${esc(name)}</h3>
-        <span class="status ${!waiting && (stale || unavailable) ? 'stale' : ''}">${waiting ? 'Waiting for first reading (can take up to an hour)' : stale ? 'No recent signal' : unavailable ? 'Usage unavailable' : Number.isFinite(stamp) ? 'Last seen '+esc(this.time(seen.state)) : 'Waiting for a reading'}</span></div>
-        ${calibrated && !warning ? this.calibration(meter, ids) : ''}
-        ${absolute !== null ? `<p class="register">Meter reading <strong>${esc(new Intl.NumberFormat(this._hass?.locale?.language || undefined, {maximumFractionDigits:0}).format(absolute))}</strong> L</p>` : ''}
-        ${leak?.state === 'on' ? `<p class="leak" role="status"><span class="leak-badge">Possible leak</span>${esc(leak.attributes?.reason)}</p>` : ''}
-        ${!attrs.encrypted && !hasLitres ? '<p class="uncalibrated" role="note"><strong>Not litres yet.</strong> These are raw pulses from the transmitter. Calibrate with the dial readings below.</p>' : ''}
-        <dl>${metrics.map(([entity,label]) => `<div><dt>${label}</dt><dd>${esc(this.format(number(entity)))} <small>${esc(unit)}</small></dd></div>`).join('')}</dl>
-        ${this.comparison(meter, today, unit)}
-        <div class="diagnostics"><span>SNR ${esc(this.format(number(get('snr'))))} dB</span>
-        <span>Signal ${esc(this.format(number(get('signal_level'))))} dBFS</span>
-        ${Number.isFinite(attrs.hours_observed) ? `<span>${attrs.hours_observed} hourly intervals today</span>` : ''}</div>
-        ${attrs.encrypted || hasLitres ? `<p class="note">${attrs.encrypted ? 'Encrypted transmitter. Only identity and signal diagnostics are available.' : 'Today includes observed intervals only; missed intervals are not estimated.'}</p>` : ''}
-        ${this.readPanel(meter, ids, index)}
-        ${!unavailable ? this.history(hour, hasLitres && Number.isFinite(attrs.litres_per_count) ? attrs.litres_per_count : 1, index) : ''}</section>`;
+      const identity = Object.values(ids).map(id => id.match(/taggle_(\d+)_/)?.[1]).find(Boolean)
+        || this.entityRegistry().find(e => Object.values(ids).includes(e.entity_id))?.unique_id?.match(/_(\d+)_/)?.[1];
+      if (!this._entrances.has(meter)) this._entrances.set(meter, Date.now());
+      return `<section class="meter"><div class="header">
+        <svg class="wave" viewBox="0 0 960 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 Q60 40 120 70 T240 70 T360 70 T480 70 T600 70 T720 70 T840 70 T960 70 V120 H0 Z"/></svg>
+        <div class="heading"><div class="identity"><span class="dot ${live && !unavailable ? 'live' : ''}" aria-hidden="true"></span><h3>${esc(name)}</h3>
+        <span class="status${!waiting && (!live || unavailable) ? ' stale' : ''}">${esc(status)}</span></div>
+        <span class="chip">${calibrated ? esc(this.format(calibration.chosen_k))+' L per pulse' : 'Not calibrated'}</span></div>
+        ${attrs.encrypted ? '<p class="empty">Encrypted transmitter. Only identity and signal diagnostics are available.</p>' : `
+        <div class="hero">${this.ring(number(today), past.usual)}<div class="today"><div class="today-label">Today</div>
+          <div class="today-value">${esc(this.format(number(today)))}<small>${esc(unit)}</small></div>
+          <p class="usual" title="${past.count} of the previous 7 days recorded">${past.usual === null ? 'Learning your usual day' : `Usual day ${esc(this.format(past.usual))} ${esc(unit)}`} · ${data.observed} of ${data.elapsed} hours heard</p></div></div>
+        ${!hasLitres ? '<p class="uncalibrated" role="note"><strong>Not litres yet.</strong> These are raw pulses from the transmitter. Calibrate with the dial readings below.</p>' : ''}`}</div>
+        ${attrs.encrypted ? '' : `<dl class="stats"><div><dt>Last hour</dt><dd>${esc(this.format(number(hour)))} <small>${esc(unit)}</small></dd></div>
+          <div><dt>Peak</dt><dd>${esc(this.format(data.peak))} <small>${esc(unit)}</small></dd><div class="stat-note">${data.peakHour === null ? 'No hours heard' : esc(this.hourLabel(data.peakHour))+' hour'}</div></div>
+          <div><dt>${dialReady ? 'Meter' : 'Meter count'}</dt><dd>${dialReady ? (absolute === null ? '—' : esc(new Intl.NumberFormat(this._hass?.locale?.language || undefined,
+            {minimumFractionDigits:2,maximumFractionDigits:2}).format(absolute / 1000))) : esc(this.format(number(get('meter_count'))))}</dd><div class="stat-note">${dialReady ? 'kL on the dial' : 'pulses'}</div></div></dl>
+        ${this.history(data, unit, factor, index, Date.now() - this._entrances.get(meter) < 1500)}${this.week(past, unit)}
+        <div class="statuses"><div class="status-row ${leak?.state === 'on' ? 'leak-warning' : leak?.state === 'off' ? 'leak-ok' : ''}" role="status">
+          <svg viewBox="0 0 24 24" aria-hidden="true">${leak?.state === 'off' ? '<path d="M20 6L9 17l-5-5"/>' : '<path d="M12 3L2 21h20L12 3zM12 9v5M12 17h.01"/>'}</svg>
+          <div><strong>${leak?.state === 'on' ? 'Possible leak.' : leak?.state === 'off' ? 'No leak signs.' : 'Leak status unavailable.'}</strong>
+          <span>${leak?.state === 'on' ? esc(leak.attributes?.reason || 'Check for running taps or continuous water use.') : leak?.state === 'off' ? 'Water stopped between uses today.' : 'Check the meter’s possible_leak entity.'}</span></div></div>
+        ${this.comparison(meter, today, unit)}</div>`}
+        <div class="support">${!attrs.encrypted ? this.readPanel(meter, ids, index) : ''}</div>
+        <div class="footer" title="Signal level ${esc(this.format(number(get('signal_level'))))} dBFS">Signal ${esc(this.format(number(get('snr'))))} dB · ${esc(identity ? 'Taggle '+identity : name)}</div></section>`;
     }
     render() {
       if (!this._config || !this._hass) return;
-      const markup = `<style>${css}</style><ha-card><h2>${esc(this._config.title || 'Water usage')}</h2>
+      this.toggleAttribute?.('data-reduced-motion', !!this._motion?.matches);
+      const markup = `<style>${css}</style><ha-card>${this._config.title ? '<h2>'+esc(this._config.title)+'</h2>' : ''}
         ${this._config.meters.map((m,i) => this.meter(m,i)).join('')}</ha-card>`;
       if (markup === this._lastMarkup) return;
       const opened = new Map([...this.shadowRoot.querySelectorAll('details')].map(d => [d.dataset.disclosure, d.open]));
@@ -455,6 +661,13 @@
           form.querySelector('.form-feedback').textContent = '';
         });
         form.addEventListener('submit', event => { event.preventDefault(); this.saveReading(meter); });
+      });
+      this.shadowRoot.querySelectorAll('.bar').forEach(bar => {
+        const show = () => {
+          const tip = this.shadowRoot.querySelector(`[data-tooltip="${bar.dataset.chart}"]`);
+          if (tip) tip.textContent = bar.getAttribute('aria-label');
+        };
+        for (const event of ['pointerenter', 'focus', 'click']) bar.addEventListener(event, show);
       });
       if (focus) {
         let target = this.shadowRoot.querySelector(`[data-focus="${focus}"]`);

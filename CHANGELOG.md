@@ -4,6 +4,8 @@
 
 Released 2026-11-03.
 
+- Redesign the usage card with a usual-day ring from cached seven-day Home Assistant history, local hourly and daily charts, live reception, peak usage, a kL dial, and leak/street status; retain dial calibration and accessible light/dark mobile layouts.
+
 - Replace the number and separate photo-time controls with one validated Dial reading text box: optional time travels with its reading; accept HHMM, at/@ and comma decimals, preserve JSON, and remove old discovery/pending time on upgrade.
 - Guide calibration over one hour: read within ten minutes after a transmission, use 20–50 L (reuse it), then read just after the next transmission. Add Good time to read the dial, countdown and three-step card guidance, exact flags and a phone reminder example.
 - Remove the minimum-usage gate and retired option; name ambiguous standard sizes, tolerate obsolete saved options with a warning, and include typed dial resolution in bounds, fits and residual checks.

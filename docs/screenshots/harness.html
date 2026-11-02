@@ -7,26 +7,26 @@
   <style>
     :root {
       color-scheme: light;
-      --primary-color: #03a9f4;
-      --primary-text-color: #212121;
-      --secondary-text-color: #727272;
+      --primary-color: #2bb3d6;
+      --primary-text-color: #0d2233;
+      --secondary-text-color: #5a6f7e;
       --text-primary-color: #ffffff;
-      --divider-color: #e0e0e0;
+      --divider-color: #e3eaee;
       --primary-background-color: #fafafa;
       --card-background-color: #ffffff;
       --ha-card-background: #ffffff;
       --error-color: #db4437;
-      --ha-card-border-radius: 12px;
-      --primary-font-family: Arial, sans-serif;
+      --ha-card-border-radius: 24px;
+      --primary-font-family: Manrope, system-ui, sans-serif;
     }
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --primary-text-color: #e1e1e1;
-      --secondary-text-color: #9b9b9b;
-      --divider-color: #383838;
+      --primary-text-color: #eef4f8;
+      --secondary-text-color: #9db0bf;
+      --divider-color: #1f3040;
       --primary-background-color: #111111;
-      --card-background-color: #1c1c1c;
-      --ha-card-background: #1c1c1c;
+      --card-background-color: #0f1a24;
+      --ha-card-background: #0f1a24;
       --error-color: #ff5252;
     }
     * { box-sizing: border-box; }
@@ -41,7 +41,7 @@
     const params = new URLSearchParams(location.search);
     const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
     const scenario = params.get('scenario') || 'calibrated';
-    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'uncalibrated', 'read-now', 'leak'].includes(scenario)) throw new Error('Unknown scenario');
+    if (!['calibrated', 'raw', 'multi', 'disagreement', 'pending', 'uncalibrated', 'read-now', 'leak', 'stale', 'learning', 'encrypted', 'waiting', 'unavailable'].includes(scenario)) throw new Error('Unknown scenario');
     const requestedWidth = Number(params.get('width') || 520);
     const width = Number.isInteger(requestedWidth) && requestedWidth >= 280 && requestedWidth <= 1600
       ? requestedWidth : 520;
@@ -49,44 +49,40 @@
     const container = document.getElementById('card-container');
     container.style.width = `${width}px`;
 
-    // The card uses Date.now() for its three-hour staleness check. Freeze that clock
+    // Freeze the clock for live status, hourly charts and local calendar history
     // before importing it; all fixture timestamps and the HA timezone are fixed too.
-    const now = Date.parse('2026-01-03T08:30:00Z');
+    const now = Date.parse('2026-11-02T12:40:00Z');
     Date.now = () => now;
     await import('../../dist/taggle-card.js');
 
     const states = {};
     const keys = ['last_hour', 'today', 'meter_count', 'last_seen', 'snr', 'signal_level', 'calibration_status'];
+    const recorded = {};
     const litreKeys = ['last_hour_litres', 'today_litres', 'total_litres', 'meter_reading'];
-    const hourlyProfile = [0, 0, 0, 0, 0, 2, 16, 28, 9, 3, 0, 5, 12, 4, 0, 3, 8, 22, 36, 18, 7, 4, 0, 0];
+    const hourlyProfile = [null, null, null, null, null, null, 25, 55, null, null, null, 30, 40, 30, 45, 25, 25, 20, 175, 25, 35, 10, 10, null];
     const zone = 'Australia/Brisbane';
     const localDay = stamp => new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(new Date(stamp));
-    const lastEnd = now - 15 * 60000;
+    const lastEnd = now;
 
     function meter(id, name, calibrated, scale, snr, signal) {
-      // Omit two intervals entirely: a missing observation is not a zero reading.
-      const history = Array.from({length: 48}, (_, i) => {
-        const stamp = lastEnd - (47 - i) * 3600000;
-        const localHour = (new Date(stamp).getUTCHours() + 10) % 24;
-        return {end: new Date(stamp).toISOString(), counts: Math.round(
-          (scenario === 'leak' ? Math.max(1, hourlyProfile[localHour]) : hourlyProfile[localHour]) * scale)};
-      }).filter((_, i) => i !== 9 && i !== 32);
-      const today = history.filter(row => localDay(row.end) === localDay(now));
-      const countToday = today.reduce((sum, row) => sum + row.counts, 0);
-      const cumulative = 10000 + history.reduce((sum, row) => sum + row.counts, 0);
-      // Fictional scale only; the receiver never assumes a litres-per-count value.
-      const factor = 2.5;
-      const attributes = {history, hours_observed: today.length, encrypted: false, raw_count: cumulative};
+      const factor = 5;
+      // Fictional ID and values; absent intervals remain missing, including 08–10h.
+      const history = hourlyProfile.flatMap((litres, hour) => litres === null ? [] : [{
+        end:`2026-11-02T${String(hour).padStart(2,'0')}:40:00+10:00`, counts:litres / factor * scale
+      }]);
+      const countToday = history.reduce((sum, row) => sum + row.counts, 0);
+      const cumulative = 46265;
+      const attributes = {history, hours_observed: history.length, encrypted:scenario === 'encrypted', raw_count:cumulative};
       const values = {
-        last_hour: history.at(-1).counts, today: countToday, meter_count: cumulative,
-        last_seen: new Date(lastEnd).toISOString(), snr, signal_level: signal,
-        last_hour_litres: history.at(-1).counts * factor, today_litres: countToday * factor,
-        total_litres: cumulative * factor, meter_reading: 1234567 + cumulative * factor,
-        calibration_status: scenario === 'disagreement' ? 'Readings disagree — check the last one: check the dial unit or digits'
+        last_hour:history.at(-1).counts, today:countToday, meter_count:cumulative,
+        last_seen:new Date(lastEnd - (scenario === 'stale' ? 4 * 3600000 : 0)).toISOString(), snr, signal_level:signal,
+        last_hour_litres:history.at(-1).counts * factor, today_litres:countToday * factor,
+        total_litres:cumulative * factor, meter_reading:1597950,
+        calibration_status:scenario === 'disagreement' ? 'Readings disagree — check the dial unit or digits'
           : scenario === 'pending' ? 'Waiting for next transmission to line up your reading'
           : scenario === 'uncalibrated' ? 'Step 2 of 3 — use some water this hour (20–50 L; reuse it), then read just after the NEXT transmission.'
           : scenario === 'read-now' ? 'Read your dial now — a transmission arrived 2 min ago. Step 1 of 3.'
-          : calibrated ? 'Calibrated: 2.5 L per pulse — standard value, fits your readings'
+          : calibrated ? 'Calibrated: 5 L per pulse — standard value, fits your readings'
           : 'Needs 2 readings — enter your dial reading to show litres',
       };
       const entities = {};
@@ -100,8 +96,8 @@
           attributes: {...attributes, friendly_name: `${name} ${key}`, unit_of_measurement: unit,
             ...(calibrated ? {litres_per_count: factor} : {}),
             ...(key === 'calibration_status' ? {chosen_k:calibrated ? factor : null,
-              next_transmission:'2026-01-03T19:15:00+10:00', dial_unit:'m³',
-              readings:scenario === 'uncalibrated' ? [{id:1, time:'2026-01-03T07:17:00Z',
+              next_transmission:'2026-11-02T23:40:00+10:00', dial_unit:'m³',
+              readings:scenario === 'uncalibrated' ? [{id:1, time:'2026-11-02T11:42:00Z',
                 value:1597.765, unit:'m³', litres:1597765, used:true,
                 base_interval:[46218,46228], count_interval:[46218,46228]}] : []} : {})},
         };
@@ -114,15 +110,24 @@
       states[entities.read_dial_now] = {state:scenario === 'read-now' ? 'on' : 'off', attributes:{
         since:new Date(now - (scenario === 'read-now' ? 2 : 15) * 60000).toISOString(),
         until:new Date(now + (scenario === 'read-now' ? 8 : -5) * 60000).toISOString(),
-        next_transmission:'2026-01-03T19:15:00+10:00'}};
-      if (scenario === 'leak') {
-        entities.possible_leak = `binary_sensor.taggle_${id}_possible_leak`;
-        states[entities.possible_leak] = {state:'on', attributes:{reason:'continuous flow for 24 h'}};
+        next_transmission:'2026-11-02T23:40:00+10:00'}};
+      entities.possible_leak = `binary_sensor.taggle_${id}_possible_leak`;
+      states[entities.possible_leak] = {state:scenario === 'leak' ? 'on' : 'off',
+        attributes:{reason:scenario === 'leak' ? 'Continuous flow for 24 h' : 'Water stopped between uses today'}};
+      for (const key of ['today', ...(calibrated ? ['today_litres'] : [])]) {
+        const totals = [510, 560, 480, 580, 525, 549, 534]; // mean 534 L, fictional complete days.
+        recorded[entities[key]] = totals.flatMap((litres, i) => {
+          const day = new Date(Date.parse('2026-10-26T12:00:00Z') + i * 86400000).toISOString().slice(0,10);
+          return [0, .4, 1].map((fraction, part) => ({s:String(litres * scale * fraction / (key === 'today' ? factor : 1)),
+            lu:Date.parse(`${day}T${['00','12','23'][part]}:40:00+10:00`) / 1000}));
+        });
       }
+      if (scenario === 'waiting') for (const id of Object.values(entities)) states[id] = {state:'unknown', attributes:{}};
+      if (scenario === 'unavailable') states[entities[calibrated ? 'last_hour_litres' : 'last_hour']].state = 'unavailable';
       return {name, entities};
     }
 
-    const meters = [meter(123456, 'House', !['raw', 'pending', 'uncalibrated', 'read-now'].includes(scenario), 1, 12.4, -43.2)];
+    const meters = [meter(123456, 'House', !['raw', 'pending', 'uncalibrated', 'read-now'].includes(scenario), 1, 27, -43.2)];
     if (scenario === 'multi') meters.push(meter(234567, 'Granny flat', true, 0.45, 9.8, -49.1));
     // Fictional aggregate only: no neighbour IDs or individual readings.
     const neighbourhood = {average_today: 410, median_today: 350, meters_counted: 14,
@@ -134,12 +139,19 @@
       };
     }
     const card = document.createElement('taggle-card');
-    card.setConfig({type: 'custom:taggle-card', title: 'Water usage', meters});
-    card.hass = {states, entities: {}, locale: {language: 'en-AU'}, config: {time_zone: zone}};
+    card.setConfig({type: 'custom:taggle-card', meters});
+    card.hass = {states, entities: {}, locale: {language: 'en-AU'}, config: {time_zone: zone},
+      callWS:async request => request.type === 'config/entity_registry/list' ? [] : scenario === 'learning' ? {} : recorded};
     container.append(card);
-    card.shadowRoot.querySelectorAll('details[data-disclosure^="history-"]').forEach(details => { details.open = true; });
+    // Let recorder requests and their render finish before measuring.
+    await new Promise(resolve => setTimeout(resolve, 0));
     await document.fonts.ready;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // Force layout without rAF: headless dump-dom can finish before a second frame.
+    container.getBoundingClientRect();
+    // Keep screenshot timing deterministic; motion is verified separately in browser checks.
+    const settled = document.createElement('style');
+    settled.textContent = '*,*::before,*::after { animation:none !important; transition:none !important; }';
+    card.shadowRoot.append(settled);
     // scripts/screenshots.py measures first, then captures with the same width.
     document.documentElement.dataset.screenshotWidth = String(width + 32);
     // Headless --window-size includes hidden browser chrome, so add the outer/inner difference.
