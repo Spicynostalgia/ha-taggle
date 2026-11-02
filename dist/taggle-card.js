@@ -49,6 +49,7 @@
       super();
       this.attachShadow({mode: 'open'});
       this._registry = [];
+      this._seenMeters = new WeakSet();
     }
     setConfig(config) {
       const meters = config.meters || [config];
@@ -176,6 +177,12 @@
       const stale = Number.isFinite(stamp) && Date.now()-stamp > 3*3600000;
       const unavailable = hour?.state === 'unavailable';
       const attrs = hour?.attributes || {};
+      // HA can mark last_seen unavailable too. Retained frame attributes and
+      // observations in this session still distinguish an outage from first use.
+      if (Number.isFinite(stamp) || [hour, today, total, get('snr'), get('signal_level')]
+          .some(entity => number(entity) !== null) || typeof attrs.encrypted === 'boolean'
+          || attrs.history?.length) this._seenMeters.add(meter);
+      const waiting = !this._seenMeters.has(meter);
       const unit = hour?.attributes?.unit_of_measurement || (hasLitres ? 'L' : 'pulses');
       const name = meter.name || 'Water meter';
       if (!Object.values(ids).some(id => states[id])) {
@@ -183,7 +190,7 @@
       }
       const metrics = [[hour, 'Last hour'], [today, 'Today · observed'], [total, hasLitres ? 'Total · calibrated' : 'Meter count']];
       return `<section><div class="heading"><h3>${esc(name)}</h3>
-        <span class="status ${stale || unavailable ? 'stale' : ''}">${stale ? 'No recent signal' : unavailable ? 'Usage unavailable' : Number.isFinite(stamp) ? 'Last seen '+esc(this.time(seen.state)) : 'Waiting for a reading'}</span></div>
+        <span class="status ${!waiting && (stale || unavailable) ? 'stale' : ''}">${waiting ? 'Waiting for first reading (can take up to an hour)' : stale ? 'No recent signal' : unavailable ? 'Usage unavailable' : Number.isFinite(stamp) ? 'Last seen '+esc(this.time(seen.state)) : 'Waiting for a reading'}</span></div>
         <dl>${metrics.map(([entity,label]) => `<div><dt>${label}</dt><dd>${esc(this.format(number(entity)))} <small>${esc(unit)}</small></dd></div>`).join('')}</dl>
         ${this.comparison(meter, today, unit)}
         <div class="diagnostics"><span>SNR ${esc(this.format(number(get('snr'))))} dB</span>

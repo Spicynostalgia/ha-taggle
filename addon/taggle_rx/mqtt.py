@@ -1,11 +1,14 @@
 """Retained Home Assistant discovery with availability and reconnect support."""
 import json
+import logging
 import threading
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 
 from . import __version__
+
+LOG = logging.getLogger(__name__)
 
 # key: (display name, unit, device class, state class)
 ENTITIES = {
@@ -30,6 +33,11 @@ NEIGHBOURHOOD_ENTITIES = {
 }
 
 
+def state_value(value):
+    """Limit wire precision without changing stored measurements or calculations."""
+    return round(value, 2) if isinstance(value, float) else value
+
+
 class Publisher:
     def __init__(self, config, client=None):
         self.config = config
@@ -46,6 +54,7 @@ class Publisher:
         if config.mqtt['username']:
             self.client.username_pw_set(config.mqtt['username'], config.mqtt['password'])
         self.client.on_connect = self.on_connect
+        self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
 
     def start(self):
@@ -59,8 +68,12 @@ class Publisher:
     def on_connect(self, client, userdata, flags, reason_code, properties=None):
         if reason_code != 0:
             return
+        LOG.info('MQTT connected to %s:%s', self.config.mqtt['host'], self.config.mqtt['port'])
         client.subscribe(f'{self.discovery_prefix}/status', qos=1)
         self.announce()
+
+    def on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties=None):
+        LOG.info('MQTT disconnected from %s:%s', self.config.mqtt['host'], self.config.mqtt['port'])
 
     def on_message(self, client, userdata, message):
         if message.topic == f'{self.discovery_prefix}/status' and message.payload == b'online':
@@ -109,6 +122,7 @@ class Publisher:
             result['entity_category'] = 'diagnostic'
         if unit:
             result['unit_of_measurement'] = unit
+            result['suggested_display_precision'] = 0 if unit == 'pulses' else 1
         if device_class:
             result['device_class'] = device_class
         if state_class:
@@ -128,6 +142,8 @@ class Publisher:
             'state_class': 'measurement',
             'unit_of_measurement': ('meters' if key.startswith('meters_') else
                                     'L' if self.config.neighbourhood_factor is not None else 'pulses'),
+            'suggested_display_precision': (0 if key.startswith('meters_') or
+                                             self.config.neighbourhood_factor is None else 1),
             'device': {'identifiers': [f'{self.prefix}_neighbourhood'],
                        'name': 'Taggle neighbourhood', 'manufacturer': 'Taggle Systems',
                        'model': 'Anonymous receiver aggregate', 'sw_version': __version__},
@@ -139,7 +155,7 @@ class Publisher:
             return
         # Whitelist the aggregate surface; opaque neighbour keys stay in the store.
         with self.lock:
-            self.latest_neighbourhood = {key: state.get(key) for key in NEIGHBOURHOOD_ENTITIES}
+            self.latest_neighbourhood = {key: state_value(state.get(key)) for key in NEIGHBOURHOOD_ENTITIES}
             if self.client.is_connected():
                 self.send(f'{self.prefix}/neighbourhood/state', self.latest_neighbourhood)
 
@@ -154,7 +170,8 @@ class Publisher:
         recent = (datetime.now(timezone.utc) - datetime.fromisoformat(state['last_seen'])).total_seconds() < 3 * 3600
         self.send(f'{base}/available', 'online' if recent else 'offline')
         self.send(f'{base}/counts_available', 'online' if recent and 'meter_count' in state else 'offline')
-        self.send(f'{base}/state', {k: v for k, v in state.items() if k != 'history'})
+        self.send(f'{base}/state', {k: state_value(v) if k in ENTITIES else v
+                                  for k, v in state.items() if k != 'history'})
         self.send(f'{base}/attributes', {k: state[k] for k in (
             'history', 'hours_observed', 'litres_per_count', 'encrypted', 'raw_count') if k in state})
 

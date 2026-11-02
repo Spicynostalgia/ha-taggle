@@ -49,8 +49,62 @@ test('unavailable and missing entities do not display fabricated zeros', () => {
   const ha = hass();
   ha.states['sensor.missing'] = state('unavailable');
   card.hass = ha;
-  assert.match(card.shadowRoot.innerHTML, /Usage unavailable/);
+  assert.match(card.shadowRoot.innerHTML, /Waiting for first reading \(can take up to an hour\)/);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /class="status stale"|Usage unavailable/);
   assert.match(card.shadowRoot.innerHTML, /—/);
+});
+test('fresh unknown or unavailable states and no last_seen show a neutral first-reading status', () => {
+  for (const value of ['unknown', 'unavailable']) {
+    for (const seen of [undefined, value]) {
+      const card = new Card();
+      card.setConfig({entities:Object.keys(hass().states)});
+      const ha = hass();
+      for (const id of Object.keys(ha.states)) ha.states[id] = state(value);
+      if (seen === undefined) delete ha.states['sensor.taggle_123456_last_seen'];
+      card.hass = ha;
+      assert.match(card.shadowRoot.innerHTML, /Waiting for first reading \(can take up to an hour\)/);
+      assert.doesNotMatch(card.shadowRoot.innerHTML, /class="status stale"|Usage unavailable/);
+    }
+  }
+});
+test('a previously seen meter keeps its warning when usage becomes unavailable', () => {
+  const card = new Card();
+  card.setConfig({entities:Object.keys(hass().states)});
+  const ha = hass();
+  card.hass = ha;
+  ha.states['sensor.taggle_123456_last_hour'] = state('unavailable');
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="status stale">Usage unavailable/);
+  ha.states['sensor.taggle_123456_last_seen'] = state(new Date(Date.now()-4*3600000).toISOString());
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="status stale">No recent signal/);
+  for (const id of Object.keys(ha.states)) ha.states[id] = state('unavailable');
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /class="status stale">Usage unavailable/);
+});
+test('retained frame attributes distinguish an outage from first use even after card reload', () => {
+  for (const attributes of [{encrypted:true}, {encrypted:false}, {history:[{counts:10}]}]) {
+    const card = new Card();
+    card.setConfig({entities:Object.keys(hass().states)});
+    const ha = hass();
+    for (const id of Object.keys(ha.states)) ha.states[id] = state('unavailable');
+    ha.states['sensor.taggle_123456_last_hour'].attributes = attributes;
+    card.hass = ha;
+    assert.match(card.shadowRoot.innerHTML, /class="status stale">Usage unavailable/);
+    assert.doesNotMatch(card.shadowRoot.innerHTML, /Waiting for first reading/);
+  }
+});
+test('each meter has its own first-reading status and a first frame clears waiting', () => {
+  const card = new Card();
+  card.setConfig({meters:[{name:'Seen', entities:Object.keys(hass().states)},
+    {name:'Fresh', entities:{last_hour:'sensor.fresh'}}]});
+  const ha = hass();
+  ha.states['sensor.fresh'] = state('unknown');
+  card.hass = ha;
+  assert.match(card.shadowRoot.innerHTML, /Waiting for first reading/);
+  ha.states['sensor.fresh'] = state(0);
+  card.hass = ha;
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /Waiting for first reading/);
 });
 test('invalid configuration has an actionable error', () => {
   assert.throws(() => new Card().setConfig({}), /Configure entities or a device/);

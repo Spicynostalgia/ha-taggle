@@ -53,6 +53,68 @@ def test_scan_prints_counts_only_for_configured_meters_and_never_writes(tmp_path
     assert not path.exists()
 
 
+@pytest.mark.parametrize('configured', [False, True])
+@pytest.mark.parametrize('size', [18, 21, 24])
+def test_scan_frame_time_and_precision(tmp_path, configured, size, caplog, monkeypatch):
+    now = 1000.
+    monkeypatch.setattr('taggle_rx.store.time.monotonic', lambda: now)
+    results = []
+    path = tmp_path / 'absent'
+    store = Store(config(path), scan=results.append)
+    decoded = {**frame(identifier=123456 if configured else 234567, size=size),
+               'snr_median_db': 30.087156629613467, 'signal_level_dbfs': -40.90190578364269}
+    original = dict(decoded)
+    with caplog.at_level('INFO'):
+        store.frame(decoded, START.astimezone(timezone(timedelta(hours=10))))
+        now += 900
+        store.heartbeat()
+    expected = {'time': '2026-01-01T12:15:00+00:00', 'meter_id': decoded['meter_id'],
+                'snr_median_db': 30.1, 'signal_level_dbfs': -40.9}
+    if configured and size != 24:
+        expected['counts'] = decoded['counts']
+    assert results == [expected]
+    assert decoded == original
+    assert not path.exists()
+    assert not caplog.records
+
+
+@pytest.mark.parametrize('neighbourhood', [False, True])
+def test_frame_logs_and_heartbeat_only_expose_configured_ids(tmp_path, caplog, monkeypatch, neighbourhood):
+    now = 1000.
+    monkeypatch.setattr('taggle_rx.store.time.monotonic', lambda: now)
+    # Even log-all mode must never put neighbour IDs in normal logs.
+    store = Store(config(tmp_path, neighbourhood=neighbourhood, log_all_meters=True))
+    with caplog.at_level('INFO'):
+        store.frame(frame(counts=(2, 65530, 65520)), START)
+        store.frame(frame(size=24), START + timedelta(seconds=1))
+        store.frame(frame(identifier=234567), START)
+        store.frame(frame(identifier=234567), START)
+        store.frame(frame(identifier=345678, size=24), START)
+        now += 899
+        store.heartbeat()
+        assert len(caplog.records) == 2
+        now += 1
+        store.heartbeat()
+        store.heartbeat()
+        now += 900
+        store.heartbeat()
+        store.frame(frame(identifier=345678), START)
+        now += 900
+        store.heartbeat()
+    assert caplog.messages == [
+        'Meter 123456: +8 pulses last hour, SNR 20.0 dB',
+        'Meter 123456: counts unavailable, SNR 20.0 dB',
+        'still listening: 3 frames from 2 other meters heard in the last 15 min',
+        'still listening: 0 frames from 0 other meters heard in the last 15 min',
+        'still listening: 1 frames from 1 other meters heard in the last 15 min',
+    ]
+    assert all(record.levelname == 'INFO' for record in caplog.records)
+    for identifier in (234567, 345678):
+        assert str(identifier) not in caplog.text
+    assert not store.other_meters
+    assert store.other_frames == 0
+
+
 def test_duplicate_history_restart_and_wrap(tmp_path):
     cfg = config(tmp_path, litres_per_count={'123456': 2.5})
     store = Store(cfg)

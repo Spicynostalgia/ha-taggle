@@ -60,6 +60,16 @@ Never include the flag nibbles in counter arithmetic. Adjacent counter differenc
 
 The **24-byte format** has an opaque encrypted body. The receiver validates framing and extracts only the clear ID and RF diagnostics. It does not interpret that body as counters, log ciphertext, or implement any decryption or key-search path.
 
+## Scan output
+
+Scan mode emits one JSON object per decoded frame. `time` is the frame's sample-derived timestamp in ISO-8601 UTC, including when replaying a recording with `--start-utc`; it is not the time decoding finishes. `snr_median_db` and `signal_level_dbfs` are rounded to one decimal place. Fictional unconfigured-meter example:
+
+```json
+{"time": "2026-01-01T12:15:00+00:00", "meter_id": 123456, "snr_median_db": 30.1, "signal_level_dbfs": -40.9}
+```
+
+A configured clear meter also includes `"counts": [120, 110, 104]` (newest first). Unconfigured IDs and encrypted frames never expose counts in scan output. Scan mode prints heard IDs, so keep its output private; it writes no state or JSONL logs and makes no MQTT connection. Normal reception logs configured IDs only, with counts-only heartbeats for other meters every 15 minutes.
+
 ## Generated test signals
 
 `tests/synthetic.py` constructs nibble-aligned fake headers and counters, solves the header CRC, appends the frame CRC/tail, convolutionally encodes, and spreads the result using `0x1267`. IQ is synthesized at four times ADC rate and low-pass filtered **before** decimation, with fractional timing, carrier offset, slow phase drift and seeded noise. This exercises partial-band acquisition without manufacturing aliases. It is an offline test generator only.

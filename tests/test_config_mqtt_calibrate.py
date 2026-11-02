@@ -96,6 +96,42 @@ def test_scan_file_cli_does_not_connect_or_write(tmp_path, monkeypatch):
     assert not data.exists()
 
 
+def test_cli_logs_startup_and_heartbeat_during_radio_silence(tmp_path, monkeypatch, caplog):
+    import json
+    import queue
+
+    import taggle_rx.cli as cli
+
+    now = 1000.
+    calls = 0
+
+    def read(timeout):
+        nonlocal now, calls
+        calls += 1
+        now += 300
+        if calls <= 3:
+            raise queue.Empty
+        return 'eof', None, None
+
+    pump = Mock()
+    pump.items.get.side_effect = read
+    monkeypatch.setattr(cli.time, 'monotonic', lambda: now)
+    monkeypatch.setattr(cli, 'InputPump', Mock(return_value=pump))
+    monkeypatch.setattr(cli, 'Receiver', Mock())
+    monkeypatch.setattr(cli, 'Publisher', Mock())
+    config = tmp_path / 'options.json'
+    config.write_text(json.dumps({'meter_ids': [123456, 123457], 'data_dir': str(tmp_path / 'data')}))
+    source = tmp_path / 'empty.bin'
+    source.write_bytes(b'')
+    with caplog.at_level('INFO'):
+        assert rx_main(['--config', str(config), '--input', str(source),
+                        '--start-utc', '2026-01-01T00:00:00Z']) == 0
+    assert caplog.messages == [
+        'Listening on 922.2 MHz for meter(s): 2 configured; first reading can take up to an hour',
+        'still listening: 0 frames from 0 other meters heard in the last 15 min',
+    ]
+
+
 @pytest.mark.parametrize('prefix', ['taggle', 'house/taggle'])
 def test_discovery_entity_ids_and_name_fallback(prefix):
     from taggle_rx.mqtt import ENTITIES, NEIGHBOURHOOD_ENTITIES
@@ -115,6 +151,96 @@ def test_discovery_entity_ids_and_name_fallback(prefix):
         assert 'object_id' not in payload
         fallback = (payload['device']['name'] + ' ' + payload['name']).lower().replace(' ', '_')
         assert 'sensor.' + fallback == payload['default_entity_id']
+
+
+@pytest.mark.parametrize('calibrated', [False, True])
+def test_discovery_display_precision(calibrated):
+    from taggle_rx.mqtt import ENTITIES, NEIGHBOURHOOD_ENTITIES
+
+    cfg = Config.from_dict({'meter_ids': [123456],
+                            'litres_per_count': {'123456': 2.5} if calibrated else {}})
+    publisher = Publisher(cfg, Mock())
+    for key, spec in ENTITIES.items():
+        payload = publisher.discovery(123456, key, spec)
+        if key == 'last_seen':
+            assert 'suggested_display_precision' not in payload
+        else:
+            assert payload['suggested_display_precision'] == (0 if spec[1] == 'pulses' else 1)
+    for key in NEIGHBOURHOOD_ENTITIES:
+        payload = publisher.neighbourhood_discovery(key)
+        assert payload['suggested_display_precision'] == (1 if calibrated and not key.startswith('meters_') else 0)
+
+
+def test_mqtt_rounds_wire_values_without_changing_state_or_attributes(tmp_path):
+    import json
+
+    from taggle_rx.store import Store
+
+    from .test_store import config, frame
+
+    cfg = config(tmp_path, litres_per_count={'123456': 1.234567})
+    client = Mock()
+    publisher = Publisher(cfg, client)
+    store = Store(cfg, publisher)
+    stamp = datetime.now(timezone.utc)
+    decoded = {**frame(), 'snr_median_db': 30.087156629613467,
+               'signal_level_dbfs': -40.90190578364269}
+    store.frame(decoded, stamp)
+    state = publisher.latest[123456]
+    state['vs_neighbourhood_today'] = 123.456789
+    original = dict(state)
+    for action in (lambda: publisher.publish(123456, state), publisher.announce):
+        client.publish.reset_mock()
+        action()
+        wire = next(json.loads(c.args[1]) for c in client.publish.call_args_list
+                    if c.args[0] == 'taggle/123456/state')
+        assert wire['snr'] == 30.09
+        assert wire['signal_level'] == -40.90
+        assert wire['last_hour_litres'] == 12.35
+        assert wire['today_litres'] == wire['total_litres'] == 19.75
+        assert wire['vs_neighbourhood_today'] == 123.46
+        assert wire['last_hour'] == 10
+        assert wire['last_seen'] == stamp.isoformat()
+        attrs = next(json.loads(c.args[1]) for c in client.publish.call_args_list
+                     if c.args[0] == 'taggle/123456/attributes')
+        assert attrs['litres_per_count'] == 1.234567
+        assert attrs['history'] == state['history']
+        assert state == original
+    stored = json.loads((tmp_path / 'state.json').read_text())['meters']['123456']
+    assert stored['snr'] == decoded['snr_median_db']
+    assert stored['signal_level'] == decoded['signal_level_dbfs']
+    assert stored['total_litres'] == 16 * 1.234567
+
+    aggregate = dict(meters_heard=3, meters_counted=None, average_today=1.234567,
+                     median_today=3.456789, average_last_hour=5.678901)
+    publisher.publish_neighbourhood(aggregate)
+    for action in (lambda: publisher.publish_neighbourhood(aggregate), publisher.announce):
+        client.publish.reset_mock()
+        action()
+        wire = next(json.loads(c.args[1]) for c in client.publish.call_args_list
+                    if c.args[0] == 'taggle/neighbourhood/state')
+        assert wire == dict(meters_heard=3, meters_counted=None, average_today=1.23,
+                            median_today=3.46, average_last_hour=5.68)
+    assert aggregate['average_today'] == 1.234567
+
+
+def test_mqtt_connection_logs_only_broker_address(caplog):
+    cfg = Config.from_dict({'meter_ids': [123456], 'mqtt': {
+        'host': 'broker.local', 'port': 1884, 'username': 'private-user', 'password': 'private-password'}})
+    client = Mock()
+    publisher = Publisher(cfg, client)
+    with caplog.at_level('INFO'):
+        publisher.on_connect(client, None, None, 5)
+        assert not caplog.records
+        publisher.on_connect(client, None, None, 0)
+        publisher.on_disconnect(client, None, None, 0)
+        publisher.on_connect(client, None, None, 0)
+        publisher.on_disconnect(client, None, None, 7)
+    assert caplog.messages == ['MQTT connected to broker.local:1884',
+                               'MQTT disconnected from broker.local:1884'] * 2
+    assert client.on_disconnect == publisher.on_disconnect
+    assert 'private-user' not in caplog.text
+    assert 'private-password' not in caplog.text
 
 
 def test_file_cli_refreshes_wall_clock_state_after_flush(tmp_path, monkeypatch):

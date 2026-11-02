@@ -2,13 +2,18 @@
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import statistics
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+LOG = logging.getLogger(__name__)
+HEARTBEAT_SECONDS = 15 * 60
 
 
 class Store:
@@ -21,6 +26,9 @@ class Store:
         self.meters = {}
         self.neighbours = {}
         self.salt = None
+        self.heartbeat_at = time.monotonic()
+        self.other_frames = 0
+        self.other_meters = set()  # In-memory cardinality only; never logged or persisted.
         if scan is None:
             self.path.mkdir(mode=0o700, parents=True, exist_ok=True)
             checkpoint = self.path / 'state.json'
@@ -87,13 +95,25 @@ class Store:
     def frame(self, frame, stamp):
         identifier = frame['meter_id']
         configured = identifier in self.config.meter_ids
+        stamp = stamp.astimezone(timezone.utc)
         if self.scan is not None:
-            row = {k: frame[k] for k in ('meter_id', 'snr_median_db', 'signal_level_dbfs')}
+            row = {'time': stamp.isoformat(), 'meter_id': identifier,
+                   'snr_median_db': round(frame['snr_median_db'], 1),
+                   'signal_level_dbfs': round(frame['signal_level_dbfs'], 1)}
             if configured and 'counts' in frame:
                 row['counts'] = frame['counts']
             self.scan(row)
             return
-        stamp = stamp.astimezone(timezone.utc)
+        if configured:
+            if 'counts' in frame:
+                delta = (frame['counts'][0] - frame['counts'][1]) % 65536
+                LOG.info('Meter %s: +%d pulses last hour, SNR %.1f dB',
+                         identifier, delta, frame['snr_median_db'])
+            else:
+                LOG.info('Meter %s: counts unavailable, SNR %.1f dB', identifier, frame['snr_median_db'])
+        else:
+            self.other_frames += 1
+            self.other_meters.add(identifier)
         if not configured and self.config.neighbourhood:
             self.neighbour_frame(frame, stamp)
         if self.config.jsonl_logging and self.config.allows(identifier):
@@ -244,6 +264,17 @@ class Store:
                 if neighbourhood is not None:
                     state['vs_neighbourhood_today'] = self.comparison(int(key), state, neighbourhood)
                 self.publisher.publish(int(key), state)
+
+    def heartbeat(self):
+        """Report reception during silence, with only counts for other meters."""
+        now = time.monotonic()
+        if self.scan is not None or now - self.heartbeat_at < HEARTBEAT_SECONDS:
+            return
+        LOG.info('still listening: %d frames from %d other meters heard in the last 15 min',
+                 self.other_frames, len(self.other_meters))
+        self.other_frames = 0
+        self.other_meters.clear()
+        self.heartbeat_at = now
 
     def comparison(self, identifier, state, neighbourhood):
         average = neighbourhood['average_today']

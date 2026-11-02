@@ -145,7 +145,7 @@ docker compose logs -f
 
 <img src="docs/images/real-terminal.png" alt="Terminal: docker compose pull, a scan detecting the RTL-SDR Blog V4 and printing two heard meters, then docker compose up" width="760">
 
-*The tested install: real output, meter IDs replaced with fictional ones.*
+*The tested install: real output, meter IDs replaced with fictional ones. Current scan JSON also includes UTC frame timestamps, as shown below.*
 
 The optional scan can show nearby meters before your own transmits. Stop it before starting normal reception. Do not run two receivers against one dongle. Compose pulls `latest`; change its image tag to `:0.2.1` to pin the tested release.
 
@@ -153,9 +153,17 @@ More detail: [Installing with Docker](https://github.com/Spicynostalgia/ha-taggl
 
 ## Check it's working
 
-- [ ] Look for `RTL-SDR Blog V4 Detected` (V4 hardware) and `Reading samples in async mode...` in the log. **A quiet log after that is normal until your configured meter sends, which can take up to an hour.** The card can show red **“Usage unavailable”** during this first hour too.
+- [ ] Look for `RTL-SDR Blog V4 Detected` (V4 hardware) and `Reading samples in async mode...` in the log. Normal reception logs the listening frequency and configured meter count, MQTT connections/disconnections with broker host:port, and each configured meter's frame. A heartbeat every 15 minutes reports only how many frames and distinct other meters were heard; it never lists neighbour IDs. **Your first reading can take up to an hour.** The card shows a neutral **“Waiting for first reading (can take up to an hour)”** until a frame arrives.
 - [ ] To see other heard meters as they arrive, use Docker's scan command above, or set add-on `scan_minutes: 65`, save and restart. Wait the full 65 minutes if needed. Scans print IDs but create no MQTT entities or usage state. **Keep scan output private.** Afterwards set `scan_minutes: 0`, configure only your ID and restart.
 - [ ] After a supported frame arrives, open **Settings → Devices & services → MQTT → Taggle [your ID]**. Look for last seen, hourly pulses and signal diagnostics.
+
+Each scan JSON line includes the frame time in ISO-8601 UTC and signal measurements rounded to one decimal place. For example, with fictional unconfigured ID `123456`:
+
+```json
+{"time": "2026-01-01T12:15:00+00:00", "meter_id": 123456, "snr_median_db": 30.1, "signal_level_dbfs": -40.9}
+```
+
+For a configured clear meter, the object also includes `"counts": [120, 110, 104]`; unconfigured IDs and encrypted frames never include counts in scan output. See [scan output details](docs/PROTOCOL.md#scan-output).
 
 <img src="docs/images/real-device.png" alt="Home Assistant MQTT device page for Taggle 123456 with usage and signal sensors" width="760">
 
@@ -233,7 +241,7 @@ More detail: [Neighbourhood comparison](https://github.com/Spicynostalgia/ha-tag
 | What you see | What to check |
 | --- | --- |
 | No frames after 65 minutes | USB access, antenna connection, window placement and host noise. Try a USB extension. A different channel or unsupported meter is possible. |
-| ID heard but counts unavailable | Configure your own ID and leave scan mode. Initial red “Usage unavailable” can last an hour. Encrypted 24-byte frames cannot provide usage. |
+| ID heard but counts unavailable | Configure your own ID and leave scan mode. “Waiting for first reading” can last an hour. Encrypted 24-byte frames cannot provide usage. |
 | “Device busy” / cannot open SDR | Stop other SDR programs; check VM USB passthrough and the Linux DVB TV driver. The tested image detached that driver automatically; no blacklist was needed in that test. |
 | Entities unavailable after 3 hours | Check logs, antenna, USB and MQTT; set `scan_minutes: 0`. Three hours without a valid frame marks a meter unavailable. |
 | Usage too high or low | Pulses need calibration. Check units, scale, aligned timestamps and gaps. Daily totals contain observed intervals only. |

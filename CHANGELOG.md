@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Limit MQTT sensor display precision and round published measurements without changing stored usage or calibration.
+- Log MQTT connections, receiver startup, configured-meter frames and a 15-minute listening heartbeat with counts only for other meters.
+- Add UTC frame timestamps and one-decimal signal measurements to scan JSON output.
+- Show a neutral first-reading message on fresh dashboard cards while preserving warnings for previously seen meters.
 - Docs: restructure the README for beginners, add real hardware screenshots and tested Docker/broker setup, and link technical detail in the wiki.
 
 ## 0.2.1

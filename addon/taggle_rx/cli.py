@@ -76,11 +76,16 @@ def main(argv=None):
                     source = producer.stdout
                 pump = InputPump(source, follow=False)
                 pump.thread.start()
+                if publisher:
+                    LOG.info('Listening on %g MHz for meter(s): %d configured; '
+                             'first reading can take up to an hour',
+                             config.frequency / 1e6, len(config.meter_ids))
                 first = True
             try:
                 kind, raw, arrival = pump.items.get(timeout=.25)
             except queue.Empty:
                 kind = None
+            store.heartbeat()
             if time.monotonic() - refresh >= 60:
                 store.refresh(datetime.now(timezone.utc))
                 refresh = time.monotonic()

@@ -50,6 +50,16 @@ Supervisor supplies MQTT host, port, username and password automatically via the
 
 Set `scan_minutes` to 65 and start. Watch the log for IDs and SNR. A scan allows an empty meter list, prints counts only for configured IDs, and writes no usage state/logs or MQTT messages. It exits when the duration elapses. Set `scan_minutes` back to zero, configure your ID and restart for normal operation.
 
+Each scan JSON line includes the frame time in ISO-8601 UTC and SNR/signal level rounded to one decimal place. Example with a fictional unconfigured ID:
+
+```json
+{"time": "2026-01-01T12:15:00+00:00", "meter_id": 123456, "snr_median_db": 30.1, "signal_level_dbfs": -40.9}
+```
+
+Configured clear meters also include `"counts": [120, 110, 104]`. Keep scan output private.
+
+In normal reception, INFO logs show the listening frequency and configured meter count, MQTT connections/disconnections (broker host:port only), and configured-meter frames. Every 15 minutes a heartbeat reports counts of frames and distinct other meters, never neighbour IDs. The card shows “Waiting for first reading (can take up to an hour)” on a fresh install; previously seen meters still show a warning when unavailable.
+
 ## Entities and data
 
 One MQTT device is created per configured meter. Supported clear frames expose hourly usage, today's partial observed total and a cumulative observed count, plus SNR, signal level and last seen. Encrypted frames expose diagnostics only. Adding `litres_per_count` entries (`meter_id` and positive `value`) enables litre entities, including a persistent `total_increasing` water entity for Energy.
