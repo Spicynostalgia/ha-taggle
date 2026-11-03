@@ -46,7 +46,9 @@
 
 # ha-taggle: hourly water use in Home Assistant
 
-ha-taggle brings hourly water-use updates from supported Taggle transmitters into Home Assistant. An RTL-SDR USB radio receiver listens to the transmitter; MQTT passes its messages to Home Assistant. Start with pulses, then enter manual dial readings to calibrate litres. It runs locally and only listens.
+ha-taggle is an open-source, receive-only Taggle water-meter radio decoder for Home Assistant in Australia. It decodes supported 922 MHz DSSS/BPSK transmissions with an RTL-SDR USB receiver and publishes hourly pulse usage over MQTT; manual dial readings calibrate litres. Only one transmitter in Gladstone, Queensland, has been field-verified, using an RTL-SDR Blog V4; other regions and models are unverified. As far as our [dated research](https://github.com/Spicynostalgia/ha-taggle/wiki/Research-and-Prior-Art) found, it is the first public over-the-air Taggle decoder.
+
+**Keywords / related searches:** Taggle decoder, Australian smart water meter, 922 MHz, RTL-SDR, MyWater (council portal), and an rtl_433 alternative for supported Taggle signals.
 
 > [!IMPORTANT]
 > **The transmitter does not send the reading on your dial.** It sends a pulse counter with an **unknown starting offset and unknown litres per pulse**. Guided calibration in **0.3.0** uses a **one-hour routine**: read just after a transmission → use **20–50 L** (reuse it) → read after the next transmission. Two aligned dial readings let it work out both. Follow **Calibration status** if it needs another reading. Until calibrated, usage is shown in pulses. Start with [Turn pulses into litres](#turn-pulses-into-litres) or the [wiki Calibration guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Calibration). Check the estimated reading against your physical dial; this is experimental, not billing-grade measurement.
@@ -70,6 +72,8 @@ These instructions use receiver and card **0.3.1**. The [hardware test record](h
 - The message is a **pulse counter, not your dial reading**. Your two manual dial readings supply the litre scale and starting offset.
 - Your **USB receiver** listens without connecting to or changing the meter. SDR means software-defined radio.
 - **MQTT** lets programs exchange messages. A **broker**, such as Mosquitto, passes messages from ha-taggle to Home Assistant's MQTT integration.
+
+Radio detail: [How it works / protocol](docs/PROTOCOL.md#how-it-works--protocol-summary) · [LLM reading guide](llms.txt) · [Citation](CITATION.cff).
 
 Optional background: [How it works](https://github.com/Spicynostalgia/ha-taggle/wiki/How-It-Works) · [Glossary](https://github.com/Spicynostalgia/ha-taggle/wiki/Glossary).
 
