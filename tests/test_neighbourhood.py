@@ -226,6 +226,30 @@ def test_every_meter_publish_preserves_comparison(tmp_path, neighbourhood, quali
         assert state['read_dial_now']['state'] == 'OFF'
 
 
+@pytest.mark.parametrize('event', ['reconnect', 'ha_birth'])
+def test_mqtt_reannouncement_preserves_meter_comparison(tmp_path, event):
+    cfg = config(tmp_path)
+    client = Mock()
+    client.is_connected.return_value = True
+    publisher = Publisher(cfg, client)
+    store = Store(cfg, publisher)
+    for identifier in NEIGHBOURS:
+        observe(store, identifier)
+    observe(store, 123456, delta=20)
+    client.publish.reset_mock()
+
+    if event == 'reconnect':
+        publisher.on_connect(client, None, {}, 0)
+    else:
+        message = Mock(topic=f'{publisher.discovery_prefix}/status', payload=b'online')
+        publisher.on_message(client, None, message)
+
+    states = [json.loads(call.args[1]) for call in client.publish.call_args_list
+              if call.args[0] == f'{publisher.prefix}/123456/state']
+    state, = states
+    assert state['vs_neighbourhood_today'] == pytest.approx(200)
+
+
 def test_first_configured_calibration_and_incompatible_units(tmp_path):
     cfg = config(tmp_path, meter_ids=[345678, 123456], litres_per_count={'123456': 2})
     assert cfg.neighbourhood_factor is None

@@ -14,7 +14,7 @@ RUN git init /src && cd /src \
  && cp /src/COPYING /stage/usr/share/licenses/rtl-sdr-blog/COPYING
 
 FROM ${BUILD_FROM}
-ARG BUILD_VERSION=0.2.1
+ARG BUILD_VERSION=0.3.1
 ARG BUILD_ARCH=amd64
 LABEL io.hass.type="addon" io.hass.version="${BUILD_VERSION}" io.hass.arch="${BUILD_ARCH}"
 RUN apt-get update && apt-get install -y --no-install-recommends \

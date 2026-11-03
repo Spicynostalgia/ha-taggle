@@ -1,4 +1,5 @@
 import importlib.util
+import re
 import subprocess
 from pathlib import Path
 
@@ -26,6 +27,8 @@ def test_current_release_versions_and_notes_agree():
     prepare_module.check_compose_version(__version__)
     assert f'\n## {__version__}\n' in (ROOT / 'addon/CHANGELOG.md').read_text()
     assert (ROOT / 'card/taggle-card.js').read_text().startswith(f'/* Taggle card {__version__}.')
+    dockerfile = (ROOT / 'addon/Dockerfile').read_text()
+    assert re.search(r'^ARG BUILD_VERSION=(.+)$', dockerfile, re.M)[1] == __version__
 
 
 @pytest.mark.parametrize(('suffix', 'header'), [

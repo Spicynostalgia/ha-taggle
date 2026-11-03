@@ -4,6 +4,7 @@
 
 - Keep the neighbourhood comparison available when a dial reading is entered or the ten-minute read window closes.
 - Prefix receiver logs with local timestamps and UTC offsets.
+- Align the add-on image's default version label with 0.3.1 for local and CI builds.
 - Explain the neighbourhood’s expected early-morning wait, midnight interval accounting and drifting transmission estimates; clarify the last-ten-readings attribute limit.
 
 ## 0.3.0

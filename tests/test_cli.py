@@ -9,6 +9,36 @@ from pathlib import Path
 
 import pytest
 
+from .synthetic import burst
+
+
+@pytest.fixture(scope='module')
+def scan_iq(tmp_path_factory):
+    source = tmp_path_factory.mktemp('scan') / 'synthetic.cu8'
+    source.write_bytes(burst())
+    return source
+
+
+@pytest.mark.parametrize('zone', ['UTC0', 'AEST-10'])
+def test_scan_stdout_stays_json_with_utc_frame_time(tmp_path, scan_iq, zone):
+    config = tmp_path / 'options.json'
+    data = tmp_path / 'unused-data'
+    config.write_text(json.dumps({'meter_ids': [123456], 'data_dir': str(data)}))
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    result = subprocess.run(
+        [sys.executable, '-m', 'taggle_rx', '--config', str(config), '--scan', '1',
+         '--input', str(scan_iq), '--start-utc', start.isoformat()],
+        env={**os.environ, 'TZ': zone, 'PYTHONPATH': str(Path(__file__).resolve().parents[1] / 'addon')},
+        capture_output=True, text=True, check=True)
+    row, = [json.loads(line) for line in result.stdout.splitlines()]
+    stamp = datetime.fromisoformat(row['time'])
+    assert stamp.utcoffset() == timedelta(0)
+    assert start <= stamp < start + timedelta(seconds=1)
+    assert row['meter_id'] == 123456
+    assert row['counts'] == [120, 110, 104]
+    assert result.stderr == ''
+    assert not data.exists()
+
 
 @pytest.mark.parametrize(('zone', 'offset'), [('UTC0', 0), ('AEST-10', 10)])
 def test_normal_logs_have_iso_local_timestamps(tmp_path, zone, offset):
