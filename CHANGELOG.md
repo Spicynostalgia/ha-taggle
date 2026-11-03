@@ -2,6 +2,8 @@
 
 ## 0.3.1
 
+Released 2026-11-03.
+
 - Allow one pulse of quantisation before choosing a nonstandard calibration fit; the overnight replay's 585 L over 116 counts now resolves to 5 L/pulse.
 - Keep the neighbourhood comparison available when a dial reading is entered or the ten-minute read window closes.
 - Prefix receiver logs with local timestamps and UTC offsets.
