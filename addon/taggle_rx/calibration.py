@@ -197,13 +197,15 @@ def align(cal):
                              'No counter history before this reading; enter a newer dial reading')
 
 
-def bounds(rows):
+def bounds(rows, pulse_slack=0):
     low, high = .05, 1000.
     for a, b in itertools.combinations(rows, 2):
         usage = b['litres'] - a['litres']
         amin, amax = a['count_interval']
         bmin, bmax = b['count_interval']
         maximum, minimum = bmax - amin, bmin - amax
+        maximum += pulse_slack
+        minimum -= pulse_slack
         resolution = a.get('resolution_litres', 1) + b.get('resolution_litres', 1)
         lower, upper = usage - resolution, usage + resolution
         if maximum == 0 and lower <= 0 <= upper:
@@ -218,7 +220,7 @@ def bounds(rows):
     return (low, high) if low <= high and high > 0 else None
 
 
-def regression(rows, factor=None):
+def regression(rows, factor=None, pulse_slack=0):
     # Exact intervals get one pulse of weight; this avoids infinite weights.
     weights = [1 / max(1, r['count_interval'][1] - r['count_interval'][0]) ** 2 for r in rows]
     counts = [sum(r['count_interval']) / 2 for r in rows]
@@ -237,8 +239,9 @@ def regression(rows, factor=None):
     else:
         offset = mean - factor * centre
     # Ensure the chosen offset fits every retained interval, when feasible.
-    lower = max(r['litres'] - r.get('resolution_litres', 1) - factor * r['count_interval'][1] for r in rows)
-    upper = min(r['litres'] + r.get('resolution_litres', 1) - factor * r['count_interval'][0] for r in rows)
+    phase = factor * pulse_slack / 2
+    lower = max(r['litres'] - r.get('resolution_litres', 1) - phase - factor * r['count_interval'][1] for r in rows)
+    upper = min(r['litres'] + r.get('resolution_litres', 1) + phase - factor * r['count_interval'][0] for r in rows)
     if lower <= upper:
         offset = max(lower, min(upper, offset))
     return factor, offset
@@ -324,6 +327,7 @@ def solve(cal, config, identifier, now=None, zone=timezone.utc):
             reference = rows[0]['litres'] if rows else row['litres']
             tolerance += row.get('resolution_litres', 1) + max(
                 (r.get('resolution_litres', 1) for r in rows), default=0) + abs(predicted - reference) * .005
+            tolerance += factor * solution.get('pulse_quantisation', 0) / 2
             residual = row['litres'] - predicted
             row['residual_litres'] = residual
             if abs(residual) > tolerance:
@@ -350,10 +354,24 @@ def solve(cal, config, identifier, now=None, zone=timezone.utc):
             standard = [(t, b, w, k) for k in STANDARDS for t, b, w in hypotheses(cal, rows, k)
                         if b[0] - 1e-12 <= k <= b[1] + 1e-12]
         standard = equivalent(standard)
+        pulse_slack = 0
+        if not standard and pinned is None:
+            # An hourly pulse counter omits the dial's fractional pulse phase.
+            # Before adopting a nonstandard fit, allow at most one count in a
+            # pair's difference. Keep strict candidates when any already fit,
+            # so this fallback never discards an existing standard ambiguity.
+            standard = equivalent([(trial, interval, wraps, k)
+                                   for trial, _, wraps in candidates
+                                   if (interval := bounds(trial, pulse_slack=1))
+                                   for k in STANDARDS if interval[0] <= k <= interval[1]])
+            if standard:
+                pulse_slack = 1
         chosen = None
         ambiguous_factor = None
         if fixed is not None:
             matches = [(t, b, w, fixed) for t, b, w in candidates if b[0] - 1e-12 <= fixed <= b[1] + 1e-12]
+            if not matches and pulse_slack:
+                matches = [candidate for candidate in standard if candidate[3] == fixed]
             matches = equivalent(matches)
             if len(matches) == 1:
                 chosen = matches[0]
@@ -372,13 +390,15 @@ def solve(cal, config, identifier, now=None, zone=timezone.utc):
         if chosen:
             trial, interval, wraps, k = chosen
             cal['bounds'] = list(interval)
-            k, offset = regression(trial, k)
+            k, offset = regression(trial, k, pulse_slack=pulse_slack)
             if offset_pin is not None:
                 offset = offset_pin
             method = 'pinned' if pinned is not None else 'standard value' if k in STANDARDS else 'fit'
             cal['solution'] = {'factor': k, 'offset': offset, 'method': method, 'bounds': list(interval),
                                'uncertainty': (interval[1] - interval[0]) / (interval[1] + interval[0]),
                                'wraps': wraps}
+            if pulse_slack:
+                cal['solution']['pulse_quantisation'] = pulse_slack
             for row, aligned in zip(rows, trial):
                 row['count_interval'] = aligned['count_interval']
         elif ambiguous_factor is not None:

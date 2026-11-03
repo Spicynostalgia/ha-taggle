@@ -59,6 +59,7 @@ Readings `(R_i, [cmin_i, cmax_i])` with counters unwrapped onto one continuous s
   (configurable). If several do, keep waiting for more usage/readings and say why.
 - Offset from the readings with exact (or narrowest) intervals; with ≥ 3 readings use least squares over
   interval midpoints, weighted by 1/width², and report residuals.
+- If no standard fits, retry standards with at most one pulse added to/subtracted from each pair's counter difference before adopting a nonstandard fit. The dial's fractional pulse phase is absent from radio counters; this fallback includes half a pulse per reading in offset constraints and residual checks, without discarding existing standard ambiguities.
 - **Plausibility checks:** reject a reading that implies negative usage, a litres-per-pulse outside
   0.05–1000 L, or a residual larger than the interval + reading resolution + 0.5% after calibration ("typo? 1579 vs 1597"); keep it
   stored but excluded, visible in status attributes, deletable.
