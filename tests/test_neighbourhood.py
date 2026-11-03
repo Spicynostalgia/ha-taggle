@@ -191,6 +191,41 @@ def test_calibration_fallback_override_comparison_and_refresh(tmp_path, scales, 
     assert publisher.publish.call_args.args[1]['vs_neighbourhood_today'] is None
 
 
+@pytest.mark.parametrize('neighbourhood', [False, True])
+@pytest.mark.parametrize('qualified', [False, True])
+@pytest.mark.parametrize('event', ['frame', 'refresh', 'window_expiry', 'reading'])
+def test_every_meter_publish_preserves_comparison(tmp_path, neighbourhood, qualified, event):
+    publisher = Mock()
+    store = Store(config(tmp_path, neighbourhood=neighbourhood), publisher)
+    if qualified:
+        for identifier in NEIGHBOURS:
+            observe(store, identifier)
+    observe(store, 123456, delta=20)
+    publisher.publish.reset_mock()
+    now = DAY + timedelta(hours=6, minutes=10)
+    if event == 'frame':
+        store.frame(frame(sequence=6, counts=(220, 200, 180)), now)
+    elif event == 'refresh':
+        store.refresh(now)
+    elif event == 'window_expiry':
+        store.expire_read_windows(now)
+    else:
+        store.command(123456, 'reading', '1597.765', now)
+    publisher.publish.assert_called_once()
+    identifier, state = publisher.publish.call_args.args
+    assert identifier == 123456
+    if neighbourhood:
+        assert 'vs_neighbourhood_today' in state
+        if qualified:
+            assert state['vs_neighbourhood_today'] == pytest.approx(200)
+        else:
+            assert state['vs_neighbourhood_today'] is None
+    else:
+        assert 'vs_neighbourhood_today' not in state
+    if event == 'window_expiry':
+        assert state['read_dial_now']['state'] == 'OFF'
+
+
 def test_first_configured_calibration_and_incompatible_units(tmp_path):
     cfg = config(tmp_path, meter_ids=[345678, 123456], litres_per_count={'123456': 2})
     assert cfg.neighbourhood_factor is None

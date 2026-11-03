@@ -143,7 +143,7 @@ class Store:
             LOG.info('Meter %s calibration: rejected; %s', identifier, error)
         self.save()
         if self.publisher:
-            self.publisher.publish(identifier, self.snapshot(identifier, now))
+            self._publish_meter(identifier, now)
 
     @synchronized
     def save(self):
@@ -226,11 +226,16 @@ class Store:
             meter['leak'] = evaluate_leak(meter['hours'], stamp, self.config, self.zone, meter.get('leak'))
         self.save()
         if self.publisher:
-            state = self.snapshot(identifier, stamp)
-            if self.config.neighbourhood:
-                state['vs_neighbourhood_today'] = self.comparison(
-                    identifier, state, self.neighbourhood_snapshot(stamp))
-            self.publisher.publish(identifier, state)
+            self._publish_meter(identifier, stamp)
+
+    def _publish_meter(self, identifier, now, neighbourhood=None):
+        """Build the complete meter state for every publish path, while locked."""
+        state = self.snapshot(identifier, now)
+        if self.config.neighbourhood:
+            if neighbourhood is None:
+                neighbourhood = self.neighbourhood_snapshot(now)
+            state['vs_neighbourhood_today'] = self.comparison(identifier, state, neighbourhood)
+        self.publisher.publish(identifier, state)
 
     def counts(self, meter, frame, stamp, factor=0):
         previous = meter.get('latest')
@@ -364,7 +369,7 @@ class Store:
             if now >= deadline:
                 self.read_window_deadlines.pop(identifier)
                 if self.publisher:
-                    self.publisher.publish(identifier, self.snapshot(identifier, now))
+                    self._publish_meter(identifier, now)
 
     @synchronized
     def refresh(self, now):
@@ -384,10 +389,7 @@ class Store:
             if neighbourhood is not None:
                 self.publisher.publish_neighbourhood(neighbourhood)
             for key in self.meters:
-                state = self.snapshot(int(key), now)
-                if neighbourhood is not None:
-                    state['vs_neighbourhood_today'] = self.comparison(int(key), state, neighbourhood)
-                self.publisher.publish(int(key), state)
+                self._publish_meter(int(key), now, neighbourhood)
 
     def heartbeat(self):
         """Report reception during silence, with only counts for other meters."""
