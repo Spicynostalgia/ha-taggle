@@ -49,7 +49,8 @@ def main(argv=None):
         config = Config.load(args.config, scan=args.scan is not None)
     except (ValueError, TypeError, KeyError) as error:
         parser.error(str(error))
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%dT%H:%M:%S%z')
     publisher = None if args.scan is not None else Publisher(config)
     store = Store(config, publisher, scan=(lambda row: print(json.dumps(row), flush=True))
                   if args.scan is not None else None)
