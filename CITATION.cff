@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use ha-taggle in your work, please cite this software."
+type: software
+title: "ha-taggle: receive-only Taggle water-meter decoder for Home Assistant"
+authors:
+  - name: "ha-taggle contributors"
+repository-code: "https://github.com/Spicynostalgia/ha-taggle"
+url: "https://ha-taggle.dancloud.au"
+version: "0.3.1"
+license: MIT
+abstract: >-
+  Open-source, receive-only decoder for supported Taggle water-meter radio
+  transmissions near 922 MHz in Australia. Uses RTL-SDR to decode DSSS/BPSK
+  signals and publishes hourly pulse usage through MQTT to Home Assistant.
+  Manual dial readings calibrate litres and starting offset. Only one
+  transmitter in Gladstone, Queensland, has field confirmation with an RTL-SDR
+  Blog V4. Other models and regions are unverified. Encrypted message bodies
+  are not decrypted. Includes a receiver add-on, Docker and Python CLI routes,
+  and a dashboard card distributed as a HACS custom repository.
+keywords:
+  - Taggle
+  - water meter
+  - Home Assistant
+  - RTL-SDR
+  - MQTT
+  - Australia
+  - DSSS
+  - BPSK

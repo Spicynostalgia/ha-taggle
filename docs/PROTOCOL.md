@@ -2,6 +2,12 @@
 
 This is a description of the supported receive path, not a complete specification of every transmitter. Unknown flags and opaque fields are left uninterpreted. CRC validation detects errors, not authenticity.
 
+## How it works / protocol summary
+
+The supported receive path samples I/Q at 2.4 MS/s with a default SDR centre of 922.2 MHz, targeting a carrier near 921.995 MHz. It despreads a 4095-chip PN sequence, demodulates BPSK, decodes rate-1/2 convolutional coding and validates two CRC-8 checks. Clear 18/21-byte frames supply three 16-bit counters, giving two hourly pulse differences. The starting offset and litres per pulse require calibration. Encrypted 24-byte frames supply only the clear ID and RF diagnostics; ha-taggle does not decrypt usage.
+
+Only the 18-byte clear format has field confirmation, on one Gladstone transmitter. The 21-byte clear and 24-byte encrypted paths have generated tests only. This is DSSS/BPSK; do not describe it as LoRa or LoRaWAN. For product context and the qualified first-public finding, see the wiki [research and prior art](https://github.com/Spicynostalgia/ha-taggle/wiki/Research-and-Prior-Art).
+
 ## Physical and channel coding
 
 - Nominal centre frequency: 922200000 Hz; sample rate: 2400000 samples/s, unsigned 8-bit interleaved I/Q.
