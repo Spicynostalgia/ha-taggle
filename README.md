@@ -55,7 +55,7 @@ ha-taggle brings hourly water-use updates from supported Taggle transmitters int
 
 [Check your meter](#will-it-work-for-me) · [Install A/B](#install) · [Calibrate](#turn-pulses-into-litres) · [Add the card](#add-the-dashboard-card) · [Troubleshooting](#troubleshooting). The [wiki guides and references](https://github.com/Spicynostalgia/ha-taggle/wiki) are optional background or help with a specific step.
 
-These instructions use receiver and card **0.3.0**. The [hardware test record](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware) used receiver **0.2.1**; it does not establish field verification of every 0.3.0 feature. Find your installed receiver version on the add-on's **Info** tab or the MQTT device's information panel; Docker also shows the image tag with `docker compose images taggle`. Update the receiver and card together using [the update steps](#back-up-and-update).
+These instructions use receiver and card **0.3.1**. The [hardware test record](https://github.com/Spicynostalgia/ha-taggle/wiki/Tested-Hardware) used receiver **0.2.1**; it does not establish field verification of every 0.3.0 feature. Find your installed receiver version on the add-on's **Info** tab or the MQTT device's information panel; Docker also shows the image tag with `docker compose images taggle`. Update the receiver and card together using [the update steps](#back-up-and-update).
 
 ## How it works in 30 seconds
 
@@ -285,7 +285,7 @@ docker compose ps
 docker compose logs -f taggle
 ```
 
-Confirm the receiver stays running, then [check startup and MQTT](#check-its-working). **Ctrl+C in `logs -f` only leaves the log viewer**; the detached receiver keeps running. The supplied Compose image is pinned to **`:0.3.0`**.
+Confirm the receiver stays running, then [check startup and MQTT](#check-its-working). **Ctrl+C in `logs -f` only leaves the log viewer**; the detached receiver keeps running. The supplied Compose image is pinned to **`:0.3.1`**.
 
 Installation reference: [Full Docker setup guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker).
 
@@ -400,9 +400,9 @@ The ring compares Today with the mean of the previous seven complete local days�
 
 **Container manual route:** find the host directory mapped to Home Assistant's `/config`, containing `configuration.yaml`. Save the raw card file as `www/taggle-card.js` inside that directory, not inside the receiver repository. Restart HA after first creating `www`, check `/local/taggle-card.js`, then register the resource.
 
-**Register a manual resource:** enable **Advanced Mode** in your HA user profile if Resources is hidden. Under **Settings → Dashboards → ⋮ → Resources**, add `/local/taggle-card.js?v=0.3.0` as a **JavaScript module**. Reload the browser.
+**Register a manual resource:** enable **Advanced Mode** in your HA user profile if Resources is hidden. Under **Settings → Dashboards → ⋮ → Resources**, add `/local/taggle-card.js?v=0.3.1` as a **JavaScript module**. Reload the browser.
 
-**HACS alternative:** the Home Assistant Community Store installs custom cards and integrations; it is separate from the add-on Store. Follow its [prerequisites](https://hacs.dev/docs/use/download/prerequisites/), [download](https://hacs.dev/docs/use/download/download/) and [initial configuration](https://hacs.dev/docs/use/configuration/basic/) steps first. Then use the button below, or add this repository under **HACS → ⋮ → Custom repositories → Dashboard**. Download **ha-taggle** 0.3.0 and reload as prompted.
+**HACS alternative:** the Home Assistant Community Store installs custom cards and integrations; it is separate from the add-on Store. Follow its [prerequisites](https://hacs.dev/docs/use/download/prerequisites/), [download](https://hacs.dev/docs/use/download/download/) and [initial configuration](https://hacs.dev/docs/use/configuration/basic/) steps first. Then use the button below, or add this repository under **HACS → ⋮ → Custom repositories → Dashboard**. Download **ha-taggle** 0.3.1 and reload as prompted.
 
 [![Open the card in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Spicynostalgia&repository=ha-taggle&category=plugin)
 
@@ -520,7 +520,7 @@ Configured meters also get a **Possible leak** hint in 0.3.0, enabled by default
 
 Guided readings and their solution live in **private receiver state**, not just configuration. Before updating, include the **Taggle add-on's data** in an HA OS backup, or stop the Docker receiver with `docker compose stop taggle` and back up its **`data` directory and `config.json`** before starting it again. Keep these backups private. Keep the same persistent data mount; restarts preserve it, deleting it loses the baseline and does not repair reception.
 
-For HA OS, update **Taggle water meter** from its Info page. For Docker, keep your config/data and update the Compose image tag deliberately; the supplied file uses **0.3.0**. Run `docker compose pull` followed by `docker compose up -d taggle` to recreate with the chosen image. Update the card to the same version via HACS or by replacing `www/taggle-card.js`, changing its resource cache suffix and reloading the browser. A cache suffix alone does not update the JavaScript.
+For HA OS, update **Taggle water meter** from its Info page. For Docker, keep your config/data and update the Compose image tag deliberately; the supplied file uses **0.3.1**. Run `docker compose pull` followed by `docker compose up -d taggle` to recreate with the chosen image. Update the card to the same version via HACS or by replacing `www/taggle-card.js`, changing its resource cache suffix and reloading the browser. A cache suffix alone does not update the JavaScript.
 
 | What changed | Apply it |
 | --- | --- |

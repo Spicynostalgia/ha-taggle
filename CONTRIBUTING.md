@@ -18,7 +18,7 @@ PYTHONPATH=addon python -m pytest -q
 node --check card/taggle-card.js
 node tests/card.test.cjs
 python scripts/check_release.py
-python scripts/prepare_release.py v0.3.0 --notes /tmp/taggle-release-notes.md
+python scripts/prepare_release.py v0.3.1 --notes /tmp/taggle-release-notes.md
 python -m build --outdir /tmp/taggle-package-check
 ```
 
@@ -57,7 +57,7 @@ The seed file [data/compat-seed.json](data/compat-seed.json) preserves the maint
 This checkout already uses image owner **`spicynostalgia`**. In a fork, edit the runtime image references explicitly:
 
 - In `addon/config.yaml`, set `image` to `ghcr.io/<your-lowercase-owner>/ha-taggle-addon-{arch}`. Preserve `{arch}` literally for Home Assistant.
-- In `docker-compose.yml`, set `image` to `ghcr.io/<your-lowercase-owner>/ha-taggle:0.3.0` (or your intended release version). Keep this tag aligned with the release.
+- In `docker-compose.yml`, set `image` to `ghcr.io/<your-lowercase-owner>/ha-taggle:0.3.1` (or your intended release version). Keep this tag aligned with the release.
 - Review repository URLs, badges, HACS links and documentation for the fork's owner/repository. Verify the resulting runtime image paths before tagging.
 
 `scripts/set_owner.py` replaces only remaining literal `GITHUB_OWNER` placeholders. It does **not** retarget the already configured `spicynostalgia` image names, even if it reports documentation substitutions. Compose retains a commented local-build block for development.

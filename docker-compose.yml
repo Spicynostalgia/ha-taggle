@@ -1,6 +1,6 @@
 services:
   taggle:
-    image: ghcr.io/spicynostalgia/ha-taggle:0.3.0
+    image: ghcr.io/spicynostalgia/ha-taggle:0.3.1
     # To follow new releases automatically, replace the version tag above with :latest.
     # To build locally, uncomment this block and run docker compose up -d --build.
     # build:

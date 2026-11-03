@@ -1,4 +1,4 @@
-/* Taggle card 0.3.0. MIT. Home Assistant states and recorder history; no external requests. */
+/* Taggle card 0.3.1. MIT. Home Assistant states and recorder history; no external requests. */
 (() => {
   'use strict';
   const KEYS = ['last_hour_litres', 'today_litres', 'total_litres', 'last_hour',

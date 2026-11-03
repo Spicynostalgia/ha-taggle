@@ -2,7 +2,7 @@
 
 Receive hourly pulse updates from a supported Taggle transmitter in Home Assistant. You need an RTL-SDR USB receiver, an antenna for 915–928 MHz and MQTT. Mosquitto can provide the broker if you do not have one.
 
-**Only one transmitter has been verified:** Gladstone, QLD, with an RTL-SDR Blog V4. Other models and areas are unverified. This add-on supports amd64/aarch64 and includes the Blog driver for V4 support. The historical Docker hardware test used receiver 0.2.1; these instructions describe **0.3.0**.
+**Only one transmitter has been verified:** Gladstone, QLD, with an RTL-SDR Blog V4. Other models and areas are unverified. This add-on supports amd64/aarch64 and includes the Blog driver for V4 support. The historical Docker hardware test used receiver 0.2.1; these instructions describe **0.3.1**.
 
 > [!IMPORTANT]
 > The transmitter sends a pulse counter, not your dial reading. Its starting offset and litres per pulse are both unknown. Guided calibration in **0.3.0** uses a one-hour routine: read just after a transmission, use 20–50 L (reuse it), then read after the next transmission to establish both; follow Calibration status if another reading is needed. Check the estimate against your physical dial. This is experimental, not billing-grade measurement.
@@ -128,7 +128,7 @@ With default logging, neighbour IDs are absent from normal logs, JSONL, state an
 
 Private state lives under `/data/receiver` and survives add-on restarts/upgrades. **Include the add-on's data in HA OS backups before updating**: dial readings and the solution are in state, not just options. Do not delete state or reinstall to fix reception. New data directories use 0700; JSONL logs, state and neighbourhood salt use 0600. Optional `jsonl_logging` is off by default; enabled logs need your own retention management. Keep options, logs and state private.
 
-Find the receiver version on the add-on Info tab or MQTT device information. Update the receiver and optional card together to **0.3.0**; replacing a manual card's file also needs browser/cache reload. [Backup and update steps](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md#back-up-and-update).
+Find the receiver version on the add-on Info tab or MQTT device information. Update the receiver and optional card together to **0.3.1**; replacing a manual card's file also needs browser/cache reload. [Backup and update steps](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md#back-up-and-update).
 
 For all option names/defaults see [Configuration reference](https://github.com/Spicynostalgia/ha-taggle/wiki/Configuration-Reference); for decoding see the [protocol specification](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/PROTOCOL.md). The standalone Python package uses the same receiver source and supports Python 3.11–3.13. Its replay availability and final daily refresh use the current wall clock, so old recordings can show unavailable sensors and zero today.
 

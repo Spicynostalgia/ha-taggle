@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from taggle_rx import __version__
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -14,9 +15,17 @@ def load_script(name):
     return module
 
 
-prepare = load_script('prepare_release').prepare
+prepare_module = load_script('prepare_release')
+prepare = prepare_module.prepare
 set_owner_module = load_script('set_owner')
 check_release_module = load_script('check_release')
+
+
+def test_current_release_versions_and_notes_agree():
+    assert prepare(f'v{__version__}')
+    prepare_module.check_compose_version(__version__)
+    assert f'\n## {__version__}\n' in (ROOT / 'addon/CHANGELOG.md').read_text()
+    assert (ROOT / 'card/taggle-card.js').read_text().startswith(f'/* Taggle card {__version__}.')
 
 
 @pytest.mark.parametrize(('suffix', 'header'), [
@@ -49,29 +58,29 @@ def release_tree(tmp_path):
 
 def test_release_notes_stop_at_next_version(release_tree):
     (release_tree / 'CHANGELOG.md').write_text(
-        '# Changelog\n\n## Unreleased\n\n- Future\n\n## 0.3.0\n\n- Released\n\n## 0.0.1\n\n- Older\n')
-    assert prepare('v0.3.0', release_tree) == '- Released\n'
+        '# Changelog\n\n## Unreleased\n\n- Future\n\n## 0.3.1\n\n- Released\n\n## 0.0.1\n\n- Older\n')
+    assert prepare('v0.3.1', release_tree) == '- Released\n'
 
 
 @pytest.mark.parametrize('name', ['addon/config.yaml', 'pyproject.toml', 'addon/pyproject.toml'])
 def test_release_rejects_version_mismatch(release_tree, name):
     path = release_tree / name
-    path.write_text(path.read_text().replace('0.3.0', '0.3.1'))
+    path.write_text(path.read_text().replace('0.3.1', '0.3.2'))
     with pytest.raises(ValueError, match='does not match'):
-        prepare('v0.3.0', release_tree)
+        prepare('v0.3.1', release_tree)
 
 
-@pytest.mark.parametrize('tag', ['0.3.0', 'v0.3.0-rc1', 'v01.1.0', 'v0.3.0.1'])
+@pytest.mark.parametrize('tag', ['0.3.1', 'v0.3.1-rc1', 'v01.1.0', 'v0.3.1.1'])
 def test_release_rejects_invalid_tags(release_tree, tag):
     with pytest.raises(ValueError, match='Release tag'):
         prepare(tag, release_tree)
 
 
-@pytest.mark.parametrize('changelog', ['## 0.0.1\n- Older\n', '## 0.3.0\n\n## 0.0.1\n- Older\n'])
+@pytest.mark.parametrize('changelog', ['## 0.0.1\n- Older\n', '## 0.3.1\n\n## 0.0.1\n- Older\n'])
 def test_release_requires_notes(release_tree, changelog):
     (release_tree / 'CHANGELOG.md').write_text(changelog)
     with pytest.raises(ValueError, match='No CHANGELOG'):
-        prepare('v0.3.0', release_tree)
+        prepare('v0.3.1', release_tree)
 
 
 def test_owner_replacement_covers_tracked_and_untracked_files(tmp_path):
