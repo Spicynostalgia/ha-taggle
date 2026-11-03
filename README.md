@@ -309,7 +309,7 @@ A normal-mode listening summary appears every **15 minutes**, counting frames an
 
 ## Turn pulses into litres
 
-The tested meter is an **Elster (Honeywell) V100**, owner-confirmed. Elster’s [V100 PSM-T specification](https://cdn.shopify.com/s/files/1/0556/0283/9744/files/V100_PSM_T_SML001_SpecSheet.pdf) lists **5 L/pulse** for the **5 black + 3 red** counter and **0.5 L/pulse** for the **4×4** counter. The tested meter’s readings match **5 L/pulse**; **still calibrate yours**. The radio counter has an arbitrary starting offset, so multiplying it by 5 does not reconstruct your dial reading.
+The tested meter is an **Elster (Honeywell) V100**, owner-confirmed. Elster’s [V100 PSM-T specification](https://cdn.shopify.com/s/files/1/0556/0283/9744/files/V100_PSM_T_SML001_SpecSheet.pdf) lists **5 L/pulse** for the **5 black + 3 red** counter and **0.5 L/pulse** for the **4×4** counter. The tested meter’s readings match **5 L/pulse**: Two utility meter readings 24 hours apart (3 November 2026) spanned **585 L over 116 radio pulses = 5.04 L/pulse**, i.e. 5 L within one pulse of rounding, and two dial photos taken in between agreed within a pulse. **Still calibrate yours**. The radio counter has an arbitrary starting offset, so multiplying it by 5 does not reconstruct your dial reading.
 
 **Guided calibration is available in 0.3.0. Manual dial readings are the main path; no utility account, maths, configuration edit or receiver restart is needed.**
 
@@ -329,7 +329,7 @@ Without the card, open **Settings → Devices & services → MQTT → devices �
 
 | Meter / counter | Expected pulse size | What to do |
 | --- | --- | --- |
-| Elster (Honeywell) V100 PSM-T, 5 black + 3 red digits | **5 L/pulse** | Tested Gladstone meter; owner-confirmed and readings match. Still calibrate yours. |
+| Elster (Honeywell) V100 PSM-T, 5 black + 3 red digits | **5 L/pulse** | Tested Gladstone meter; owner-confirmed; utility readings give 5.04 L/pulse over 116 pulses. Still calibrate yours. |
 | V100, 4 black + 4 red digits (4×4) | **0.5 L/pulse** | Check the counter and output variant, then calibrate. |
 | Other meter with a pulse unit or sensor | **1–1000 L/pulse**, depending on the output | Read its label/specification; do not copy another meter’s factor. |
 | Honeywell V200HT, integrated radio / digital display | **Unknown here** | Confirm the radio and pulse format; ha-taggle compatibility is unverified. |
