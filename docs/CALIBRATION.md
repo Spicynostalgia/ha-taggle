@@ -17,6 +17,8 @@ Use the dashboard card’s **Read your dial** panel: its mechanical register pic
 2. **Use some water during the hour**, for example fill buckets or run a shower, about **20–50 L**. Reuse the water. This is practical guidance, not a minimum-usage gate.
 3. **Just after the NEXT transmission** (normally about one hour later), read within 10 minutes again, before further water use. Save the second reading and follow **Calibration status**. When exactly one standard pulse size fits, calibration supplies litres automatically. If multiple sizes fit, status names them and asks for another reading.
 
+The transmit minute can drift (about **13 seconds earlier per hour** in the overnight hardware test). **Next transmission expected ≈ HH:MM** follows the meter’s observed timing. Use that estimate and the actual **Good time to read the dial** window, rather than assuming a fixed minute each hour.
+
 The card’s friendly form combines **Meter reading** and optional **Photo taken at** into one text command, preserving the decimals you type. Leave the photo time blank for a fresh reading. A clock time uses the receiver’s timezone: today, or yesterday if ahead of now. The last ten readings show time, value/unit, exactness and whether they are used, excluded or pending. **Reading sent** means the command was sent; check receiver status for acceptance.
 
 **Without the card:** open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ = kL, or L)** and type `1597.765` or `1597.765 18:00` into **Dial reading (e.g. 1597.765 or 1597.765 18:00)**. Submit once with Enter. The reading and time travel together; there is no pending time for the next reading.
@@ -127,7 +129,7 @@ entities:
 
 Each meter has its own form. The card preserves unsent entries and keyboard focus through Home Assistant state updates. If controls are missing or unavailable, it shows an explanation and disables saving.
 
-Up to **200 readings** are stored. To inspect them, open **Developer tools → States**, select your actual Calibration status entity and inspect its `readings` attribute. Each row includes an `id`, time, original value/unit, litres, source, `resolution_litres`, `exact` flag, counter interval, `used` flag, reason and residual when available. Attributes also report bounds, chosen factor, method, offset, uncertainty and next expected transmission. Delete an older reading before adding another at the limit.
+Up to **200 readings** are stored privately. Home Assistant attributes expose only the **last ten**, plus `reading_count` for the full count, to keep attributes small enough for HA to record. To inspect recent readings, open **Developer tools → States**, select your actual Calibration status entity and inspect its `readings` attribute. Each row includes an `id`, time, original value/unit, litres, source, `resolution_litres`, `exact` flag, counter interval, `used` flag, reason and residual when available. Attributes also report bounds, chosen factor, method, offset, uncertainty and next expected transmission. Delete an older reading before adding another at the limit.
 
 ### How alignment and the solver work
 

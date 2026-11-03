@@ -300,10 +300,12 @@ Installation reference: [Full Docker setup guide](https://github.com/Spicynostal
 Example normal-mode log lines (fictional ID/address; startup order can vary):
 
 ```text
-INFO Listening on 922.2 MHz for meter(s): 1 configured; first reading can take up to an hour
-INFO MQTT connected to 192.168.1.50:1883
-INFO Meter 123456: +10 pulses last hour, SNR 30.1 dB
+2026-11-03T07:00:00+1000 INFO Listening on 922.2 MHz for meter(s): 1 configured; first reading can take up to an hour
+2026-11-03T07:00:01+1000 INFO MQTT connected to 192.168.1.50:1883
+2026-11-03T07:38:18+1000 INFO Meter 123456: +10 pulses last hour, SNR 30.1 dB
 ```
+
+Receiver log lines start with an ISO local timestamp and UTC offset, using the process/container timezone (`TZ`; the supplied Compose file uses UTC). Scan JSON keeps its sample-derived UTC `time`.
 
 A normal-mode listening summary appears every **15 minutes**, counting frames and distinct other meters without listing neighbour IDs. It proves the receiver runs, not that your own meter was heard. Scan mode has no MQTT or normal heartbeat; silence can mean no decoded frames yet.
 
@@ -322,6 +324,8 @@ The dashboard card’s **Read your dial** panel has a dial picture, help for oth
 1. **Just after a transmission**, read the dial within **10 minutes**, before anyone uses water. The card shows **Read now** with minutes remaining; **Read your dial now** (`binary_sensor.taggle_123456_read_dial_now`, displayed as **Good time to read the dial**) turns on. Choose **m³, kL or L** to match the face (1 m³ = 1 kL = 1,000 L), type the full reading, and save promptly.
 2. **Use some water during the hour**, for example fill buckets or run a shower, about **20–50 L**. Reuse the water. This is practical guidance, not a minimum-usage gate.
 3. **Just after the NEXT transmission** (normally about one hour later), read within 10 minutes again, before further water use. Save the second reading and follow **Calibration status**. When exactly one standard pulse size fits, calibration supplies litres automatically. If multiple sizes fit, status names them and asks for another reading.
+
+The transmit minute can drift: the overnight hardware test moved about **13 seconds earlier per hour**. **Next transmission expected ≈ HH:MM** follows the observed timing; use that estimate and the actual **Good time to read the dial** window rather than assuming a fixed minute each hour.
 
 Without the card, open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Choose **Dial unit (m³ = kL, or L)**, then use the single **Dial reading (e.g. 1597.765 or 1597.765 18:00)** box and press Enter. Enter `1597.765` for a fresh reading, or `1597.765 18:00` for a photo.
 
@@ -484,12 +488,16 @@ This is evidence, not proof of ownership or litre calibration. With an unknown p
 
 ## Neighbourhood comparison
 
+**Today uses the local date of each interval’s end.** An interval crossing midnight, such as **23:39–00:39**, counts towards the **new day** in both your meter’s total and neighbourhood totals. At midnight the neighbourhood’s today values normally return to unknown for several hours while enough new-day observations arrive.
+
 <details>
 <summary>Group statistics, calibration assumptions and privacy</summary>
 
 This is **on by default**. It publishes averages, a median and group counts from nearby meters once enough qualify. Your configured meters are excluded; individual neighbours' IDs and usage never reach MQTT.
 
-Values stay **unknown until at least three meters qualify for that cohort**. Today's values also need enough received intervals; hearing three IDs alone is not enough. **Neighbours' litres per pulse are unknown.** Unless separately configured, the comparison uses your first configured meter's calibrated litres per pulse, or raw pulses if it is uncalibrated. Applying your calibration to neighbours is an assumption, not a calibration of their meters. Reception gaps can bias this rough comparison; it is not a ranking of household efficiency.
+Values stay **unknown until at least three meters qualify for that cohort**. Today's values need **at least six observed intervals per neighbour** and **75% coverage of elapsed local clock hours**; hearing three IDs alone is not enough. After local midnight, today's average, median, counted meters and your comparison percentage stay **unknown until at least three neighbours qualify again**. This can take roughly **five hours** (00:00–05:05 in the overnight hardware test), depending on transmission times and reception. This daily wait is expected.
+
+**Neighbours' litres per pulse are unknown.** Unless separately configured, the comparison uses your first configured meter's calibrated litres per pulse, or raw pulses if it is uncalibrated. Applying your calibration to neighbours is an assumption, not a calibration of their meters. Reception gaps can bias this rough comparison; it is not a ranking of household efficiency.
 
 The card hides percentages when displayed units differ. **Current receiver limitation:** if the first meter is uncalibrated and a later configured meter is calibrated, MQTT can still publish a raw-pulse `vs_neighbourhood_today` percentage for that later meter. Do not interpret it as a litres comparison.
 

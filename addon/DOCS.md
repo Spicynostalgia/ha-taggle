@@ -45,7 +45,7 @@ Leave `litres_per_count: []` for guided calibration. Match `timezone` to Home As
 
 **Before first Start:** neighbourhood comparison is **on by default**. It publishes group statistics, not individual neighbours' identities/usage. To disable collection, set `neighbourhood: false`, Save, then start/restart the add-on. Hiding the card row only hides the display.
 
-Check that the add-on stays running, the USB receiver is detected and `Reading samples in async mode...` appears. In normal mode, confirm `MQTT connected`. Resolve startup errors now; once healthy, allow a full **65 minutes** for a transmission opportunity. Reception is not guaranteed. Every 15 minutes a normal-mode heartbeat counts frames and distinct other meters without printing neighbour IDs; it does not prove your own transmitter was heard.
+Check that the add-on stays running, the USB receiver is detected and `Reading samples in async mode...` appears. In normal mode, confirm `MQTT connected`. Resolve startup errors now; once healthy, allow a full **65 minutes** for a transmission opportunity. Reception is not guaranteed. Receiver log lines include an ISO local timestamp and UTC offset from the process/container timezone (`TZ`); scan JSON uses UTC frame times. Every 15 minutes a normal-mode heartbeat counts frames and distinct other meters without printing neighbour IDs; it does not prove your own transmitter was heard.
 
 MQTT discovery announces the configured Taggle devices and enabled neighbourhood device immediately on broker connection. Unknown/unavailable initial values are expected; missing devices call for checking configuration/MQTT, rather than waiting for the radio. Open **Settings → Devices & services → MQTT → devices → Taggle [your ID]**. Look under **Diagnostics** for Last seen, SNR and signal level.
 
@@ -56,6 +56,8 @@ Manual dial readings are the main route in **0.3.0**. No utility account, maths 
 1. **Just after a transmission**, read the dial within **10 minutes**, before anyone uses water. The card shows **Read now** with minutes remaining; **Good time to read the dial** turns on. Choose **m³, kL or L** to match the face (1 m³ = 1 kL = 1,000 L), type the full reading, and save promptly.
 2. **Use some water during the hour**, for example fill buckets or run a shower, about **20–50 L**. Reuse the water. This is practical guidance, not a minimum-usage gate.
 3. **Just after the NEXT transmission** (normally about one hour later), read within 10 minutes again, before further water use. Save the second reading and follow **Calibration status**. When exactly one standard pulse size fits, calibration supplies litres automatically. If multiple sizes fit, status names them and asks for another reading.
+
+The transmit minute can drift (about **13 seconds earlier per hour** in the overnight hardware test). **Next transmission expected ≈ HH:MM** follows observed timing; use it and the actual **Good time to read the dial** window rather than a fixed minute each hour.
 
 On the MQTT device page use **Dial unit (m³ = kL, or L)**, then the single **Dial reading (e.g. 1597.765 or 1597.765 18:00)** box. Fresh: `1597.765` or `1597,765`. Photo: `1597.765 18:00`, `1597.765 1800`, `1597.765 at 6:00`, `1597.765@18:00`, or `1597.765 2026-11-02T18:00:00+10:00`. The reading and time are submitted together to `taggle/<id>/reading/set`; there is no pending photo-time setting. Clock times use the receiver’s timezone and mean yesterday if ahead of now. JSON entries remain supported.
 
@@ -112,7 +114,9 @@ Supported clear frames expose usage and diagnostics; confirmed encrypted frames 
 
 ### Neighbourhood comparison and privacy
 
-Neighbourhood comparison is on by default. Each cohort stays unknown below **three qualifying meters**; hearing three IDs alone does not qualify today's usage. Today also requires six observed intervals and at least 75% of elapsed local clock hours. The add-on accepts `neighbourhood_min_meters` of 3 or greater; standalone clamps lower integers to 3. Missing intervals are not estimated. Encrypted neighbours contribute only to the heard count.
+**Today uses each interval’s end date in the configured local timezone.** The interval **23:39–00:39** counts towards the **new day**, for your meter and the neighbourhood.
+
+Neighbourhood comparison is on by default. Each cohort stays unknown below **three qualifying meters**; hearing three IDs alone does not qualify today's usage. Today also requires six observed intervals and at least 75% of elapsed local clock hours. The add-on accepts `neighbourhood_min_meters` of 3 or greater; standalone clamps lower integers to 3. After local midnight, today’s average, median, counted meters and per-meter comparison stay **unknown until at least three neighbours each have six new-day intervals and sufficient coverage again**. This can take roughly **five hours** (00:00–05:05 in the overnight hardware test); actual timing depends on transmissions and reception. It is expected each morning. Missing intervals are not estimated. Encrypted neighbours contribute only to the heard count.
 
 Neighbours' litres per pulse are unknown. Unless `neighbourhood_litres_per_count` is set, aggregates use the first configured meter's calibrated value or raw pulses. Your calibration does not calibrate neighbours. This is a rough, reception-biased group comparison, not a household efficiency ranking. Aggregate measurements are not Energy totals.
 
@@ -130,7 +134,7 @@ For all option names/defaults see [Configuration reference](https://github.com/S
 
 ## Troubleshooting
 
-- **Startup or USB failure:** resolve errors immediately. Stop competing SDR software; check app USB access, power/cabling and VM passthrough if used. The receiver retries a disconnected producer after two seconds. Linux DVB driver commands are host-specific, not ordinary HA OS setup.
+- **Startup or USB failure:** resolve errors immediately. Stop competing SDR software; check app USB access, power/cabling and VM passthrough if used. The receiver retries after two seconds, backs off to 60 seconds while the SDR remains unavailable, and repeats its USB/passthrough hint at most every ten minutes. Linux DVB driver commands are host-specific, not ordinary HA OS setup.
 - **No frames after healthy startup:** check antenna, placement and host noise. After changing gain or other options, Save and Restart Taggle water meter; compare reception over 65 minutes. Another channel or unsupported transmitter remains possible.
 - **No devices:** check configured IDs, normal mode (`scan_minutes: 0`), the same broker in HA, MQTT connection and discovery. Discovery happens on broker connection before a radio frame.
 - **Usage unavailable:** a new device can wait for its first frame. Previously seen meters expire after three hours. Encryption or sequence discontinuity can leave diagnostics updating without usage; unavailable alone does not diagnose encryption.
