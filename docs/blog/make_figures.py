@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Render redacted figures from read-only Taggle recordings and the real receiver.
+"""Render publication figures from read-only Taggle recordings and the real receiver.
 
 Example (NumPy, SciPy, matplotlib and the decoder's CLI dependencies installed):
   OPENBLAS_NUM_THREADS=2 python make_figures.py --captures /path/to/captures \
     --analysis /path/to/analysis --decoder /path/to/ha-taggle
 
-No IQ, decoded payload, unredacted log or cumulative counter is written. The
-CLI scan is captured in memory and redacted before rendering or saving text.
+Only the author’s approved 18-byte frame is shown unmasked. Other meters stay
+masked; no IQ or precise reception timestamp is published.
 """
 import argparse
 import hashlib
@@ -82,13 +82,13 @@ def main():
         'axes.spines.right':False,'axes.titleweight':'bold', 'axes.titlesize':13,
         'figure.constrained_layout.use':True})
     frames = [json.loads(line) for line in (args.analysis/'live/full-frames.jsonl').open()]
-    clear = next(f for f in frames if f['format_bytes']==18)
+    clear = next(f for f in frames if f['id_decimal']==527814
+                 and round(f['sample_offset']/RATE, 2)==595.33)
+    assert clear['format_bytes']==18 and round(clear['snr_median_db'], 1)==30.7
     encrypted = next(f for f in frames if f['format_bytes']==24)
-    source = args.captures/'iq-922200k-g40-3900s.cu8'
-    # Read only 1.2 seconds (~5.8 MB), including quiet padding on either side.
-    start = int(clear['sample_offset']/RATE*RATE)-int(.4*RATE)
+    source = args.captures/'bursts/burst06_595.33s.cu8'
+    # The archived clip starts 0.5 s before the burst. Read 1.2 s only.
     with source.open('rb') as stream:
-        stream.seek(2*start)
         raw = stream.read(2*int(1.2*RATE))
     z = iq(raw)
     detector = Detector()
@@ -97,7 +97,7 @@ def main():
     if not hits:
         raise RuntimeError('real receiver did not acquire the selected slice')
     hit = max(hits,key=lambda h:h['pn_peak_ratio'])
-    result = recover_dsss(z,hit['carrier_offset_hz'],PERIOD,.43*RATE,.68*RATE,RATE)
+    result = recover_dsss(z,hit['carrier_offset_hz'],PERIOD,.53*RATE,.78*RATE,RATE)
     frame = decode_frame(result['bits'])
     if frame['meter_id'] != clear['id_decimal'] or frame['format_bytes'] != 18:
         raise RuntimeError('recovered slice disagrees with research frame')
@@ -112,7 +112,7 @@ def main():
     encrypted_air = np.unpackbits(np.frombuffer(bytes.fromhex(encrypted['on_air_bits_hex']),np.uint8))[:encrypted['symbols']]
     encrypted_decoded = decode_frame(encrypted_air)
     assert encrypted_decoded['encrypted'] and 'counts' not in encrypted_decoded
-    prov = 'Real cu8 slice; 2.4 MS/s, 922.2 MHz centre. IDs, counters and payload bits withheld.'
+    prov = 'Author’s own meter 527814 / 0x80DC6, shown with permission; 18 bytes, SNR 30.7 dB. 2.4 MS/s, 922.2 MHz centre.'
 
     # 1: full-band occupancy from measured survey bins, plus actual burst spectrum.
     bins = np.genfromtxt(args.analysis/'bins.csv',delimiter=',',names=True)
@@ -139,14 +139,14 @@ def main():
     power=np.mean(abs(z[:len(z)//n*n].reshape(-1,n))**2,axis=1)
     ax[0].plot(np.arange(len(power))*n/RATE,10*np.log10(power/(2*127.5**2)),color=BLUE,lw=1)
     ax[0].axvspan(a/RATE,b/RATE,color='#dceef5',zorder=-1)
-    ax[0].set(xlabel='Time within private slice (s)',ylabel='Total power (dBFS)',title='One real burst: RF power, averaged over 0.5 ms')
+    ax[0].set(xlabel='Time within clip (s)',ylabel='Total power (dBFS)',title='Author’s meter 527814 / 0x80DC6: RF power, averaged over 0.5 ms')
     f,t,s=signal.spectrogram(z,fs=RATE,nperseg=1024,noverlap=0,return_onesided=False)
     order=np.argsort(f)
     db=10*np.log10(s[order]+1e-20)
     im=ax[1].pcolormesh(t,CENTRE_MHZ+f[order]/1e6,db,
                        cmap='Blues',vmin=float(np.percentile(db,15)),
                        vmax=float(np.percentile(db,99)),rasterized=True,shading='auto')
-    ax[1].set(xlabel='Time within private slice (s)',ylabel='Frequency (MHz)',title='Spectrogram of the same cu8 samples')
+    ax[1].set(xlabel='Time within clip (s)',ylabel='Frequency (MHz)',title='Spectrogram of the same cu8 samples')
     fig.colorbar(im,ax=ax[1],label='PSD (relative dB/Hz)')
     save(fig,'02-single-burst',args.out,prov)
 
@@ -158,6 +158,7 @@ def main():
     lag=np.arange(len(v))*4095/len(v)
     peak=int(corr.argmax())
     fig,ax=plt.subplots(figsize=(10,4))
+    fig.suptitle('Author’s meter 527814 / 0x80DC6 · shown with permission',fontsize=11)
     ax.plot(lag,corr/corr.max(),color=BLUE,lw=1)
     ax.annotate('Measured peak against the\n4095-chip generated sequence',
                 xy=(lag[peak],1),xytext=(900,.72),fontsize=11,
@@ -171,6 +172,7 @@ def main():
     after=result['corrected']
     scale=np.median(abs(after))
     fig,axes=plt.subplots(1,2,figsize=(10,4.7))
+    fig.suptitle('Author’s meter 527814 / 0x80DC6 · shown with permission',fontsize=11)
     for ax,points,title in zip(axes,[before,after],['Despread; coarse carrier removed','Residual carrier / phase corrected']):
         points=points/scale
         ax.scatter(points.real,points.imag,s=9,alpha=.55,color=BLUE)
@@ -188,14 +190,14 @@ def main():
     box(ax,.08,.29,.38,.23,'Header CRC-8: PASS','bits [8:36] → residue 0',GREEN)
     box(ax,.54,.29,.38,.23,'Frame CRC-8: PASS','bits [8:N−16] → stored CRC',GREEN)
     ax.text(.5,.13,'Polynomial 0x07 · init 0 · no reflection · xorout 0',ha='center',fontsize=11)
-    ax.text(.5,.03,'Sync C0 and zero tail also verified. Payload bits withheld for privacy.',ha='center',fontsize=10)
+    ax.text(.5,.03,'Sync C0 and zero tail verified · author’s meter 527814 / 0x80DC6',ha='center',fontsize=10)
     save(fig,'05-fec-and-crcs',args.out,prov+' Viterbi explicitly rerun; production exact-inversion path also passes.')
 
-    # 6/7: true nibble positions; actual identifiers/counters never sent to text().
+    # 6/7: publish only the approved clear frame; mask the neighbour’s record.
     def layout(record,name,opaque=False):
-        text=safe_hex(record['decoded_frame_hex'],opaque)
+        text=safe_hex(record['decoded_frame_hex'],True) if opaque else record['decoded_frame_hex'].upper()
         fig,ax=plt.subplots(figsize=(10,6.5)); ax.set_axis_off()
-        ax.set_title(('24-byte encrypted frame' if opaque else '18-byte clear frame')+' · redacted real record',pad=15)
+        ax.set_title(('24-byte encrypted frame' if opaque else '18-byte clear frame')+(' · masked neighbour’s record' if opaque else ' · author’s meter, shown with permission'),pad=15)
         display=' '.join(text[i:i+2] for i in range(0,len(text),2))
         lines=[display[i:i+35] for i in range(0,len(display),36)]
         for i,line in enumerate(lines):
@@ -209,56 +211,61 @@ def main():
             ax.text(.5,.10,'Clear framing is readable. AES keys are held by the utility.',ha='center',fontsize=11)
         else:
             box(ax,.03,.60,.28,.16,'Sync / header','C0 · bits 0–7',BLUE)
-            box(ax,.36,.60,.28,.16,'Clear ID: '+mask_id(record['id_decimal']),'XXXXX · bits 8–27',BLUE)
+            box(ax,.36,.60,.28,.16,'ID: '+str(record['id_decimal']),'0x80DC6 · bits 8–27',BLUE)
             box(ax,.68,.60,.29,.16,'Header CRC-8','bits 28–35 · PASS',GREEN)
-            for x,title,span in ((.03,'Newest counter','18–21'),(.36,'Previous counter','23–26'),(.68,'Oldest counter','28–31')):
-                box(ax,x,.36,.28,.16,title,f'XXXX · nibbles {span}',BLUE)
+            for slot,(x,title,span) in zip(record['count_slots'],((.03,'Newest counter','18–21'),(.36,'Previous counter','23–26'),(.68,'Oldest counter','28–31'))):
+                box(ax,x,.36,.28,.16,title,f'{slot["value"]} · nibbles {span}',BLUE)
             box(ax,.03,.17,.61,.12,'Flags: meanings unknown','nibbles 17, 22, 27 · excluded from arithmetic',PURPLE)
             box(ax,.68,.17,.29,.12,'Frame CRC / tail','last 2 bytes · PASS',GREEN)
-            ax.text(.5,.09,'Illustrative counters only: 120, 110, 104 (newest first)',ha='center',fontsize=10)
-            ax.text(.5,.045,'Hourly deltas: (120 − 110) mod 65536 = 10; (110 − 104) mod 65536 = 6',ha='center',fontsize=10)
-        ax.text(.5,.01,'X masks IDs, checksums, unknown fields and absolute counters. Nibbles indexed from zero.',ha='center',fontsize=9)
-        save(fig,name,args.out,prov+' Actual redacted frame; 120/110/104 is a detached illustrative example, not measured counters.')
+            ax.text(.5,.09,'Measured counters: 46234, 46223, 46218 · sequence 172 (newest first)',ha='center',fontsize=10)
+            ax.text(.5,.045,'Hourly deltas: (46234 − 46223) mod 65536 = 11; (46223 − 46218) mod 65536 = 5',ha='center',fontsize=10)
+        ax.text(.5,.01,'X masks the neighbour’s ID, checksums and body.' if opaque else 'Full 18-byte frame shown with permission. Nibbles indexed from zero.',ha='center',fontsize=9)
+        save(fig,name,args.out,'Neighbour’s encrypted frame; ID, checksums and ciphertext masked.' if opaque else prov+' Full measured frame and counters.')
     layout(clear,'06-clear-frame')
     layout(encrypted,'07-encrypted-frame',True)
 
-    # 8: actual production CLI, scan mode, no configured IDs or disk/MQTT output.
+    # 8: actual production CLI, scan mode, only the approved ID configured; no disk/MQTT output.
     env=os.environ.copy(); env['PYTHONPATH']=str(args.decoder/'addon'); env['PYTHONDONTWRITEBYTECODE']='1'
     with tempfile.TemporaryDirectory(prefix='taggle-blog-') as temporary:
         temp=Path(temporary)
         (temp/'slice.cu8').write_bytes(raw)
-        (temp/'config.json').write_text('{}')
+        (temp/'config.json').write_text(json.dumps({'meter_ids':[clear['id_decimal']]}))
         run=subprocess.run([sys.executable,'-m','taggle_rx','--config',str(temp/'config.json'),
             '--input',str(temp/'slice.cu8'),'--start-utc','2026-01-01T00:00:00+00:00','--scan','1'],
             env=env,capture_output=True,text=True,check=True)
     logs=[]
     for line in run.stdout.splitlines():
         row=json.loads(line)
-        row['meter_id']=mask_id(row['meter_id'])
+        assert row['meter_id']==clear['id_decimal'], 'unexpected meter in approved clip'
+        assert row['counts']==frame['counts']
+        row['meter_id']=str(row['meter_id'])
         # Relative time avoids publishing a household's absolute reception time.
-        row.pop('time',None); row.pop('counts',None)
+        row.pop('time',None)
         logs.extend(['{',f'  "meter_id": "{row["meter_id"]}",',
+                     f'  "counts": {row["counts"]},',
                      f'  "snr_median_db": {row["snr_median_db"]},',
                      f'  "signal_level_dbfs": {row["signal_level_dbfs"]}','}'])
     assert logs, 'production CLI must emit a real frame'
     lines=['$ python -m taggle_rx … --input slice.cu8 --scan 1',
-           '# Production CLI replay; IDs masked; timestamp omitted.']+logs
+           '# Author’s meter 527814 / 0x80DC6; timestamp omitted.']+logs
     safe_log='\n'.join(lines)+'\n'
     (args.out/'receiver-log.txt').write_text(safe_log)
     fig,ax=plt.subplots(figsize=(10,3.6)); ax.set_axis_off()
     ax.text(.025,.96,safe_log,va='top',fontfamily='DejaVu Sans Mono',fontsize=12,linespacing=1.55)
     save(fig,'08-receiver-log',args.out,prov+' Actual production CLI stdout; date is a placeholder, omitted from output.')
-    report={'source':'iq-922200k-g40-3900s.cu8; bounded 1.2-second read',
+    report={'source':'bursts/burst06_595.33s.cu8; first 1.2 seconds',
         'slice_sha256':hashlib.sha256(raw).hexdigest(),
         'sample_rate_msps':2.4,'centre_mhz':922.2,
-        'clear_id':mask_id(clear['id_decimal']),'encrypted_id':mask_id(encrypted['id_decimal']),
+        'clear_id':clear['id_decimal'],'clear_id_hex':clear['id_hex'],
+        'clear_frame_hex':clear['decoded_frame_hex'],'counts':frame['counts'],
+        'archive_snr_median_db':round(clear['snr_median_db'],1),'encrypted_id':mask_id(encrypted['id_decimal']),
         'header_crc_pass':bool(header_ok),'frame_crc_pass':bool(frame_ok),
         'viterbi_corrections':int(errors),'cli_replayed':True,
-        'privacy':'No raw bits, full IDs, timestamps, ciphertext or cumulative counters published.',
+        'privacy':'Author’s own frame, ID and counters shown with permission for this post only. Other IDs and ciphertext masked; timestamps omitted.',
         'decoder_commit':subprocess.check_output(['git','-C',str(args.decoder),'rev-parse','HEAD'],text=True).strip(),
         'figures':[p.name for p in sorted(args.out.glob('*.png'))]}
     (args.out/'provenance.json').write_text(json.dumps(report,indent=2)+'\n')
-    print('Rendered eight redacted figures; real CLI replay and both CRC checks passed.')
+    print('Rendered eight figures with only the author’s frame unmasked; real CLI replay and both CRC checks passed.')
 
 
 if __name__=='__main__':

@@ -12,7 +12,7 @@
   "RF diagnostics",
   "SNR 20.5 dB\n24 bytes · FEC 0",
   "Clear framing is readable. AES keys are held by the utility.",
-  "X masks IDs, checksums, unknown fields and absolute counters. Nibbles indexed from zero.",
+  "X masks the neighbour’s ID, checksums and body.",
   "0.0",
   "0.0",
   "0.2",
@@ -25,5 +25,5 @@
   "0.8",
   "1.0",
   "1.0",
-  "24-byte encrypted frame · redacted real record"
+  "24-byte encrypted frame · masked neighbour’s record"
 ]

@@ -1,5 +1,38 @@
 # Blog validation — 8 November 2026
 
+## Author’s approved sample — current revision
+
+- All clear figures now use the author’s own 18-byte frame, ID 527814 / 0x80DC6,
+  at recording offset 595.33 seconds. The first 1.2 seconds of the archived
+  `burst06_595.33s.cu8` clip are read; captures and analysis inputs stay unchanged.
+- The recovered full frame matches the archive exactly. Viterbi corrects zero
+  bits, forward encoding matches all 288 coded bits, and sync, zero tail and both
+  CRC-8 checks pass. Counters are 46234, 46223, 46218, yielding deltas 11 and 5.
+- The real production CLI runs in scan mode with only the author’s ID configured.
+  It emits that ID and those counters, without MQTT or persistent state writes.
+  Timestamp is omitted. Replay SNR is 30.9 dB; archived SNR is 30.7 dB.
+- Full decoded hex, ID and counters are shown with the author’s permission for
+  this post only. Neighbours’ IDs, checksums and encrypted body remain masked.
+  The encrypted example still passes outer framing checks without usage decoding.
+- `check_privacy.py` exempts only the author’s decimal/hex ID and this exact decoded
+  frame. All coded/on-air dumps remain forbidden. `test_privacy.py` accepts the
+  approved example and rejects 118 private ID/frame/bit-dump probes, plus private
+  rendered labels and PNG metadata, without printing private values.
+- The article is 1,653 whitespace-separated words; pitch body is 169 words.
+  All three editions have identical article text and byte-identical copies of
+  all eight PNGs. Site build and verifier pass: 30 HTML pages, 46 fingerprinted
+  assets; homepage budget remains 227,913 bytes raw / 156,235 bytes with text gzip.
+- Publication privacy audit includes all three editions, 32 PNG copies, eight
+  rendered-label sources, scripts, pitch, provenance, manifest and validation
+  reports. It finds zero forbidden matches across 15 private IDs in 20 frames.
+- Browser checks pass at 1440, 768, 390 and 320 px with JavaScript disabled:
+  all eight images decode, no horizontal overflow, full-size and contents links
+  work, skip link and visible keyboard focus pass. Direct PNG inspection confirms
+  readable full hex, ID, counters and receiver output. Whitespace checks pass in
+  all three repos. Commits are local only. No push, deployment or email is part of this revision.
+
+## Earlier publication checks (before the approved-sample change)
+
 The revised article is 1,590 whitespace-separated words including captions, links
 and screenshot placeholders. The draft pitch body is 145 words. Nothing was pushed, deployed
 or emailed. The source capture, research archive and decoder are read-only.

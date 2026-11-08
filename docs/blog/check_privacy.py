@@ -22,12 +22,18 @@ def main():
     parser.add_argument('--paths', nargs='+', required=True, type=Path)
     args = parser.parse_args()
     frames = [json.loads(line) for line in args.frames.open()]
-    identifiers = {str(f['id_decimal']) for f in frames}
-    hex_ids = {f['id_hex'].lower().removeprefix('0x').zfill(5) for f in frames}
-    # Whole raw frames and coded dumps are also unacceptable publication output.
+    # Permission is limited to the author’s ID and this one decoded frame.
+    private_frames = [f for f in frames if f['id_decimal'] != 527814]
+    identifiers = {str(f['id_decimal']) for f in private_frames}
+    hex_ids = {f['id_hex'].lower().removeprefix('0x').zfill(5) for f in private_frames}
+    # Keep all bit dumps private; only the approved decoded frame is exempt.
     forbidden = identifiers | hex_ids
     forbidden |= {str(f[key]).lower() for f in frames for key in
-                  ('decoded_frame_hex','raw_coded_bits_hex','on_air_bits_hex')}
+                  ('raw_coded_bits_hex','on_air_bits_hex')}
+    forbidden |= {f['decoded_frame_hex'].lower() for f in frames
+                  if not (f['id_decimal'] == 527814
+                          and f['decoded_frame_hex'].lower() ==
+                          'c080dc6e4f1ac0d301b49a1b48f1b48a5d00')}
     files=set()
     for path in args.paths:
         files.update(p for p in path.rglob('*') if p.is_file()) if path.is_dir() else files.add(path)
@@ -58,9 +64,10 @@ def main():
         raise SystemExit('FAIL: private identifiers or payload found in: '+', '.join(failures))
     label_files=[p for p in files if p.name.endswith('.labels.json')]
     assert len(label_files)==8, 'include the eight figure label-source files in this audit'
-    print(f'PASS: {len(identifiers)} unique IDs from {len(frames)} real frames; '
+    print(f'PASS: {len(identifiers)} private IDs from {len(frames)} real frames; '
           f'{len(texts)} text/metadata inputs, {images} PNGs, eight rendered-label sources; '
-          'zero unmasked decimal/hex IDs or raw frame/bit dumps.')
+          'only author ID 527814/0x80DC6 and approved decoded frame allowed; '
+          'zero private ID or frame/bit-dump matches.')
 
 
 if __name__=='__main__':

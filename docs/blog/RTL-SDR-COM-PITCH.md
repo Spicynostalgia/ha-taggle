@@ -8,7 +8,7 @@ We used an RTL-SDR Blog V4 to read our own Taggle water meter in Gladstone, QLD.
 
 We follow a real recording from a noise-like burst near 922 MHz to a checked frame. We recover the signal with a 4095-chip pattern seen through a 2.4 MHz passband, track the BPSK carrier, decode the rate-1/2 convolutional code and check two independent CRC-8s. Reproducible matplotlib figures and an actual receiver replay show each step.
 
-We also show real 24-byte encrypted frames. We can check framing and RF diagnostics, but we do not decrypt usage or search for keys. Every ID and cumulative counter is masked. We have field-verified one transmitter; yours may differ.
+We also show real 24-byte encrypted frames. We can check framing and RF diagnostics, but we do not decrypt usage or search for keys. The clear example is the author’s own meter, 527814 / 0x80DC6, with hex and counters shown with his permission for this post only. Neighbours’ IDs and the encrypted example stay masked. We have field-verified one transmitter; yours may differ.
 
 Would this suit a reader project feature? The MIT source, full article and setup guide are linked below.
 

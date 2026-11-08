@@ -2,7 +2,7 @@
 
 We used an RTL-SDR Blog V4 to get hourly water readings from our own meter in Gladstone, QLD, without a cloud portal. We built [ha-taggle](https://github.com/Spicynostalgia/ha-taggle), an MIT-licensed, receive-only decoder that sends supported clear readings over MQTT to Home Assistant. We also received encrypted frames whose usage we cannot read.
 
-We have field-tested one transmitter, producing 18-byte frames. Yours may differ. The owner confirmed an Elster (Honeywell) V100 mechanical meter; the transmitter model is unknown. This does not establish compatibility across Taggle installations, councils or current transmitters. We mask every identifier and withhold absolute usage counters.
+We have field-tested one transmitter, producing 18-byte frames. Yours may differ. The owner confirmed an Elster (Honeywell) V100 mechanical meter; the transmitter model is unknown. This does not establish compatibility across Taggle installations, councils or current transmitters. The clear example is the author’s own meter, ID `527814` (`0x80DC6`), shown with his permission for this post only. Its hex frame and counters are unmasked; all other IDs stay masked.
 
 ## Finding the right burst
 
@@ -18,7 +18,7 @@ The [SP3C datasheet](https://taggle.com/wp-content/uploads/2025/12/Datasheet-SP3
 
 ![Burst power and spectrogram.](img/02-single-burst.png)
 
-*Figure 2. Look for the burst within this 1.2-second slice, including quiet padding; power is averaged over half a millisecond in uncalibrated ADC units, not dBm. The spectrogram covers only the receiver passband.*
+*Figure 2. This is the author’s burst at 595.33 seconds in the recording, with archived SNR 30.7 dB. The 1.2-second clip includes quiet padding; power is averaged over half a millisecond in uncalibrated ADC units, not dBm. The spectrogram covers only the receiver passband.*
 
 <!-- SCREENSHOT: inspectrum waterfall, clear burst -->
 
@@ -60,19 +60,19 @@ The constraint-length-seven convolutional encoder shifts left, puts the newest i
 
 Both CRC-8 checks use polynomial `0x07`, zero initial value, no reflection and zero xorout. In zero-based decoded-bit indices, header residue over `[8:36]` must be zero. Frame CRC covers `[8:N−16]`, excluding sync, its checksum and tail. The receiver requires sync `C0`, a zero final byte and at most twelve corrected coded bits. A winning trellis path alone cannot pass; CRCs detect errors; they do not authenticate transmitters.
 
-![Masked clear-frame layout and illustrative arithmetic.](img/06-clear-frame.png)
+![Author’s unmasked clear-frame layout and measured counters.](img/06-clear-frame.png)
 
-*Figure 6. Private nibbles are `X`, and byte-aligned IDs are `XX`; crossing byte boundaries requires nibble and bit annotations. The three example counters replace measurements.*
+*Figure 6. The author’s full 18-byte frame is `C080DC6E4F1AC0D301B49A1B48F1B48A5D00`, shown with permission. The ID crosses byte boundaries; annotations mark the bit and nibble positions.*
 
 Transmitter ID occupies bits 8–27, followed by eight header-CRC bits. Clear frames hold three 16-bit counters at hex nibbles 18–21, 23–26 and 28–31, newest first. Nibbles 17, 22 and 27 are separate, unknown flags; exclude them from arithmetic.
 
-Example counters `120, 110, 104` give hourly pulse deltas `(120 − 110) mod 65536 = 10` and `(110 − 104) mod 65536 = 6`. Three counters preserve two intervals, bridging a missed reception when sequence and elapsed time agree. The hourly sequence wraps modulo 256; counters wrap modulo 65536. Longer gaps or inconsistent sequences need a new baseline.
+Measured counters `46234, 46223, 46218` give hourly pulse deltas `(46234 − 46223) mod 65536 = 11` and `(46223 − 46218) mod 65536 = 5`. This frame’s hourly sequence is `172`. Three counters preserve two intervals, bridging a missed reception when sequence and elapsed time agree. The hourly sequence wraps modulo 256; counters wrap modulo 65536. Longer gaps or inconsistent sequences need a new baseline.
 
 Dial observations establish litres per pulse and starting offset. Hourly pulses cannot give instantaneous flow or immediate leak alarms. Flag and extension meanings remain unknown; datasheet capabilities do not identify battery, tamper or backflow fields.
 
-![Masked production receiver scan output.](img/08-receiver-log.png)
+![Production receiver scan output for the author’s meter.](img/08-receiver-log.png)
 
-*Figure 7. This light-background CLI replay shows signal diagnostics from the same slice, with ID masked and timestamp omitted. With no configured meters, scan mode emitted no counters, connected to no MQTT broker and wrote no persistent state.*
+*Figure 7. This CLI replay shows the author’s ID, measured counters and RF diagnostics from the same clip; the timestamp is omitted. The replay reports SNR 30.9 dB, compared with 30.7 dB in the archive. Only his meter is configured, and scan mode connects to no MQTT broker and writes no persistent state.*
 
 ## Where decoding stops: encrypted frames
 
@@ -95,9 +95,9 @@ These frames belong to other households. **The project does not attempt decrypti
 
 ## Reproducing the figures
 
-We rendered all eight figures with matplotlib from the read-only research archive and decoder code. [The generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_figures.py) takes capture, analysis and decoder paths. It reads a bounded 1.2-second slice from the multi-gigabyte IQ recording, replays the production CLI and checks the frame against the archive. Occupancy uses measured survey-bin summaries; the encrypted diagram separately verifies the archived 24-byte frame's framing.
+We rendered all eight figures with matplotlib from the read-only research archive and decoder code. [The generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_figures.py) takes capture, analysis and decoder paths. It reads the first 1.2 seconds of the archived `burst06_595.33s.cu8` clip, replays the production CLI and checks the frame against the archive. Occupancy uses measured survey-bin summaries; the encrypted diagram separately verifies the archived 24-byte frame's framing.
 
-The source IQ and full archive contain other transmitters and household data, so remain private. Reproduction needs authorised local recordings and matching analysis inputs. We supply scripts and redacted figures, redact before rendering and publish no raw bit dumps. Masking covers hexadecimal ID nibbles, cumulative counters and checksums that could constrain hidden fields. Example arithmetic stays separate from captured usage.
+The source IQ and full archive contain other transmitters and household data, so remain private. Reproduction needs authorised local recordings and matching analysis inputs. We supply scripts and figures, with the author’s approved frame shown in full and other meters masked before rendering. For other households, masking covers hexadecimal ID nibbles, counters and checksums that could constrain hidden fields; ciphertext and raw bit dumps stay private.
 
 ## Fork it for your own meter
 
