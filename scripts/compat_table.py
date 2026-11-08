@@ -12,8 +12,6 @@ from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
-START = '<!-- compat:start -->'
-END = '<!-- compat:end -->'
 CONSENT = 'I agree to list my council publicly in the compatibility tables.'
 RESULTS = {'Unknown': 0, 'Not received': 1, 'IDs only': 2, 'Usage worked': 3}
 METER_ID = re.compile(r'(?<!\d)\d(?:[ -]?\d){5,6}(?!\d)')
@@ -198,16 +196,6 @@ def render(issues, seeds, repository):
     return '\n'.join(lines) + '\n', len(groups)
 
 
-def replace_markers(readme, table):
-    if readme.count(START) != 1 or readme.count(END) != 1:
-        raise ValueError('README must contain exactly one pair of compatibility markers')
-    if readme.index(END) < readme.index(START):
-        raise ValueError('README compatibility markers are out of order')
-    before, rest = readme.split(START)
-    _, after = rest.split(END)
-    return before + START + '\n' + table.rstrip() + '\n' + END + after
-
-
 def write_if_changed(path, content):
     if path.exists() and path.read_text(encoding='utf-8') == content:
         return False
@@ -219,11 +207,9 @@ def write_if_changed(path, content):
 def generate(issues, repository, root=ROOT):
     seeds = json.loads((root / 'data/compat-seed.json').read_text(encoding='utf-8'))
     table, count = render(issues, seeds, repository)
-    readme = replace_markers((root / 'README.md').read_text(encoding='utf-8'), table)
     badge = {'schemaVersion': 1, 'label': 'councils reported', 'message': str(count),
              'color': 'brightgreen' if count else 'lightgrey'}
     outputs = {
-        'README.md': readme,
         'docs/COMPATIBILITY.md': '# Where it works\n\n' + table,
         'docs/compat-badge.json': json.dumps(badge, indent=2) + '\n',
     }

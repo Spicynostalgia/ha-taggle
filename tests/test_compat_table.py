@@ -206,26 +206,14 @@ def test_invalid_seed_source_rejected(source):
         compat.safe_source(source)
 
 
-def test_marker_replacement_preserves_surrounding_readme():
-    text = f'Intro\n\n{compat.START}\nstale\n{compat.END}\n\n## Troubleshooting\nOriginal\n'
-    result = compat.replace_markers(text, 'fresh\n')
-    assert result == text.replace('stale', 'fresh')
-    assert compat.replace_markers(result, 'fresh\n') == result
-
-
-@pytest.mark.parametrize('text', ['', compat.START, compat.START + compat.END + compat.END,
-                                  compat.END + compat.START])
-def test_bad_markers_fail_without_replacing(text):
-    with pytest.raises(ValueError):
-        compat.replace_markers(text, 'table')
-
-
 def test_generate_idempotent_and_badge_counts_councils(tmp_path, issue, seeds):
     (tmp_path / 'data').mkdir()
     (tmp_path / 'data/compat-seed.json').write_text(json.dumps(seeds))
-    (tmp_path / 'README.md').write_text(f'intro\n{compat.START}\n{compat.END}\nend\n')
+    readme = 'Quick start\nSee docs/COMPATIBILITY.md for reports.\n'
+    (tmp_path / 'README.md').write_text(readme)
+    readme_mtime = (tmp_path / 'README.md').stat().st_mtime_ns
     changed = compat.generate([issue], REPO, tmp_path)
-    assert changed == ['README.md', 'docs/COMPATIBILITY.md', 'docs/compat-badge.json']
+    assert changed == ['docs/COMPATIBILITY.md', 'docs/compat-badge.json']
     times = {name: (tmp_path / name).stat().st_mtime_ns for name in changed}
     assert compat.generate([issue], REPO, tmp_path) == []
     assert times == {name: (tmp_path / name).stat().st_mtime_ns for name in changed}
@@ -233,7 +221,9 @@ def test_generate_idempotent_and_badge_counts_councils(tmp_path, issue, seeds):
     assert badge == {'schemaVersion': 1, 'label': 'councils reported', 'message': '2', 'color': 'brightgreen'}
     assert 'Example Regional Council' in (tmp_path / 'docs/COMPATIBILITY.md').read_text()
     compat.generate([], REPO, tmp_path)
-    assert 'Example Regional Council' not in (tmp_path / 'README.md').read_text()
+    assert 'Example Regional Council' not in (tmp_path / 'docs/COMPATIBILITY.md').read_text()
+    assert (tmp_path / 'README.md').read_text() == readme
+    assert (tmp_path / 'README.md').stat().st_mtime_ns == readme_mtime
 
 
 def test_api_pagination_and_required_request_parameters(monkeypatch, issue):

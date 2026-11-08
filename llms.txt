@@ -7,7 +7,7 @@ Clear messages provide pulse counters, not the dial reading; manual calibration 
 
 ## Project
 
-- [Repository and installation](https://github.com/Spicynostalgia/ha-taggle): Canonical source, README and releases.
+- [Repository and quick start](https://github.com/Spicynostalgia/ha-taggle): Canonical source, concise README and releases.
 - [Website](https://ha-taggle.dancloud.au): Project introduction.
 - [Factual reference](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/llms-full.md): Quoteable summary, common questions, evidence and limitations.
 - [Software citation](https://github.com/Spicynostalgia/ha-taggle/blob/main/CITATION.cff): Software metadata and MIT licence.
@@ -22,6 +22,8 @@ Clear messages provide pulse counters, not the dial reading; manual calibration 
 ## Setup
 
 - [Wiki home](https://github.com/Spicynostalgia/ha-taggle/wiki): Guides and references.
+- [Detailed setup](https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started): Installation routes, scan, calibration and reference index.
+- [Troubleshooting](https://github.com/Spicynostalgia/ha-taggle/wiki/Troubleshooting): Startup, reception, MQTT and usage checks.
 - [Calibration](https://github.com/Spicynostalgia/ha-taggle/wiki/Calibration): Two aligned dial readings, litres per pulse and offset.
 - [Add-on documentation](https://github.com/Spicynostalgia/ha-taggle/blob/main/addon/DOCS.md): Home Assistant OS receiver setup.
 - [Docker installation](https://github.com/Spicynostalgia/ha-taggle/wiki/Installing-with-Docker): Standalone receiver setup.

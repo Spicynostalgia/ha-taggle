@@ -39,7 +39,9 @@ The supported receive path samples I/Q at 2.4 MS/s with a default SDR centre of 
 - [Research and prior art](https://github.com/Spicynostalgia/ha-taggle/wiki/Research-and-Prior-Art): dated search and primary sources for DSSS, MyWater and cloud MQTT.
 - [Calibration](https://github.com/Spicynostalgia/ha-taggle/wiki/Calibration): dial readings, scale and offset.
 - [Area coverage](https://github.com/Spicynostalgia/ha-taggle/wiki/Is-My-Area-Covered): deployment context, not a compatibility guarantee.
-- [README](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md): installation and troubleshooting.
+- [README](https://github.com/Spicynostalgia/ha-taggle/blob/main/README.md): quick start for Home Assistant and SDR users.
+- [Installation and detailed guides](https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started): add-on/Docker setup, scanning, calibration and reference index.
+- [Troubleshooting](https://github.com/Spicynostalgia/ha-taggle/wiki/Troubleshooting): startup, reception, MQTT and usage checks.
 
 ## Privacy and attribution
 

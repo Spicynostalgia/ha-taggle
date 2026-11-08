@@ -151,7 +151,7 @@ The [davidjb cloud-MQTT example](https://gist.github.com/davidjb/faffe4a8ce14dea
 
 Negative use, implausible pulse sizes, and dial/prediction differences larger than the counter interval plus dial-reading resolution and **0.5% of measured use** flag a suspect reading. Suspect readings remain stored, excluded and visible. A reading about **1000×** off suggests switching **Dial unit**; it is never silently converted. Check all digits, decimal places, units, photo time, timezone and your transmitter ID.
 
-Back up receiver state first: include the add-on's data in an HA OS backup, or stop the Docker receiver and copy its private `data` directory together with `config.json`. [Backup guidance](../README.md#back-up-and-update).
+Back up receiver state first: include the add-on's data in an HA OS backup, or stop the Docker receiver and copy its private `data` directory together with `config.json`. [Backup guidance](https://github.com/Spicynostalgia/ha-taggle/wiki/Configuration-Reference#back-up-and-update).
 
 To delete one mistake, inspect `readings` in Calibration status attributes. For example, a row with `id: 3`, `used: false` and a disagreement `reason` identifies reading **3**, not your transmitter number. In **Developer tools → Actions → MQTT: Publish**, send `{"delete":3}` to `taggle/123456/reading/set` (substitute your transmitter ID and the actual reading ID), with **retain off**. The remaining readings are solved again; check status, then submit the corrected reading with its actual time. Deleting may remove the solution if insufficient usable readings remain.
 
