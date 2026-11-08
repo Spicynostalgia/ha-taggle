@@ -1,0 +1,24 @@
+{
+  "source": "iq-922200k-g40-3900s.cu8; bounded 1.2-second read",
+  "slice_sha256": "fe9ccf6b0587092eaa66561ea23e5fdf28968ccda7be27a7a44ff0ce875070e9",
+  "sample_rate_msps": 2.4,
+  "centre_mhz": 922.2,
+  "clear_id": "52xxxx",
+  "encrypted_id": "34xxxx",
+  "header_crc_pass": true,
+  "frame_crc_pass": true,
+  "viterbi_corrections": 0,
+  "cli_replayed": true,
+  "privacy": "No raw bits, full IDs, timestamps, ciphertext or cumulative counters published.",
+  "decoder_commit": "05d1dab3c371f863811b89be79d3b9c1d2e8106e",
+  "figures": [
+    "01-band-occupancy.png",
+    "02-single-burst.png",
+    "03-pn-correlation.png",
+    "04-bpsk-constellation.png",
+    "05-fec-and-crcs.png",
+    "06-clear-frame.png",
+    "07-encrypted-frame.png",
+    "08-receiver-log.png"
+  ]
+}

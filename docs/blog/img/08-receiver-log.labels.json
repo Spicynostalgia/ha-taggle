@@ -1,0 +1,3 @@
+[
+  "$ python -m taggle_rx … --input slice.cu8 --scan 1\n# Production CLI replay; IDs masked; timestamp omitted.\n{\n  \"meter_id\": \"52xxxx\",\n  \"snr_median_db\": 21.9,\n  \"signal_level_dbfs\": -47.5\n}\n"
+]
