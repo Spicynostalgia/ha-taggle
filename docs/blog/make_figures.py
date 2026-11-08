@@ -5,8 +5,8 @@ Example (NumPy, SciPy, matplotlib and the decoder's CLI dependencies installed):
   OPENBLAS_NUM_THREADS=2 python make_figures.py --captures /path/to/captures \
     --analysis /path/to/analysis --decoder /path/to/ha-taggle
 
-Only the author’s approved 18-byte frame is shown unmasked. Other meters stay
-masked; no IQ or precise reception timestamp is published.
+The approved clear burst 06 and encrypted burst 08 are shown unmasked.
+No other household’s clear frame or usage is published; source IQ stays private.
 """
 import argparse
 import hashlib
@@ -27,24 +27,6 @@ from scipy import fft, signal
 RATE = 2_400_000
 CENTRE_MHZ = 922.2
 INK, BLUE, GREEN, PURPLE = '#172c3c', '#075e91', '#166846', '#7451a5'
-
-
-def mask_id(value):
-    text = str(int(value))
-    return text[:2] + 'x' * (len(text)-2)
-
-
-def safe_hex(text, encrypted=False):
-    """Keep framing/format/flags only; redact whole ID and every usage field.
-
-    The 20-bit ID crosses byte boundaries, so nibble masking is mandatory.
-    Redact CRC bytes too: truncated header checks can constrain a masked ID.
-    Ciphertext is represented by opaque blocks rather than published bytes.
-    """
-    keep = {0, 1, 9}
-    if not encrypted:
-        keep |= {17, 22, 27}
-    return ''.join(c.upper() if i in keep else 'X' for i, c in enumerate(text))
 
 
 def save(fig, name, out, provenance):
@@ -85,7 +67,9 @@ def main():
     clear = next(f for f in frames if f['id_decimal']==527814
                  and round(f['sample_offset']/RATE, 2)==595.33)
     assert clear['format_bytes']==18 and round(clear['snr_median_db'], 1)==30.7
-    encrypted = next(f for f in frames if f['format_bytes']==24)
+    encrypted = next(f for f in frames if f['id_decimal']==766910
+                     and abs(f['sample_offset']/RATE - 1406.47) < .02)
+    assert encrypted['format_bytes']==24
     source = args.captures/'bursts/burst06_595.33s.cu8'
     # The archived clip starts 0.5 s before the burst. Read 1.2 s only.
     with source.open('rb') as stream:
@@ -112,6 +96,10 @@ def main():
     encrypted_air = np.unpackbits(np.frombuffer(bytes.fromhex(encrypted['on_air_bits_hex']),np.uint8))[:encrypted['symbols']]
     encrypted_decoded = decode_frame(encrypted_air)
     assert encrypted_decoded['encrypted'] and 'counts' not in encrypted_decoded
+    encrypted_plain, encrypted_errors = convolution_decode_viterbi(encrypted_air[104:])
+    assert np.packbits(encrypted_plain).tobytes().hex() == encrypted['decoded_frame_hex']
+    assert encrypted_errors == encrypted['fec_errors'] == 0
+    assert np.array_equal(convolution_encode(encrypted_plain), encrypted_air[104:])
     prov = 'Author’s own meter 527814 / 0x80DC6, shown with permission; 18 bytes, SNR 30.7 dB. 2.4 MS/s, 922.2 MHz centre.'
 
     # 1: full-band occupancy from measured survey bins, plus actual burst spectrum.
@@ -181,7 +169,7 @@ def main():
                xlim=(-1.7,1.7),ylim=(-1.7,1.7),aspect='equal')
     save(fig,'04-bpsk-constellation',args.out,prov+' Before = pre-Costas symbol projections; already coarse-carrier corrected.')
 
-    # 5: actual FEC result and checks. No raw coded bits that could reveal IDs.
+    # 5: actual FEC result and checks for the approved clear frame.
     fig,ax=plt.subplots(figsize=(10,4.8)); ax.set_axis_off()
     box(ax,.03,.68,.25,.23,'392 air symbols','104 preamble + 288 coded')
     box(ax,.37,.68,.25,.23,'Rate 1/2, K = 7','Viterbi → 144 bits')
@@ -193,20 +181,20 @@ def main():
     ax.text(.5,.03,'Sync C0 and zero tail verified · author’s meter 527814 / 0x80DC6',ha='center',fontsize=10)
     save(fig,'05-fec-and-crcs',args.out,prov+' Viterbi explicitly rerun; production exact-inversion path also passes.')
 
-    # 6/7: publish only the approved clear frame; mask the neighbour’s record.
+    # 6/7: publish the two selected frames in full; never interpret ciphertext.
     def layout(record,name,opaque=False):
-        text=safe_hex(record['decoded_frame_hex'],True) if opaque else record['decoded_frame_hex'].upper()
+        text=record['decoded_frame_hex'].upper()
         fig,ax=plt.subplots(figsize=(10,6.5)); ax.set_axis_off()
-        ax.set_title(('24-byte encrypted frame' if opaque else '18-byte clear frame')+(' · masked neighbour’s record' if opaque else ' · author’s meter, shown with permission'),pad=15)
+        ax.set_title(('24-byte encrypted frame' if opaque else '18-byte clear frame')+(' · burst 08, unmasked' if opaque else ' · author’s meter, shown with permission'),pad=15)
         display=' '.join(text[i:i+2] for i in range(0,len(text),2))
         lines=[display[i:i+35] for i in range(0,len(display),36)]
         for i,line in enumerate(lines):
             ax.text(.04,.91-i*.07,line,fontfamily='DejaVu Sans Mono',fontsize=13)
         if opaque:
-            box(ax,.03,.52,.29,.18,'Header / clear ID',f'C0 · {mask_id(record["id_decimal"])}\nID: bits 8–27',BLUE)
+            box(ax,.03,.52,.29,.18,'Header / clear ID',f'C0 · {record["id_decimal"]} / {record["id_hex"]}\nID: bits 8–27',BLUE)
             box(ax,.36,.52,.28,.18,'Header CRC-8','bits 28–35 · PASS',GREEN)
             box(ax,.68,.52,.29,.18,'Frame CRC / tail','last 2 bytes · PASS',GREEN)
-            box(ax,.03,.23,.61,.22,'Opaque body: bits 36–175','Ciphertext withheld · no usage decoded',PURPLE)
+            box(ax,.03,.23,.61,.22,'Opaque body: bits 36–175','Ciphertext shown · no usage decoded',PURPLE)
             box(ax,.68,.23,.29,.22,'RF diagnostics',f'SNR {record["snr_median_db"]:.1f} dB\n{record["format_bytes"]} bytes · FEC {record["fec_errors"]}',BLUE)
             ax.text(.5,.10,'Clear framing is readable. AES keys are held by the utility.',ha='center',fontsize=11)
         else:
@@ -219,8 +207,8 @@ def main():
             box(ax,.68,.17,.29,.12,'Frame CRC / tail','last 2 bytes · PASS',GREEN)
             ax.text(.5,.09,'Measured counters: 46234, 46223, 46218 · sequence 172 (newest first)',ha='center',fontsize=10)
             ax.text(.5,.045,'Hourly deltas: (46234 − 46223) mod 65536 = 11; (46223 − 46218) mod 65536 = 5',ha='center',fontsize=10)
-        ax.text(.5,.01,'X masks the neighbour’s ID, checksums and body.' if opaque else 'Full 18-byte frame shown with permission. Nibbles indexed from zero.',ha='center',fontsize=9)
-        save(fig,name,args.out,'Neighbour’s encrypted frame; ID, checksums and ciphertext masked.' if opaque else prov+' Full measured frame and counters.')
+        ax.text(.5,.01,'Full ciphertext and clear ID shown. Cipher mode and body subfields unknown.' if opaque else 'Full 18-byte frame shown with permission. Nibbles indexed from zero.',ha='center',fontsize=9)
+        save(fig,name,args.out,'Encrypted burst 08; full ID 766910 / 0xBB3BE, checksums and ciphertext shown; usage unreadable.' if opaque else prov+' Full measured frame and counters.')
     layout(clear,'06-clear-frame')
     layout(encrypted,'07-encrypted-frame',True)
 
@@ -258,14 +246,20 @@ def main():
         'sample_rate_msps':2.4,'centre_mhz':922.2,
         'clear_id':clear['id_decimal'],'clear_id_hex':clear['id_hex'],
         'clear_frame_hex':clear['decoded_frame_hex'],'counts':frame['counts'],
-        'archive_snr_median_db':round(clear['snr_median_db'],1),'encrypted_id':mask_id(encrypted['id_decimal']),
+        'archive_snr_median_db':round(clear['snr_median_db'],1),'encrypted_id':encrypted['id_decimal'],
+        'encrypted_id_hex':encrypted['id_hex'],
+        'encrypted_frame_hex':encrypted['decoded_frame_hex'],
+        'encrypted_source':'bursts/burst08_1406.47s.cu8',
+        'clear_rf':{k:clear[k] for k in ('carrier_offset_hz','code_period_samples','snr_median_db','raw_coded_bits_hex','fec_errors')},
+        'encrypted_rf':{k:encrypted[k] for k in ('carrier_offset_hz','code_period_samples','snr_median_db','fec_errors')},
+        'tool_screenshots':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(args.out.glob('*.png')) if p.name.startswith(('waterfall-', 'urh-'))},
         'header_crc_pass':bool(header_ok),'frame_crc_pass':bool(frame_ok),
         'viterbi_corrections':int(errors),'cli_replayed':True,
-        'privacy':'Author’s own frame, ID and counters shown with permission for this post only. Other IDs and ciphertext masked; timestamps omitted.',
+        'privacy':'Author’s own frame, ID and counters shown with permission for this post only. Encrypted burst 08 ID and ciphertext also shown unmasked; no other clear frames or usage. Log timestamp omitted.',
         'decoder_commit':subprocess.check_output(['git','-C',str(args.decoder),'rev-parse','HEAD'],text=True).strip(),
-        'figures':[p.name for p in sorted(args.out.glob('*.png'))]}
+        'figures':[p.name for p in sorted(args.out.glob('[0-9]*.png'))]}
     (args.out/'provenance.json').write_text(json.dumps(report,indent=2)+'\n')
-    print('Rendered eight figures with only the author’s frame unmasked; real CLI replay and both CRC checks passed.')
+    print('Rendered eight figures with the two approved frames unmasked; real CLI replay and both CRC checks passed.')
 
 
 if __name__=='__main__':

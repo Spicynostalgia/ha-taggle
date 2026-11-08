@@ -1,18 +1,18 @@
 [
-  "C0 XX XX XX X5 XX XX XX XX XX XX XX",
-  "XX XX XX XX XX XX XX XX XX XX XX XX",
+  "C0 BB 3B EA F5 FA 2E E8 4A 43 CF D6",
+  "71 37 61 AD 97 92 5F 7B 24 D1 6A 00",
   "Header / clear ID",
-  "C0 · 34xxxx\nID: bits 8–27",
+  "C0 · 766910 / 0xBB3BE\nID: bits 8–27",
   "Header CRC-8",
   "bits 28–35 · PASS",
   "Frame CRC / tail",
   "last 2 bytes · PASS",
   "Opaque body: bits 36–175",
-  "Ciphertext withheld · no usage decoded",
+  "Ciphertext shown · no usage decoded",
   "RF diagnostics",
-  "SNR 20.5 dB\n24 bytes · FEC 0",
+  "SNR 22.1 dB\n24 bytes · FEC 0",
   "Clear framing is readable. AES keys are held by the utility.",
-  "X masks the neighbour’s ID, checksums and body.",
+  "Full ciphertext and clear ID shown. Cipher mode and body subfields unknown.",
   "0.0",
   "0.0",
   "0.2",
@@ -25,5 +25,5 @@
   "0.8",
   "1.0",
   "1.0",
-  "24-byte encrypted frame · masked neighbour’s record"
+  "24-byte encrypted frame · burst 08, unmasked"
 ]

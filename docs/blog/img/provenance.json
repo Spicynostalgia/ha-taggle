@@ -12,13 +12,35 @@
     46218
   ],
   "archive_snr_median_db": 30.7,
-  "encrypted_id": "34xxxx",
+  "encrypted_id": 766910,
+  "encrypted_id_hex": "0xBB3BE",
+  "encrypted_frame_hex": "c0bb3beaf5fa2ee84a43cfd6713761ad97925f7b24d16a00",
+  "encrypted_source": "bursts/burst08_1406.47s.cu8",
+  "clear_rf": {
+    "carrier_offset_hz": -207517.0409777608,
+    "code_period_samples": 2046.6294635052332,
+    "snr_median_db": 30.68218503144905,
+    "raw_coded_bits_hex": "e8e7df2ceb736ddce2ed6ade8627eb953e73ad2567826d6d2564ca6add2564feea9c2bb0",
+    "fec_errors": 0
+  },
+  "encrypted_rf": {
+    "carrier_offset_hz": -205089.43634903096,
+    "code_period_samples": 2046.6241032761573,
+    "snr_median_db": 22.064547334253586,
+    "fec_errors": 0
+  },
+  "tool_screenshots": {
+    "urh-clear-burst06.png": "959be7447641bb838933337f3129d02bf9e75fb882c2a5eeb3f9f2704b5fea70",
+    "urh-encrypted-burst08.png": "a9eece6c0e1435c5fbb38ab92325123db13b921635284fd7d22fcb64912146b9",
+    "waterfall-clear-burst06.png": "e0d4b03c6cddcb9d0a0d3fb4463a8768ff1eb3b101f1e168292a3a5444706e6c",
+    "waterfall-encrypted-burst08.png": "38ed16d068d79940eb4b29eb1e02cdf66d8c35fb524bab5a003518e03ee57e46"
+  },
   "header_crc_pass": true,
   "frame_crc_pass": true,
   "viterbi_corrections": 0,
   "cli_replayed": true,
-  "privacy": "Author\u2019s own frame, ID and counters shown with permission for this post only. Other IDs and ciphertext masked; timestamps omitted.",
-  "decoder_commit": "9287246b86d6213453b7944ce1d9e1b5302c6d9c",
+  "privacy": "Author\u2019s own frame, ID and counters shown with permission for this post only. Encrypted burst 08 ID and ciphertext also shown unmasked; no other clear frames or usage. Log timestamp omitted.",
+  "decoder_commit": "53bd892d52a65d527d01084187f0c3751d973268",
   "figures": [
     "01-band-occupancy.png",
     "02-single-burst.png",
