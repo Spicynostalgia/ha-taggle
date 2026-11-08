@@ -149,7 +149,7 @@ After calibration, open **Settings → Dashboards → Energy → Water**. Select
 
 [All troubleshooting](https://github.com/Spicynostalgia/ha-taggle/wiki/Troubleshooting) · [FAQ](https://github.com/Spicynostalgia/ha-taggle/wiki/FAQ) · [Back up and update](https://github.com/Spicynostalgia/ha-taggle/wiki/Configuration-Reference#back-up-and-update).
 
-## How we decoded it
+## How I decoded it
 
 [Decoding Taggle at 922 MHz](docs/blog/decoding-taggle-922mhz.md) · [Protocol specification](docs/PROTOCOL.md) · [Research and prior art](https://github.com/Spicynostalgia/ha-taggle/wiki/Research-and-Prior-Art).
 
