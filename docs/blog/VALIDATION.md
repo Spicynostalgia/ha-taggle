@@ -1,7 +1,7 @@
 # Blog validation — 8 November 2026
 
-The article is 2,145 whitespace-separated words including captions and links.
-The draft pitch body is approximately 151 words. Nothing was pushed, deployed
+The revised article is 1,590 whitespace-separated words including captions, links
+and screenshot placeholders. The draft pitch body is 145 words. Nothing was pushed, deployed
 or emailed. The source capture, research archive and decoder are read-only.
 
 ## Scientific checks
@@ -67,3 +67,26 @@ The brief referred to datasheet links in `docs/PROTOCOL.md`; that file has none.
 We instead located them in the research/wiki sources and verified the actual
 SP3C, Cockatoo and V200HT manufacturer PDFs. The article links those directly
 and distinguishes their product specifications from the observed radio format.
+
+## Plain-language revision — 8 November 2026
+
+- Rewrote the article and pitch in direct language. Retained every original
+  numeric value and external link; reviewed the technical details against the
+  original draft. Captions now have one or two sentences.
+- Added four comment placeholders: inspectrum waterfall and URH bit view for
+  each of a clear and an encrypted burst. No new screenshots were produced here.
+- Verified main/wiki Markdown equality after normalising image paths. Compared
+  the site article's parsed text against independently rendered Markdown:
+  prose and captions match, excluding site metadata and contents navigation.
+  All four screenshot comments also match.
+- All eight original figures remain unchanged and byte-identical across main,
+  wiki, site source and fingerprinted site output. Scientific decoding and
+  browser checks above describe the original figure publication; this copy-only
+  revision did not rerun those checks.
+- Rebuilt the site and reran its verifier: 30 pages pass, with the same transfer
+  budget. Sitemap lastmod already matches the content-edit date, 2026-11-08.
+- Reran the privacy grep over the revised publication and figure sources:
+  16 unique IDs from 20 frames, 51 text/metadata inputs, 32 PNG copies and eight
+  rendered-label sources; zero unmasked decimal/hex IDs or raw frame/bit dumps.
+- Whitespace checks pass in all three repositories. Only requested publication
+  files and this validation record are committed; unrelated work is untouched.

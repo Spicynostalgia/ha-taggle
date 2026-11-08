@@ -4,20 +4,20 @@ Subject: Decoding Taggle water meters at 922 MHz with an RTL-SDR
 
 Hi rtl-sdr.com team,
 
-We've written up how we used an RTL-SDR Blog V4 to receive our own Taggle water-meter transmitter in Gladstone, QLD, and turn its hourly pulse counts into local MQTT and Home Assistant readings.
+We used an RTL-SDR Blog V4 to read our own Taggle water meter in Gladstone, QLD. Our write-up shows how we turned its hourly pulse counts into local MQTT and Home Assistant readings.
 
-The interesting part is the receive chain: a noise-like DSSS burst near 922 MHz, a recovered 4095-chip PN sequence observed through a 2.4 MHz passband, BPSK carrier tracking, rate-1/2 convolutional decoding and two independent CRC-8 checks. The article follows real IQ through each stage, with reproducible matplotlib figures and an actual receiver replay.
+We follow a real recording from a noise-like burst near 922 MHz to a checked frame. We recover the signal with a 4095-chip pattern seen through a 2.4 MHz passband, track the BPSK carrier, decode the rate-1/2 convolutional code and check two independent CRC-8s. Reproducible matplotlib figures and an actual receiver replay show each step.
 
-It also shows where we stop: real 24-byte encrypted frames expose framing and RF diagnostics, but we do not decrypt usage or search for keys. Every ID and cumulative counter is masked. Only one transmitter is field-verified; this isn't a universal Taggle compatibility claim.
+We also show real 24-byte encrypted frames. We can check framing and RF diagnostics, but we do not decrypt usage or search for keys. Every ID and cumulative counter is masked. We have field-verified one transmitter; yours may differ.
 
 Would this suit a reader project feature? The MIT source, full article and setup guide are linked below.
 
 ## Image picks
 
-- [Band survey and confirmed-burst spectrum](img/01-band-occupancy.png): the RF starting point and its limits.
-- [PN correlation](img/03-pn-correlation.png): the 4095-chip match from real IQ.
-- [Before/after BPSK constellation](img/04-bpsk-constellation.png): measured symbol recovery.
-- [Encrypted-frame boundary](img/07-encrypted-frame.png): readable header, opaque usage body.
+- [Band survey and confirmed-burst spectrum](img/01-band-occupancy.png): where we looked for the signal.
+- [PN correlation](img/03-pn-correlation.png): where the real recording matches the 4095-chip pattern.
+- [Before/after BPSK constellation](img/04-bpsk-constellation.png): how carrier tracking aligns the measured symbols.
+- [Encrypted-frame boundary](img/07-encrypted-frame.png): the header we can read and the body we cannot.
 
 ## Links to include
 
