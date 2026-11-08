@@ -1,0 +1,56 @@
+{
+  "sources": {
+    "dan_hours.json": {
+      "sha256": "bc80ce6c662c8496ac11604f02ebc01e63af9c2fe530da8b79754ecb92df0946"
+    },
+    "calibration.json": {
+      "sha256": "b76214205e621e586a39b180a64a903537770d690b0f6bbbe094127bdbfe3678"
+    },
+    "energy_status.json": {
+      "sha256": "d1aed23309c6a0131d7d7258f969e86236d04d33e6de6ae8220f109cb9a5ad74"
+    }
+  },
+  "timezone": "Australia/Brisbane",
+  "hourly_intervals": 146,
+  "hourly_utility_series_supplied": false,
+  "daily_ratios": [
+    {
+      "date": "2026-11-03",
+      "raw_units": 216,
+      "mywater_litres": 1082.676,
+      "relative_error": 0.284537,
+      "agrees": false,
+      "litres_per_pulse": 5.012388888888888
+    },
+    {
+      "date": "2026-11-04",
+      "raw_units": 179,
+      "mywater_litres": 894.99,
+      "relative_error": 0.282756,
+      "agrees": false,
+      "litres_per_pulse": 4.999944134078213
+    },
+    {
+      "date": "2026-11-05",
+      "raw_units": 136,
+      "mywater_litres": 680.682,
+      "relative_error": 0.283482,
+      "agrees": false,
+      "litres_per_pulse": 5.005014705882353
+    }
+  ],
+  "annotation_precision": "litres rounded to 0.1 L before division; ratio shown to 0.01 L/pulse",
+  "energy_overlap_dates": [
+    "2026-11-03",
+    "2026-11-04",
+    "2026-11-05",
+    "2026-11-06"
+  ],
+  "energy_filter": "radio_hours == 24, filled_hours == pending_hours == 0, utility present",
+  "energy_radio_field": "radio_litres",
+  "figures": {
+    "09-calibration-hours.png": "e491ba7012627bf8deb1ab5fbe11191126cd7a3e60e605e341e28dc99983c2a0",
+    "10-calibration-days.png": "4494f8194a04f3da42a8cd931f1e29216623dc19ac033f44acd82612d35fd65e",
+    "11-calibration-hourly-fit.png": "b34bcd7b26d2530ad135cc5164b9b0191db88d70760247a191d569fb5cf335d3"
+  }
+}

@@ -16,18 +16,33 @@ import tempfile
 from PIL import Image
 
 
+# Permission is scoped to these exact captures, not every frame from either ID.
+APPROVED_FRAMES = {
+    527814: 'c080dc6e4f1ac0d301b49a1b48f1b48a5d00',
+    766910: 'c0bb3beaf5fa2ee84a43cfd6713761ad97925f7b24d16a00',
+}
+
+
+def approved(frame):
+    return APPROVED_FRAMES.get(frame['id_decimal']) == frame['decoded_frame_hex'].lower()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--frames', required=True, type=Path)
     parser.add_argument('--paths', nargs='+', required=True, type=Path)
     args = parser.parse_args()
     frames = [json.loads(line) for line in args.frames.open()]
-    identifiers = {str(f['id_decimal']) for f in frames}
-    hex_ids = {f['id_hex'].lower().removeprefix('0x').zfill(5) for f in frames}
-    # Whole raw frames and coded dumps are also unacceptable publication output.
+    private_frames = [f for f in frames if f['id_decimal'] not in APPROVED_FRAMES]
+    identifiers = {str(f['id_decimal']) for f in private_frames}
+    hex_ids = {f['id_hex'].lower().removeprefix('0x').zfill(5) for f in private_frames}
     forbidden = identifiers | hex_ids
-    forbidden |= {str(f[key]).lower() for f in frames for key in
-                  ('decoded_frame_hex','raw_coded_bits_hex','on_air_bits_hex')}
+    # Full coded/on-air bits are visible in the two unblurred URH screenshots.
+    # All other captures remain private, including other frames from allowed IDs.
+    forbidden |= {str(f[key]).lower() for f in frames if not approved(f) for key in
+                  ('decoded_frame_hex', 'raw_coded_bits_hex', 'on_air_bits_hex')}
+    forbidden |= {f['opaque_body_hex'].lower() for f in frames
+                  if not approved(f) and f.get('opaque_body_hex')}
     files=set()
     for path in args.paths:
         files.update(p for p in path.rglob('*') if p.is_file()) if path.is_dir() else files.add(path)
@@ -57,10 +72,11 @@ def main():
     if failures:
         raise SystemExit('FAIL: private identifiers or payload found in: '+', '.join(failures))
     label_files=[p for p in files if p.name.endswith('.labels.json')]
-    assert len(label_files)==8, 'include the eight figure label-source files in this audit'
-    print(f'PASS: {len(identifiers)} unique IDs from {len(frames)} real frames; '
-          f'{len(texts)} text/metadata inputs, {images} PNGs, eight rendered-label sources; '
-          'zero unmasked decimal/hex IDs or raw frame/bit dumps.')
+    assert len(label_files)==11, 'include all eleven radio and calibration figure label-source files in this audit'
+    print(f'PASS: {len(identifiers)} private IDs from {len(frames)} real frames; '
+          f'{len(texts)} text/metadata inputs, {images} PNGs, {len(label_files)} rendered-label sources; '
+          'only IDs 527814/0x80DC6 and 766910/0xBB3BE plus their two selected frames allowed; '
+          'zero private ID or frame/bit-dump matches.')
 
 
 if __name__=='__main__':

@@ -1,0 +1,17 @@
+[
+  "The automatic hourly fit was rejected",
+  "3.59 L/pulse",
+  "Zero-intercept ordinary least squares\nClock-hour overlap weighted to radio intervals",
+  "Matched / nonzero hours",
+  "90 / 62",
+  "R²",
+  "0.72",
+  "required ≥ 0.95",
+  "NRMSE",
+  "0.66",
+  "required ≤ 0.12",
+  "RMSE",
+  "23.53 L",
+  "Daily errors at this fit: 28.3–28.5% (limit 10%). Scale left unchanged.",
+  "No hourly utility observations are included in these source files.\nDaily utility totals cannot reconstruct use within :41-to-:41 radio intervals."
+]

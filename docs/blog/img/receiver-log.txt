@@ -1,7 +1,8 @@
-$ python -m taggle_rx … --input slice.cu8 --scan 1
-# Production CLI replay; IDs masked; timestamp omitted.
+# Real CLI replay; JSON reformatted, timestamp omitted.
+# Author’s meter 527814 / 0x80DC6; numeric ID retained.
 {
-  "meter_id": "52xxxx",
-  "snr_median_db": 21.9,
-  "signal_level_dbfs": -47.5
+  "meter_id": 527814,
+  "counts": [46234, 46223, 46218],
+  "snr_median_db": 30.9,
+  "signal_level_dbfs": -40.3
 }

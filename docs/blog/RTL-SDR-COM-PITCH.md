@@ -1,30 +1,31 @@
-# Draft pitch for the maintainer to send
+# Draft pitch to rtl-sdr.com
 
 Subject: Decoding Taggle water meters at 922 MHz with an RTL-SDR
 
 Hi rtl-sdr.com team,
 
-We've written up how we used an RTL-SDR Blog V4 to receive our own Taggle water-meter transmitter in Gladstone, QLD, and turn its hourly pulse counts into local MQTT and Home Assistant readings.
+I decoded my Taggle water meter in Gladstone, QLD, with an RTL-SDR Blog V4 and Python, then sent hourly readings to MQTT and Home Assistant. The unusual part is the DSSS/BPSK signal: each symbol carries a 4095-chip spreading pattern.
 
-The interesting part is the receive chain: a noise-like DSSS burst near 922 MHz, a recovered 4095-chip PN sequence observed through a 2.4 MHz passband, BPSK carrier tracking, rate-1/2 convolutional decoding and two independent CRC-8 checks. The article follows real IQ through each stage, with reproducible matplotlib figures and an actual receiver replay.
+The write-up follows one real frame from IQ to litres: finding the carrier with a squared-BPSK screen and known PN code, removing a −208 kHz offset, despreading, tracking BPSK, undoing the rate-1/2 convolutional code and checking both CRC-8s. It shows the coded pairs, all 18 decoded bytes, and counter differences worth 55 L and 25 L on my calibrated V100. Fifteen unblurred figures include inspectrum waterfalls, Universal Radio Hacker (URH) views of despread symbols, measured matplotlib plots and calibration checks.
 
-It also shows where we stop: real 24-byte encrypted frames expose framing and RF diagnostics, but we do not decrypt usage or search for keys. Every ID and cumulative counter is masked. Only one transmitter is field-verified; this isn't a universal Taggle compatibility claim.
+A 24-byte example shows its clear ID and opaque body, classified as encrypted by length, in full, but no usage. The project does not attempt decryption or key search. Only one transmitter is field-verified; other installations remain unverified. Readers can verify the published bits without private IQ; exact figure reproduction needs my private dataset. The setup covers the fixed channel and disabling neighbourhood processing for own-meter use. I built it with [AI coding assistants](https://github.com/Spicynostalgia/ha-taggle/wiki/AI-Disclosure). The article, MIT source and setup links are below if this suits a reader project feature.
 
-Would this suit a reader project feature? The MIT source, full article and setup guide are linked below.
+Thanks,
+Dan
 
 ## Image picks
 
-- [Band survey and confirmed-burst spectrum](img/01-band-occupancy.png): the RF starting point and its limits.
-- [PN correlation](img/03-pn-correlation.png): the 4095-chip match from real IQ.
-- [Before/after BPSK constellation](img/04-bpsk-constellation.png): measured symbol recovery.
-- [Encrypted-frame boundary](img/07-encrypted-frame.png): readable header, opaque usage body.
+- [Clear burst in inspectrum](img/waterfall-clear-burst06.png): full receiver passband, MHz and time axes from real IQ.
+- [Clear frame in Universal Radio Hacker](img/urh-clear-burst06.png): decoder’s despread stream at 20 samples per symbol, all bits unblurred.
+- [Clear-frame layout](img/06-clear-frame.png): my ID, complete hex and measured counters.
+- [Encrypted-frame layout](img/07-encrypted-frame.png): burst 08’s clear ID and opaque body, classified as encrypted, fully visible; usage stays unreadable.
 
-## Links to include
+## Links
 
 - Article: https://ha-taggle.dancloud.au/blog/decoding-taggle/
-- Repository article: https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/decoding-taggle-922mhz.md
-- Source: https://github.com/Spicynostalgia/ha-taggle
-- Wiki article: https://github.com/Spicynostalgia/ha-taggle/wiki/Blog-Decoding-Taggle
+- GitHub edition: https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/decoding-taggle-922mhz.md
+- Wiki edition: https://github.com/Spicynostalgia/ha-taggle/wiki/Blog-Decoding-Taggle
+- MIT source: https://github.com/Spicynostalgia/ha-taggle
 - Quick start: https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started
 
-These article URLs are intended destinations. This task commits locally only; confirm that the article is published before sending. No email has been sent.
+Draft only; I have not sent this pitch, pushed this revision or deployed it.

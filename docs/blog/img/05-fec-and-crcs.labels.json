@@ -10,5 +10,5 @@
   "Frame CRC-8: PASS",
   "bits [8:N−16] → stored CRC",
   "Polynomial 0x07 · init 0 · no reflection · xorout 0",
-  "Sync C0 and zero tail also verified. Payload bits withheld for privacy."
+  "Sync C0 and zero tail verified · author’s meter 527814 / 0x80DC6"
 ]

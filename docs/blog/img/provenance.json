@@ -1,16 +1,46 @@
 {
-  "source": "iq-922200k-g40-3900s.cu8; bounded 1.2-second read",
-  "slice_sha256": "fe9ccf6b0587092eaa66561ea23e5fdf28968ccda7be27a7a44ff0ce875070e9",
+  "source": "bursts/burst06_595.33s.cu8; first 1.2 seconds",
+  "slice_sha256": "7595d1a40ac6e3a96728ed1868eabe3736a1a5dcf33457616463788d310399ac",
   "sample_rate_msps": 2.4,
   "centre_mhz": 922.2,
-  "clear_id": "52xxxx",
-  "encrypted_id": "34xxxx",
+  "clear_id": 527814,
+  "clear_id_hex": "0x80DC6",
+  "clear_frame_hex": "c080dc6e4f1ac0d301b49a1b48f1b48a5d00",
+  "counts": [
+    46234,
+    46223,
+    46218
+  ],
+  "archive_snr_median_db": 30.7,
+  "encrypted_id": 766910,
+  "encrypted_id_hex": "0xBB3BE",
+  "encrypted_frame_hex": "c0bb3beaf5fa2ee84a43cfd6713761ad97925f7b24d16a00",
+  "encrypted_source": "bursts/burst08_1406.47s.cu8",
+  "clear_rf": {
+    "carrier_offset_hz": -207517.0409777608,
+    "code_period_samples": 2046.6294635052332,
+    "snr_median_db": 30.68218503144905,
+    "raw_coded_bits_hex": "e8e7df2ceb736ddce2ed6ade8627eb953e73ad2567826d6d2564ca6add2564feea9c2bb0",
+    "fec_errors": 0
+  },
+  "encrypted_rf": {
+    "carrier_offset_hz": -205089.43634903096,
+    "code_period_samples": 2046.6241032761573,
+    "snr_median_db": 22.064547334253586,
+    "fec_errors": 0
+  },
+  "tool_screenshots": {
+    "urh-clear-burst06.png": "959be7447641bb838933337f3129d02bf9e75fb882c2a5eeb3f9f2704b5fea70",
+    "urh-encrypted-burst08.png": "606daea198fbc2e15679ee4c0cfc3e9b93ef041dbeea9fd66edb3617e2fb2195",
+    "waterfall-clear-burst06.png": "ffeb550c36c19dc95ff6de8a9a8a7790f357f6af5ea31a7965f0fcf86e1f8ad1",
+    "waterfall-encrypted-burst08.png": "ec3eab72e760ca6e8411437bab59671109d044569f9cc499e48247ed624589a5"
+  },
   "header_crc_pass": true,
   "frame_crc_pass": true,
   "viterbi_corrections": 0,
   "cli_replayed": true,
-  "privacy": "No raw bits, full IDs, timestamps, ciphertext or cumulative counters published.",
-  "decoder_commit": "05d1dab3c371f863811b89be79d3b9c1d2e8106e",
+  "privacy": "Author\u2019s own frame, ID and counters shown with permission for this post only. Encrypted burst 08 ID and ciphertext also shown unmasked; no other clear frames or usage. Log timestamp omitted.",
+  "decoder_commit": "343580b6b4f85d910a5322bde602b43af1b2671e",
   "figures": [
     "01-band-occupancy.png",
     "02-single-burst.png",
@@ -19,6 +49,9 @@
     "05-fec-and-crcs.png",
     "06-clear-frame.png",
     "07-encrypted-frame.png",
-    "08-receiver-log.png"
+    "08-receiver-log.png",
+    "09-calibration-hours.png",
+    "10-calibration-days.png",
+    "11-calibration-hourly-fit.png"
   ]
 }
