@@ -1,0 +1,14 @@
+[
+  "392 air symbols",
+  "104 preamble + 288 coded",
+  "Rate 1/2, K = 7",
+  "Viterbi → 144 bits",
+  "18-byte frame",
+  "0 corrected coded bits",
+  "Header CRC-8: PASS",
+  "bits [8:36] → residue 0",
+  "Frame CRC-8: PASS",
+  "bits [8:N−16] → stored CRC",
+  "Polynomial 0x07 · init 0 · no reflection · xorout 0",
+  "Sync C0 and zero tail also verified. Payload bits withheld for privacy."
+]

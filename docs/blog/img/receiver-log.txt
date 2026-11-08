@@ -1,0 +1,7 @@
+$ python -m taggle_rx … --input slice.cu8 --scan 1
+# Production CLI replay; IDs masked; timestamp omitted.
+{
+  "meter_id": "52xxxx",
+  "snr_median_db": 21.9,
+  "signal_level_dbfs": -47.5
+}
