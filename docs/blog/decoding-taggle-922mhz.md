@@ -8,11 +8,11 @@ Here's the result from replaying my recording through the production receiver: m
 
 ![Production receiver scan output for my meter.](img/08-receiver-log.png)
 
-*Figure 1. Real CLI replay of the worked clear clip: my ID, counters and RF diagnostics. Replay SNR is 30.9 dB versus 30.7 dB archived. Timestamp omitted; scan mode uses no MQTT broker or persistent state.*
+*Figure 1. Reformatted output from a real CLI replay of the worked clear clip: my numeric ID, counters and RF diagnostics. Replay SNR is 30.9 dB versus 30.7 dB archived. Timestamp omitted; scan mode uses no MQTT broker or persistent state.*
 
 I built the decoder with help from AI coding assistants; the [AI disclosure](https://github.com/Spicynostalgia/ha-taggle/wiki/AI-Disclosure) explains their role in the code and signal analysis.
 
-I have field-tested one transmitter, producing 18-byte frames, on my V100; the transmitter model is still unknown. That establishes one working setup, not compatibility across Taggle installations, councils or current transmitters. The worked example is my meter, ID `527814` (`0x80DC6`), shown in full. I also show one encrypted frame's clear ID and ciphertext unmasked; no other household's clear frame or usage is included.
+I have field-tested one transmitter, producing 18-byte frames, on my V100; the transmitter model is still unknown. That establishes one working setup, not compatibility across Taggle installations, councils or current transmitters. The worked example is my meter, ID `527814` (`0x80DC6`), shown in full. I also show one frame's clear ID and opaque body, classified as encrypted, unmasked; no other household's clear frame or usage is included.
 
 ## Finding the right burst
 
@@ -22,7 +22,7 @@ I started by surveying 915–928 MHz and found my signal near 922 MHz. Picking t
 
 *Figure 2. Occupancy above the temporal median by at least 6 dB during the available 13.6-minute survey prefix, above the confirmed burst’s spectrum. I hopped frequencies; this is not simultaneous 13 MHz IQ or a meter census.*
 
-The [SP3C datasheet](https://taggle.com/wp-content/uploads/2025/12/Datasheet-SP3C-002.pdf) describes Byron radio, one-way DSSS and generally hourly reporting, without identifying my transmitter. The signal I received uses DSSS/BPSK, not LoRa or LoRaWAN.
+The [SP3C datasheet](https://taggle.com/wp-content/uploads/2025/12/Datasheet-SP3C-002.pdf) describes Byron radio, one-way DSSS and generally hourly reporting, without identifying my transmitter. The signal I received uses DSSS/BPSK, not LoRa or LoRaWAN. A chip is one element of the spreading pattern; PN means pseudonoise, a deterministic sequence that looks noise-like.
 
 My research archive holds 20 decoded frames: twelve 18-byte clear, one 21-byte clear and seven 24-byte classified as encrypted. The production 21-byte and encrypted paths have only generated tests as deployment evidence.
 
@@ -53,11 +53,13 @@ And here’s the same burst in inspectrum, with the full receiver passband visib
 
 ![My clear burst in inspectrum with MHz and time axes.](img/waterfall-clear-burst06.png)
 
-*Figure 4. Made with inspectrum from the real burst 06 IQ: the full receiver passband, absolute MHz and time since clip start. The clip begins 594.83 seconds into the recording; the burst starts about half a second later.*
+*Figure 4. Made with inspectrum from the real burst 06 IQ: the full receiver passband, absolute MHz and time since clip start. The clip begins 594.83 seconds into the recording; the burst starts about half a second later. This 2.4 MHz view does not measure the waveform's full bandwidth.*
 
 ### 2. Mix the carrier to baseband
 
-I first needed to remove the carrier offset so its rapid rotation would not cancel the correlation. The opposite rotation moves the carrier to zero, ready for correlation.
+I first needed to find the carrier. The production detector squares the complex BPSK signal: ideally that removes the sign changes and exposes a component at twice the carrier offset. It searches near the expected channel, halves that frequency, then checks a cyclic projection against the generated PN waveform before `recover_dsss` learns and refines its templates. It does not need a per-capture frequency answer or a saved waveform from my meter.
+
+I then needed to remove the carrier offset so its rapid rotation would not cancel the correlation. The opposite rotation moves the carrier to zero, ready for correlation.
 > **Details for the curious.**
 >
 > After subtracting the complex mean, `recover_dsss` multiplies sample `n` by `exp(−j·2π·f_offset·n/2400000)`. For the archived decode, `f_offset = −207517.04098 Hz`. Acquisition refits this value on replay, so a new run need not reproduce every RF diagnostic digit.
@@ -77,9 +79,11 @@ The useful clue was the repeating spreading pattern. Correlating with it let the
 >
 > At 2.4 MS/s I retain only part of the RF bandwidth, about half a complex sample per chip. Interpolation does not recover missing bandwidth. The theoretical full-code processing gain is `10·log10(4095) ≈ 36.1 dB`: why a burst buried below the broadband noise can become a strong symbol stream.
 >
+> Rectangular BPSK chips would give an expected unfiltered first-null-to-first-null width of about `2 × 4.802 = 9.6 MHz`. That is an expectation under a pulse-shape assumption, not a measurement of this transmitter's occupied bandwidth. RF rates and absolute frequencies here use the nominal ADC clock.
+>
 > The measured median despread correlation SNR for my burst is **30.682 dB**, about 31 dB. The ideal 36 dB is not a measured gain for this partial-band receiver; I cannot subtract it to claim an exact pre-despread SNR.
 >
-> The sequence recovered in the analysis is degree-12, with forward polynomial `x^12 + x^9 + x^6 + x^5 + x^2 + x + 1` (`0x1267`). Starting at state 1, output its least significant bit, shift right, and insert the parity of `state & 0x267` at bit 11; one maps to minus one. The production receiver generates it algebraically, without per-meter captured bits.
+> The sequence recovered during earlier analysis is degree-12, with forward polynomial `x^12 + x^9 + x^6 + x^5 + x^2 + x + 1` (`0x1267`). That polynomial is now a receiver constant; this post replays the recovered protocol rather than deriving the polynomial. Starting at state 1, output its least significant bit, shift right, and insert the parity of `state & 0x267` at bit 11; one maps to minus one. The production receiver generates it algebraically, without per-meter captured bits.
 
 ### 4. Track BPSK phase and choose polarity
 
@@ -90,7 +94,7 @@ Despreading gave me symbols, but I still needed to track the remaining phase rot
 *Figure 6. Same amplitude scale throughout. “Before” already includes coarse carrier removal and despreading; “after” adds residual carrier and phase tracking.*
 > **Details for the curious.**
 >
-> The second-order Costas loop corrects residual phase and frequency, then reads a negative real component as one. Its squared phase error cannot distinguish phases π apart: choosing the other branch swaps every bit.
+> The second-order Costas loop corrects residual phase and frequency, then reads a negative real component as one. The phase detector squares the derotated complex symbol, so it cannot distinguish phases π apart; choosing the other branch swaps every bit.
 >
 > The constant preamble supplies the polarity reference. The implementation takes the first symbol as the positive branch, making the preamble zero under the chosen convention; it does not feed assumed payload bits into tracking. The decoder checks the 104-symbol preamble, permitting at most four ones, then independently checks framing and CRCs.
 
@@ -176,7 +180,7 @@ Calibrate your own pulse size against the dial before converting.
 
 > **Details for the curious.**
 >
-> I compute differences modulo **65536** to handle counter wrap. The hourly sequence wraps modulo 256; three counters preserve two intervals and can bridge one missed reception when sequence and elapsed time agree. Longer gaps or inconsistent sequences require a new baseline.
+> I compute differences modulo **65536** to handle counter wrap. The hourly sequence wraps modulo 256. Three counters can recover all intervals across one missed hourly reception when sequence and elapsed time agree. After longer gaps, the receiver still recovers the newest two intervals, but older hours remain missing; absolute-reading calibration may need another dial reading. Inconsistent sequences invalidate the previous baseline.
 >
 > Its arbitrary starting offset means `46234 × 5` is not the dial reading. Hourly pulses cannot supply instantaneous flow or immediate leak alarms.
 
@@ -224,11 +228,11 @@ I could apply the same radio decoding and outer checks to burst 08, in the clip 
 C0BB3BEAF5FA2EE84A43CFD6713761AD97925F7B24D16A00
 ```
 
-The encrypted format’s body, bits 36–175, is `5FA2EE84A43CFD6713761AD97925F7B24D1`. I show it unmasked without interpreting it as counters or assigning cryptographic subfields. Here’s the frame layout, with the clear header separate from the opaque body:
+The opaque body, bits 36–175, is `5FA2EE84A43CFD6713761AD97925F7B24D1`. The decoder classifies a 24-byte frame as encrypted based on its length. I show the body unmasked without interpreting it as counters or assigning cryptographic subfields. Here’s the frame layout, with the clear header separate from the opaque body:
 
-![Unmasked encrypted frame, clear header and opaque ciphertext body.](img/07-encrypted-frame.png)
+![Unmasked frame, clear header and opaque body, classified as encrypted.](img/07-encrypted-frame.png)
 
-*Figure 13. Burst 08: full ID, ciphertext and outer checks. RF statistics come from reception, not decrypted fields. No usage is readable.*
+*Figure 13. Burst 08: full ID and outer checks alongside the opaque body, classified as encrypted. RF statistics come from reception, not decrypted fields. No usage is readable.*
 
 **Details for the curious — outer checks and RF measurements.**
 
@@ -243,19 +247,19 @@ The encrypted format’s body, bits 36–175, is `5FA2EE84A43CFD6713761AD97925F7
 | Archived despread SNR | 30.7 dB | 22.1 dB |
 | Carrier offset | −207517.04 Hz | −205089.44 Hz |
 | Code period | 2046.62946 samples | 2046.62410 samples |
-| Body | Sequence, counters, unknown fields | Opaque ciphertext; usage unreadable |
+| Body | Sequence, counters, unknown fields | Opaque body, classified as encrypted; usage unreadable |
 
 Here’s encrypted burst 08 in inspectrum; it still looks like a faint radio burst:
 
 ![Encrypted burst 08 in inspectrum with MHz and time axes.](img/waterfall-encrypted-burst08.png)
 
-*Figure 14. Made with inspectrum from real burst 08 IQ, showing the full receiver passband. The clip starts 1405.97 seconds into the recording; despreading recovers the faint burst at about 22 dB SNR.*
+*Figure 14. Made with inspectrum from real burst 08 IQ: opaque body, classified as encrypted. The clip starts 1405.97 seconds into the recording; the orange box marks a roughly 0.45-second window, while the 488-symbol frame lasts about 0.416 seconds. Despreading recovers the faint burst at about 22 dB SNR.*
 
-And here are its despread symbols in URH. Recovering coded bits gets me to ciphertext, not to water usage:
+And here are its despread symbols in URH. Recovering coded bits gets me to the opaque body, without revealing water usage:
 
 ![Universal Radio Hacker PSK view of the encrypted burst’s despread symbols.](img/urh-encrypted-burst08.png)
 
-*Figure 15. Made with Universal Radio Hacker from real IQ via the decoder’s despread symbol stream, at 20 samples per symbol. Preamble and coded bits are unblurred. Demodulating ciphertext does not reveal its meaning.*
+*Figure 15. Made with Universal Radio Hacker from real IQ via the decoder’s despread symbol stream, at 20 samples per symbol: clear framing and opaque body, classified as encrypted. Preamble and coded bits are unblurred; demodulation does not reveal the body's meaning.*
 
 The [SP3C](https://taggle.com/wp-content/uploads/2025/12/Datasheet-SP3C-002.pdf) and [Cockatoo](https://myriota.lbcdn.io/uploads/Datasheet-Cockatoo-002.pdf) sheets specify AES-128 for Byron telemetry; the [V200HT sheet](https://taggle.com/wp-content/uploads/2023/05/Datasheet-Honeywell-V200HT-V4.pdf) describes AES-encrypted meter data. I have kept the archive’s encrypted classification. An opaque body and its length do not establish transmitter model, cipher mode, key handling or which bits are cryptographic overhead. I have not reverse-engineered those details.
 > **Details for the curious.**
@@ -268,11 +272,13 @@ This encrypted frame belongs to a neighbour’s meter. **The project does not at
 
 ## Reproducing the figures
 
-For the eight radio-analysis matplotlib figures, I used the read-only research archive and decoder code. [The generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_figures.py) reads the first 1.2 seconds of `burst06_595.33s.cu8`, replays the production CLI and checks the result against the archive. It separately validates encrypted burst 08’s outer framing. The four inspectrum/URH images I used for this post come from real IQ; URH receives despread symbols, not raw RF.
+For the eight radio-analysis matplotlib figures, I used the read-only research archive and decoder code. [The generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_figures.py) reads the first 1.2 seconds of `burst06_595.33s.cu8`, replays the production CLI and checks the result against the archive. It separately validates burst 08’s outer framing. Exact reproduction requires my original private dataset, including `analysis/bins.csv` and the selected archive records; another authorised capture needs changes to the generator. [FIGURES.md](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/FIGURES.md) lists the dependencies and inputs.
+
+The four inspectrum/URH images are supplied, annotated views from real IQ. The generator hashes those existing PNGs; it does not recreate their GUI sessions or annotations. URH receives despread symbols, not raw RF; the reproduction guide records the visible display settings and the limits of the supplied exports.
 
 The three calibration figures use a [separate generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_calibration_figures.py) with `--data-dir` pointing to my read-only calibration snapshots. It plots the radio history, saved daily checks and complete Energy overlap days, and reports the rejected hourly fit without inventing hourly utility data. Both generators save rendered labels and provenance for checking.
 
-I keep the source IQ and full archive private. Reproduction needs authorised recordings and matching analysis inputs. Publication permits exactly these two IDs and their selected frames, including their coded bits; the privacy check rejects other recorded IDs and frame dumps. All fifteen images are unmasked.
+I keep the source IQ and full archive private. For a check without IQ, [verify_bits.py](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/verify_bits.py) runs the two approved on-air bitstreams through FEC, framing, CRCs and clear-counter checks. That verifies the bits-to-fields steps, not RF acquisition, timing or the tool screenshots. Publication permits exactly these two IDs and their selected frames, including their coded bits; the privacy check rejects other recorded IDs and frame dumps. All fifteen images are unmasked.
 
 ## What's next / open questions
 
@@ -282,13 +288,15 @@ If you try your own meter, [report your result](https://github.com/Spicynostalgi
 
 ## Fork it for your own meter
 
-If you want to try this with your own meter, start with my MIT-licensed [repository](https://github.com/Spicynostalgia/ha-taggle) and wiki [Quick start / Getting started](https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started). Set `meter_ids` privately. Set `frequency` to an SDR centre retaining the supported channel, within the implementation’s centre-frequency range and acquisition target; do not copy another region’s channel plan.
+If you want to try this with your own meter, start with my MIT-licensed [repository](https://github.com/Spicynostalgia/ha-taggle), wiki [Quick start / Getting started](https://github.com/Spicynostalgia/ha-taggle/wiki/Getting-Started) and [Python CLI installation](https://github.com/Spicynostalgia/ha-taggle/wiki/Python-CLI#install). In your private `config.json`, set `meter_ids` to your confirmed ID, or `[]` while scanning for it. Set `"neighbourhood": false` and retain `"log_all_meters": false` for this own-meter scope. Neighbourhood processing defaults to on: setting `meter_ids` alone still lets normal reception keep salted-identifier histories and derive usage statistics from other heard clear frames.
 
-The documented scan listens for 65 minutes to allow an hourly transmission opportunity. Stop the normal receiver first; after the scan, press **Ctrl+C** and restart normal reception without `--scan`:
+The working default is centre **922.2 MHz**, sample rate **2.4 MS/s**, with a target carrier near **921.995 MHz**. Accepted centres are **921.700–922.490 MHz**, and acquisition searches **±100 kHz** about that fixed target. Changing `frequency` moves the SDR centre; it does not retarget the decoder across the 915–928 MHz survey band or select another region's channel plan.
+
+The documented scan listens for 65 minutes as an example waiting period for an hourly transmission, not a reception guarantee. Stop the normal receiver first. Scan output can include other heard IDs, even with neighbourhood processing off; keep it private. Success means a CRC-valid ID you confirm as your own, rather than the strongest waterfall peak. Stop an ongoing scan with **Ctrl+C**; once your ID is confirmed and saved in `meter_ids`, start normal reception without `--scan`:
 
 ```sh
 taggle-rx --config config.json --scan 65
 taggle-rx --config config.json
 ```
 
-Calibrate `litres_per_count` against your dial. Configure `mqtt` for your broker and Home Assistant discovery or another MQTT consumer; that choice does not extend RF compatibility. Confirm ownership before using readings. Receive only your own meter, keep recordings and logs private, and redact photos before sharing compatibility results.
+Calibrate `litres_per_count` against your dial. Configure `mqtt` for your broker and Home Assistant discovery or another MQTT consumer; that choice does not extend RF compatibility. RF reception can hear other meters in the passband; the configuration above limits normal history and usage processing to your configured meter. Confirm ownership before using readings, keep recordings and logs private, and redact photos before sharing compatibility results.

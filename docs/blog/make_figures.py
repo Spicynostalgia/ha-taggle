@@ -199,9 +199,9 @@ def main():
             box(ax,.03,.52,.29,.18,'Header / clear ID',f'C0 · {record["id_decimal"]} / {record["id_hex"]}\nID: bits 8–27',BLUE)
             box(ax,.36,.52,.28,.18,'Header CRC-8','bits 28–35 · PASS',GREEN)
             box(ax,.68,.52,.29,.18,'Frame CRC / tail','last 2 bytes · PASS',GREEN)
-            box(ax,.03,.23,.61,.22,'Opaque body: bits 36–175','Ciphertext shown · no usage decoded',PURPLE)
+            box(ax,.03,.23,.61,.22,'Opaque body: bits 36–175','Classified as encrypted · no usage decoded',PURPLE)
             box(ax,.68,.23,.29,.22,'RF diagnostics',f'SNR {record["snr_median_db"]:.1f} dB\n{record["format_bytes"]} bytes · FEC {record["fec_errors"]}',BLUE)
-            ax.text(.5,.10,'Clear framing is readable. AES keys are held by the utility.',ha='center',fontsize=11)
+            ax.text(.5,.10,'No keys available; body not interpreted',ha='center',fontsize=11)
         else:
             box(ax,.03,.60,.28,.16,'Sync / header','C0 · bits 0–7',BLUE)
             box(ax,.36,.60,.28,.16,'ID: '+str(record['id_decimal']),'0x80DC6 · bits 8–27',BLUE)
@@ -212,8 +212,8 @@ def main():
             box(ax,.68,.17,.29,.12,'Frame CRC / tail','last 2 bytes · PASS',GREEN)
             ax.text(.5,.09,'Measured counters: 46234, 46223, 46218 · sequence 172 (newest first)',ha='center',fontsize=10)
             ax.text(.5,.045,'Hourly deltas: (46234 − 46223) mod 65536 = 11; (46223 − 46218) mod 65536 = 5',ha='center',fontsize=10)
-        ax.text(.5,.01,'Full ciphertext and clear ID shown. Cipher mode and body subfields unknown.' if opaque else 'Full 18-byte frame shown with permission. Nibbles indexed from zero.',ha='center',fontsize=9)
-        save(fig,name,args.out,'Encrypted burst 08; full ID 766910 / 0xBB3BE, checksums and ciphertext shown; usage unreadable.' if opaque else prov+' Full measured frame and counters.')
+        ax.text(.5,.01,'Full opaque body and clear ID shown. Cipher mode and body subfields unknown.' if opaque else 'Full 18-byte frame shown with permission. Nibbles indexed from zero.',ha='center',fontsize=9)
+        save(fig,name,args.out,'Burst 08; full ID 766910 / 0xBB3BE, checksums and opaque body, classified as encrypted; usage unreadable.' if opaque else prov+' Full measured frame and counters.')
     layout(clear,'06-clear-frame')
     layout(encrypted,'07-encrypted-frame',True)
 
@@ -222,7 +222,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='taggle-blog-') as temporary:
         temp=Path(temporary)
         (temp/'slice.cu8').write_bytes(raw)
-        (temp/'config.json').write_text(json.dumps({'meter_ids':[clear['id_decimal']]}))
+        (temp/'config.json').write_text(json.dumps({'meter_ids':[clear['id_decimal']],
+            'neighbourhood':False,'log_all_meters':False}))
         run=subprocess.run([sys.executable,'-m','taggle_rx','--config',str(temp/'config.json'),
             '--input',str(temp/'slice.cu8'),'--start-utc','2026-01-01T00:00:00+00:00','--scan','1'],
             env=env,capture_output=True,text=True,check=True)
@@ -231,21 +232,20 @@ def main():
         row=json.loads(line)
         assert row['meter_id']==clear['id_decimal'], 'unexpected meter in approved clip'
         assert row['counts']==frame['counts']
-        row['meter_id']=str(row['meter_id'])
         # Relative time avoids publishing a household's absolute reception time.
         row.pop('time',None)
-        logs.extend(['{',f'  "meter_id": "{row["meter_id"]}",',
+        logs.extend(['{',f'  "meter_id": {row["meter_id"]},',
                      f'  "counts": {row["counts"]},',
                      f'  "snr_median_db": {row["snr_median_db"]},',
                      f'  "signal_level_dbfs": {row["signal_level_dbfs"]}','}'])
     assert logs, 'production CLI must emit a real frame'
-    lines=['$ python -m taggle_rx … --input slice.cu8 --scan 1',
-           '# Author’s meter 527814 / 0x80DC6; timestamp omitted.']+logs
+    lines=['# Real CLI replay; JSON reformatted, timestamp omitted.',
+           '# Author’s meter 527814 / 0x80DC6; numeric ID retained.']+logs
     safe_log='\n'.join(lines)+'\n'
     (args.out/'receiver-log.txt').write_text(safe_log)
     fig,ax=plt.subplots(figsize=(10,3.6)); ax.set_axis_off()
     ax.text(.025,.96,safe_log,va='top',fontfamily='DejaVu Sans Mono',fontsize=12,linespacing=1.55)
-    save(fig,'08-receiver-log',args.out,prov+' Actual production CLI stdout; date is a placeholder, omitted from output.')
+    save(fig,'08-receiver-log',args.out,prov+' Production CLI stdout reformatted; numeric ID retained, timestamp omitted.')
     report={'source':'bursts/burst06_595.33s.cu8; first 1.2 seconds',
         'slice_sha256':hashlib.sha256(raw).hexdigest(),
         'sample_rate_msps':2.4,'centre_mhz':922.2,

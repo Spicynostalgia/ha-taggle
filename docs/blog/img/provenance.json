@@ -31,16 +31,16 @@
   },
   "tool_screenshots": {
     "urh-clear-burst06.png": "959be7447641bb838933337f3129d02bf9e75fb882c2a5eeb3f9f2704b5fea70",
-    "urh-encrypted-burst08.png": "a9eece6c0e1435c5fbb38ab92325123db13b921635284fd7d22fcb64912146b9",
-    "waterfall-clear-burst06.png": "e0d4b03c6cddcb9d0a0d3fb4463a8768ff1eb3b101f1e168292a3a5444706e6c",
-    "waterfall-encrypted-burst08.png": "38ed16d068d79940eb4b29eb1e02cdf66d8c35fb524bab5a003518e03ee57e46"
+    "urh-encrypted-burst08.png": "606daea198fbc2e15679ee4c0cfc3e9b93ef041dbeea9fd66edb3617e2fb2195",
+    "waterfall-clear-burst06.png": "ffeb550c36c19dc95ff6de8a9a8a7790f357f6af5ea31a7965f0fcf86e1f8ad1",
+    "waterfall-encrypted-burst08.png": "ec3eab72e760ca6e8411437bab59671109d044569f9cc499e48247ed624589a5"
   },
   "header_crc_pass": true,
   "frame_crc_pass": true,
   "viterbi_corrections": 0,
   "cli_replayed": true,
   "privacy": "Author\u2019s own frame, ID and counters shown with permission for this post only. Encrypted burst 08 ID and ciphertext also shown unmasked; no other clear frames or usage. Log timestamp omitted.",
-  "decoder_commit": "53bd892d52a65d527d01084187f0c3751d973268",
+  "decoder_commit": "343580b6b4f85d910a5322bde602b43af1b2671e",
   "figures": [
     "01-band-occupancy.png",
     "02-single-burst.png",
@@ -49,6 +49,9 @@
     "05-fec-and-crcs.png",
     "06-clear-frame.png",
     "07-encrypted-frame.png",
-    "08-receiver-log.png"
+    "08-receiver-log.png",
+    "09-calibration-hours.png",
+    "10-calibration-days.png",
+    "11-calibration-hourly-fit.png"
   ]
 }

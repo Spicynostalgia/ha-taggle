@@ -60,17 +60,27 @@ utility backfill. No utility-only history or incomplete day is plotted.
 unapplied zero-intercept hourly fit. No hourly utility observations are supplied,
 so no hourly scatter or inferred sub-day utility profile is generated.
 
+Exact reproduction of the eight radio figures requires the original private
+dataset, not just any authorised recording. The generator hard-codes both
+approved IDs, their recording offsets and expected decode values; it also needs
+the original `analysis/bins.csv` and `analysis/live/full-frames.jsonl`. Adapt
+those selections, checks and plot annotations for a different capture, and audit
+its publication permissions separately. No private input files are distributed.
+
 The radio generator reads only the first 1.2 seconds of
 `captures/bursts/burst06_595.33s.cu8`, independently acquires it and reruns DSSS
 recovery, Viterbi, re-encoding, framing and both CRCs. Its decoded bytes must
 match the selected archive line exactly. The production CLI runs against a
 temporary copy in scan mode, with only Dan’s ID configured, no MQTT connection
-and no persistent state writes. Its log omits the timestamp. Archived SNR is
+and no persistent state writes. Its log omits the timestamp and reformats the
+JSON while retaining the CLI's numeric `meter_id` type. The screenshot is an
+excerpt, without an abbreviated command presented as runnable. Archived SNR is
 30.7 dB; replay SNR is 30.9 dB. Occupancy uses `analysis/bins.csv`.
 
 The encrypted diagram selects the archive record near 1406.47 seconds by ID
 and offset, rather than the first 24-byte record. Its framing is checked without
-interpreting ciphertext. The clip filename and screenshot round its time
+interpreting the opaque body, classified as encrypted by the 24-byte length.
+The clip filename and screenshot round its time
 differently from the fitted sample offset (1406.47828 seconds).
 
 | File | Evidence |
@@ -81,8 +91,8 @@ differently from the fitted sample offset (1406.47828 seconds).
 | `04-bpsk-constellation.png` | Despread projections before/after phase tracking |
 | `05-fec-and-crcs.png` | Viterbi, zero corrections, both CRC checks |
 | `06-clear-frame.png` | Dan’s full clear hex, ID and counters |
-| `07-encrypted-frame.png` | Burst 08’s full header, ID, checksums and ciphertext |
-| `08-receiver-log.png` | Actual production CLI output for Dan’s meter |
+| `07-encrypted-frame.png` | Burst 08’s full header, ID, checksums and opaque body, classified as encrypted |
+| `08-receiver-log.png` | Reformatted production CLI output for Dan’s meter; numeric ID, timestamp omitted |
 | `waterfall-clear-burst06.png` | inspectrum, real clear IQ, full receiver band and MHz/time axes |
 | `urh-clear-burst06.png` | Universal Radio Hacker PSK, real clear despread symbols, full bits |
 | `waterfall-encrypted-burst08.png` | inspectrum, real encrypted IQ, full receiver band and MHz/time axes |
@@ -96,6 +106,39 @@ They do not change the ADC sample rate or add missing RF bandwidth. The tool
 screenshots are supplied artifacts; `make_figures.py` regenerates the eight
 matplotlib figures and hashes the supplied screenshots already in its output
 folder. No screenshot is masked, blurred or recreated by the generator.
+
+The supplied inspectrum views show cu8 input at 2.4 MS/s, centred at 922.2 MHz;
+annotations add absolute MHz and time since clip start. The clear clip starts
+at 594.83 s and the opaque-frame clip at 1405.97 s. The latter rectangle marks
+about 0.45 s; its 488 active symbols last about 0.416 s. The 2.4 MHz slice does
+not measure full transmitter bandwidth: about 9.6 MHz is an expected unfiltered
+null-to-null width only under a rectangular-chip assumption and nominal ADC
+clock. The original inspectrum FFT/window/export and annotation steps were not
+supplied as a repeatable script.
+
+Both URH views visibly use PSK, one bit per symbol, 20 samples per symbol,
+centre 0, noise threshold 0.0354 and a moving-average display filter; the shown
+error tolerances are 5 (clear) and 1 (opaque). They show a constant
+104-symbol preamble followed by coded bits. The source is the decoder's
+despread symbol stream expanded to 20 samples per symbol. A complete original
+symbol-export command and GUI project were not supplied, so these settings
+document the provided views rather than independently reproducing them. PNG
+hashes establish faithful copying, not the original GUI/export process.
+
+For a public check without any private inputs, install the receiver's NumPy
+dependency and run from this repository:
+
+```sh
+python docs/blog/verify_bits.py
+```
+
+`--decoder /path/to/ha-taggle` optionally selects another receiver checkout.
+This example embeds the two approved captured on-air bitstreams, packed
+MSB-first with explicit symbol counts. It verifies production decoding,
+explicit Viterbi decoding with zero corrections, exact re-encoding, preamble,
+sync, tail, both CRCs and the clear counters/deltas. It never interprets the
+opaque body. It tests bits to fields only, without RF acquisition, timing,
+carrier estimation, calibration evidence or screenshot reproduction.
 
 The privacy audit allows exactly the two IDs above and exactly their selected
 decoded/coded/on-air frame dumps. Any other archived frame remains forbidden,
