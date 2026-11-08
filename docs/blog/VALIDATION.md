@@ -1,8 +1,31 @@
 # Final blog validation — 8 November 2026
 
-The article is 2,599 whitespace-separated words including Markdown table
-syntax, code and captions. The draft email body is 156 words. All three editions
+The article is 2,754 whitespace-separated words including Markdown table
+syntax, code and captions. The draft email body is 166 words. All three editions
 have identical article text. Nothing was pushed, deployed or emailed.
+
+## First-person voice revision
+
+- Rewrote the article and captions as Dan describing his own meter and the
+  steps from capture to readings. Kept all nine steps and the fork section.
+- Added one short linked AI disclosure covering coding and signal analysis;
+  the account does not claim manual derivation of the recovered mathematics.
+- Rewrote the pitch as a draft from Dan to the rtl-sdr.com editors.
+- Compared the revision with its previous commit: every numeric token and
+  original link remains, all twelve figures/captions remain, and the exact
+  no-decryption policy is preserved. The article is about 6% longer.
+- Rebuilt the site and passed its verifier across all 30 pages. Article text
+  matches across repo, wiki and rendered site; all twelve images match across
+  all four locations (48 copies). No figures needed regeneration.
+- Privacy self-test passes: both approved captures accepted; all 115 private
+  ID/frame/bit-dump probes plus rendered-label and PNG-metadata probes rejected.
+- Publication privacy audit: zero forbidden matches across 14 private IDs from
+  20 real frames, 70 text/metadata inputs, 48 PNGs and eight label sources.
+- Chromium passes at 1440, 768, 390 and 320 px with JavaScript disabled:
+  twelve loaded figures, no page overflow, working contents/full-size links,
+  homepage nav/footer links, skip link and visible keyboard focus.
+- `git diff --check` passes in all three repositories. Existing unrelated logo
+  edits and untracked briefs/reports are excluded from the revision commits.
 
 ## Publication changes
 
