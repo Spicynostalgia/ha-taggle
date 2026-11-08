@@ -1,6 +1,7 @@
 # Figure reproduction and publication scope
 
-The post has eight matplotlib figures and four supplied SIGINT tool images.
+The post has eleven matplotlib figures (eight radio-analysis figures and three
+calibration figures) and four supplied SIGINT tool images.
 Every published image is unblurred. Dan’s own clear burst 06 is ID 527814 /
 0x80DC6. The encrypted example is burst 08, ID 766910 / 0xBB3BE, matching both
 supplied encrypted screenshots. No neighbours’ clear frames or usage appear.
@@ -30,7 +31,36 @@ python docs/blog/check_privacy.py \
   /path/to/site/reports/blog-2026-11-08.md
 ```
 
-The generator reads only the first 1.2 seconds of
+Generate the calibration figures separately from the read-only snapshots:
+
+```sh
+python docs/blog/make_calibration_figures.py --data-dir /path/to/private/calibration
+```
+
+This sibling generator uses the same style and save helper as `make_figures.py`.
+It reads `dan_hours.json`, `calibration.json` and `energy_status.json` without
+modifying them. `--out` optionally selects another output folder.
+`img/calibration-provenance.json` records source hashes, full-precision daily
+ratios, the complete-overlap filter and output hashes. Source snapshots stay
+private. Its three PNGs and label files are additional to the original eight.
+
+`09-calibration-hours.png` plots the 146 observed hourly deltas at their actual
+ending times in `Australia/Brisbane` (UTC+10), with morning/evening shading.
+Missing intervals are not resampled or filled with zeroes.
+`10-calibration-days.png` compares the three saved daily checks against
+`litres = 5 × pulses`. Annotation arithmetic uses the displayed litres rounded
+to 0.1 L before dividing, giving 1082.7/216 = 5.01, 895.0/179 = 5.00 and
+680.7/136 = 5.01 L/pulse. The full-precision last ratio is 5.004985…; the
+annotation deliberately describes the displayed tenths, not extra precision.
+The lower panel uses the later Energy snapshot's separately reported totals:
+only 3–6 November have 24 radio hours, zero filled/pending hours and utility
+data. It uses `radio_litres`, never the combined `litres` value that can include
+utility backfill. No utility-only history or incomplete day is plotted.
+`11-calibration-hourly-fit.png` is a statistics panel for the stored rejected,
+unapplied zero-intercept hourly fit. No hourly utility observations are supplied,
+so no hourly scatter or inferred sub-day utility profile is generated.
+
+The radio generator reads only the first 1.2 seconds of
 `captures/bursts/burst06_595.33s.cu8`, independently acquires it and reruns DSSS
 recovery, Viterbi, re-encoding, framing and both CRCs. Its decoded bytes must
 match the selected archive line exactly. The production CLI runs against a
@@ -72,6 +102,6 @@ decoded/coded/on-air frame dumps. Any other archived frame remains forbidden,
 even if its ID is approved. Other recorded IDs in decimal or hex remain
 forbidden. The self-test checks approved IDs/dumps, rejects the other real
 IDs/dumps, and tests rendered-label and PNG-metadata paths without printing
-private matches. The eight label files cover matplotlib text; supplied tool
+private matches. The eleven label files cover matplotlib text; supplied tool
 images also receive direct visual inspection. Wiki/site images must be
 byte-identical to the audited originals; site fingerprinting changes names only.

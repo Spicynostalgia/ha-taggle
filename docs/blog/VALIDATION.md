@@ -1,5 +1,7 @@
 # Final blog validation — 8 November 2026
 
+The later calibration addition is recorded in [CALIBRATION-VALIDATION.md](CALIBRATION-VALIDATION.md). The checks below record the preceding voice/decode revision.
+
 The article is 2,754 whitespace-separated words including Markdown table
 syntax, code and captions. The draft email body is 166 words. All three editions
 have identical article text. Nothing was pushed, deployed or emailed.

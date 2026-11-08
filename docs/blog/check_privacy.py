@@ -72,9 +72,9 @@ def main():
     if failures:
         raise SystemExit('FAIL: private identifiers or payload found in: '+', '.join(failures))
     label_files=[p for p in files if p.name.endswith('.labels.json')]
-    assert len(label_files)==8, 'include the eight figure label-source files in this audit'
+    assert len(label_files)==11, 'include all eleven radio and calibration figure label-source files in this audit'
     print(f'PASS: {len(identifiers)} private IDs from {len(frames)} real frames; '
-          f'{len(texts)} text/metadata inputs, {images} PNGs, eight rendered-label sources; '
+          f'{len(texts)} text/metadata inputs, {images} PNGs, {len(label_files)} rendered-label sources; '
           'only IDs 527814/0x80DC6 and 766910/0xBB3BE plus their two selected frames allowed; '
           'zero private ID or frame/bit-dump matches.')
 

@@ -32,7 +32,7 @@ def main():
                 rejected.add(frame['opaque_body_hex'])
     with tempfile.TemporaryDirectory(prefix='taggle-privacy-test-') as temporary:
         root = Path(temporary)
-        for index in range(8):
+        for index in range(11):
             (root/f'{index}.labels.json').write_text('[]')
         probe = root/'probe.txt'
         def check(value, expected):

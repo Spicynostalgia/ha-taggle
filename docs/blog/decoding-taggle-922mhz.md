@@ -135,6 +135,34 @@ I compute differences modulo **65536** to handle counter wrap. The hourly sequen
 
 *Figure 9. Real CLI replay of the same clip: my ID, counters and RF diagnostics. Replay SNR is 30.9 dB versus 30.7 dB archived. Timestamp omitted; scan mode uses no MQTT broker or persistent state.*
 
+## How I got 5 litres per pulse
+
+The multiplication in that last step needed checking. The radio gave me pulses; it did not tell me how much water each pulse meant. I wanted to know whether 5 litres really matched my meter, across normal use over hours and days.
+
+I started with the hourly pulse deltas. The saved history has 146 recovered intervals, and plotting them in Brisbane time let me see the morning and evening usage pattern. Those are radio intervals ending around :41, rather than neat clock hours. Keeping that distinction turned out to matter.
+
+![My hourly radio pulse deltas across the recorded days, with Brisbane morning and evening periods shaded.](img/09-calibration-hours.png)
+
+*Figure 10. My 146 recovered hourly deltas, positioned at their actual ending times in Brisbane (UTC+10). Shading marks 06–10 and 17–21; missing intervals are not filled with invented zeroes.*
+
+The first automatic hourly fit said about **3.6 L/pulse**: more precisely, **3.586**, using ordinary least squares through zero. It had 90 matched hours, 62 with nonzero usage, but **R² was 0.72 and NRMSE was 0.66**. The receiver rejected it and left the scale unchanged. Its daily checks were roughly 28% out at that factor, too. I could not use that result just because it produced a number.
+
+Hourly matching was the awkward part. My utility totals here are daily. They do not say when water was used within each day, so I cannot split them reliably into radio hours. My transmissions land at :41, not on the hour; a missed hour can shift which pulses get matched to which interval. The saved fit used clock-hour overlap weighting, but that cannot establish the actual timing of water use. These files contain the fit summary, not hourly utility observations, so I have shown the statistics rather than inventing a scatter plot.
+
+![Rejected hourly fit: 3.59 litres per pulse, R squared 0.72 and NRMSE 0.66, with acceptance thresholds.](img/11-calibration-hourly-fit.png)
+
+*Figure 11. The saved automatic fit failed its R², NRMSE and daily-error checks. No hourly utility series is supplied; this panel reports the stored result rather than reconstructing observations.*
+
+I then compared whole days. For 3, 4 and 5 November, the saved daily checks gave about **5.0 L/pulse three days running**. That was much more convincing than trying to force the hourly boundaries together. The later Energy snapshot also lets me compare radio litres after applying 5 L/pulse with utility totals on complete overlapping days.
+
+![Three whole-day calibration checks near the litres equals five times pulses line, above complete-day radio and utility comparisons after calibration.](img/10-calibration-days.png)
+
+*Figure 12. Upper: saved calibration checks, with ratios calculated from the displayed litres rounded to 0.1 L. Lower: the later Energy snapshot’s separately reported totals for 3–6 November. Only complete radio days with utility overlap are included; partial days and utility-only backfill are excluded.*
+
+I had another check from 3 November 2026: two utility meter readings 24 hours apart spanned **585 L over 116 radio pulses**, or **5.04 L/pulse**. The two dial photos I took in between agreed within a pulse. The [V100 specification](https://cdn.shopify.com/s/files/1/0556/0283/9744/files/V100_PSM_T_SML001_SpecSheet.pdf) lists **5 L/pulse for the 5 black + 3 red register**. As a separate cross-check, [davidjb’s Taggle cloud configuration](https://gist.github.com/davidjb/faffe4a8ce14dea58b9b9b3cee862aae) also converts pulses to litres by multiplying by five.
+
+For your own meter, take aligned dial readings just after transmissions, keep their timestamps, and compare the volume change with recovered pulses. Check for missing intervals or resets, then validate the factor over several independent days. The [wiki’s Calibration guide](https://github.com/Spicynostalgia/ha-taggle/wiki/Calibration) walks through that process; my result does not set your pulse size.
+
 ## Where decoding stops: encrypted frames
 
 I could apply the same radio decoding and outer checks to burst 08, in the clip labelled 1406.47 seconds, but this is where reading the message stopped. Its full 24-byte frame is:
@@ -160,15 +188,15 @@ The encrypted format’s body, bits 36–175, is `5FA2EE84A43CFD6713761AD97925F7
 
 ![Unmasked encrypted frame, clear header and opaque ciphertext body.](img/07-encrypted-frame.png)
 
-*Figure 10. Burst 08: full ID, ciphertext and outer checks. RF statistics come from reception, not decrypted fields. No usage is readable.*
+*Figure 13. Burst 08: full ID, ciphertext and outer checks. RF statistics come from reception, not decrypted fields. No usage is readable.*
 
 ![Encrypted burst 08 in inspectrum with MHz and time axes.](img/waterfall-encrypted-burst08.png)
 
-*Figure 11. Made with inspectrum from real burst 08 IQ, showing the full receiver passband. The clip starts 1405.97 seconds into the recording; despreading recovers the faint burst at about 22 dB SNR.*
+*Figure 14. Made with inspectrum from real burst 08 IQ, showing the full receiver passband. The clip starts 1405.97 seconds into the recording; despreading recovers the faint burst at about 22 dB SNR.*
 
 ![Universal Radio Hacker PSK view of the encrypted burst’s despread symbols.](img/urh-encrypted-burst08.png)
 
-*Figure 12. Made with Universal Radio Hacker from real IQ via the decoder’s despread symbol stream, at 20 samples per symbol. Preamble and coded bits are unblurred. Demodulating ciphertext does not reveal its meaning.*
+*Figure 15. Made with Universal Radio Hacker from real IQ via the decoder’s despread symbol stream, at 20 samples per symbol. Preamble and coded bits are unblurred. Demodulating ciphertext does not reveal its meaning.*
 
 The [SP3C](https://taggle.com/wp-content/uploads/2025/12/Datasheet-SP3C-002.pdf) and [Cockatoo](https://myriota.lbcdn.io/uploads/Datasheet-Cockatoo-002.pdf) sheets specify AES-128 for Byron telemetry; the [V200HT sheet](https://taggle.com/wp-content/uploads/2023/05/Datasheet-Honeywell-V200HT-V4.pdf) describes AES-encrypted meter data. I have kept the archive’s encrypted classification. An opaque body and its length do not establish transmitter model, cipher mode, key handling or which bits are cryptographic overhead. I have not reverse-engineered those details.
 
@@ -180,9 +208,11 @@ This encrypted frame belongs to a neighbour’s meter. **The project does not at
 
 ## Reproducing the figures
 
-For the eight matplotlib figures, I used the read-only research archive and decoder code. [The generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_figures.py) reads the first 1.2 seconds of `burst06_595.33s.cu8`, replays the production CLI and checks the result against the archive. It separately validates encrypted burst 08’s outer framing. The four inspectrum/URH images I used for this post come from real IQ; URH receives despread symbols, not raw RF.
+For the eight radio-analysis matplotlib figures, I used the read-only research archive and decoder code. [The generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_figures.py) reads the first 1.2 seconds of `burst06_595.33s.cu8`, replays the production CLI and checks the result against the archive. It separately validates encrypted burst 08’s outer framing. The four inspectrum/URH images I used for this post come from real IQ; URH receives despread symbols, not raw RF.
 
-I keep the source IQ and full archive private. Reproduction needs authorised recordings and matching analysis inputs. Publication permits exactly these two IDs and their selected frames, including their coded bits; the privacy check rejects other recorded IDs and frame dumps. All twelve images are unmasked.
+The three calibration figures use a [separate generator](https://github.com/Spicynostalgia/ha-taggle/blob/main/docs/blog/make_calibration_figures.py) with `--data-dir` pointing to my read-only calibration snapshots. It plots the radio history, saved daily checks and complete Energy overlap days, and reports the rejected hourly fit without inventing hourly utility data. Both generators save rendered labels and provenance for checking.
+
+I keep the source IQ and full archive private. Reproduction needs authorised recordings and matching analysis inputs. Publication permits exactly these two IDs and their selected frames, including their coded bits; the privacy check rejects other recorded IDs and frame dumps. All fifteen images are unmasked.
 
 ## Fork it for your own meter
 

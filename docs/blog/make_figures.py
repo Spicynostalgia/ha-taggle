@@ -44,6 +44,15 @@ def box(ax, x, y, w, h, title, body, color=BLUE):
     ax.text(x+w/2,y+h*.28,body,ha='center',va='center',fontsize=10,color=INK)
 
 
+def configure_style():
+    """Keep radio and calibration figures in the same publication style."""
+    plt.rcParams.update({'font.family':'DejaVu Sans','font.size':11,
+        'text.color':INK,'axes.labelcolor':INK,'axes.edgecolor':'#748592',
+        'xtick.color':INK,'ytick.color':INK,'axes.spines.top':False,
+        'axes.spines.right':False,'axes.titleweight':'bold', 'axes.titlesize':13,
+        'figure.constrained_layout.use':True})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--captures', required=True, type=Path)
@@ -58,11 +67,7 @@ def main():
     from taggle_rx.protocol import lfsr, decode_frame
     from taggle_rx.coding import convolution_decode_viterbi, crc_bits, convolution_encode
 
-    plt.rcParams.update({'font.family':'DejaVu Sans','font.size':11,
-        'text.color':INK,'axes.labelcolor':INK,'axes.edgecolor':'#748592',
-        'xtick.color':INK,'ytick.color':INK,'axes.spines.top':False,
-        'axes.spines.right':False,'axes.titleweight':'bold', 'axes.titlesize':13,
-        'figure.constrained_layout.use':True})
+    configure_style()
     frames = [json.loads(line) for line in (args.analysis/'live/full-frames.jsonl').open()]
     clear = next(f for f in frames if f['id_decimal']==527814
                  and round(f['sample_offset']/RATE, 2)==595.33)
