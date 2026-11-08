@@ -4,13 +4,11 @@ Subject: Decoding Taggle water meters at 922 MHz with an RTL-SDR
 
 Hi rtl-sdr.com team,
 
-I used an RTL-SDR Blog V4 to read my own Taggle water meter in Gladstone, QLD, and send hourly readings to MQTT and Home Assistant.
+I decoded my Taggle water meter in Gladstone, QLD, with an RTL-SDR Blog V4 and Python, then sent hourly readings to MQTT and Home Assistant. The unusual part is the DSSS/BPSK signal: each symbol carries a 4095-chip spreading pattern.
 
-My write-up follows one real frame from IQ to litres: mixing a −208 kHz carrier offset, correlating a 4095-chip spreading pattern, tracking BPSK phase, decoding the rate-1/2 convolutional code and calculating both CRC-8s. It shows the actual coded pairs, all 18 decoded bytes, and how two counter differences become 55 L and 25 L on my calibrated V100.
+The write-up follows one real frame from IQ to litres: removing a −208 kHz carrier offset, despreading, tracking BPSK, undoing the rate-1/2 convolutional code and checking both CRC-8s. It shows the coded pairs, all 18 decoded bytes, and counter differences worth 55 L and 25 L on my calibrated V100. Fifteen unblurred figures include inspectrum waterfalls, Universal Radio Hacker (URH) views of despread symbols, measured matplotlib plots and calibration checks.
 
-Twelve unblurred images include real inspectrum waterfalls, Universal Radio Hacker views of despread symbols and measured matplotlib figures. My own frame is shown in full. A 24-byte encrypted example shows its clear ID and ciphertext in full, but no readable usage. I do not decrypt or search for keys.
-
-I built the decoder with help from [AI coding assistants](https://github.com/Spicynostalgia/ha-taggle/wiki/AI-Disclosure). Only one transmitter is field-verified; others may differ. Would this suit a reader project feature? The article, MIT source and setup guide are below.
+A 24-byte encrypted example shows its clear ID and ciphertext in full, but no usage. The project does not attempt decryption or key search. Only one transmitter is field-verified; other installations remain unverified. I built it with [AI coding assistants](https://github.com/Spicynostalgia/ha-taggle/wiki/AI-Disclosure). The article, MIT source and setup links are below if this suits a reader project feature.
 
 Thanks,
 Dan
