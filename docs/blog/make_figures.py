@@ -12,16 +12,17 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
 import numpy as np
+from matplotlib.patches import FancyBboxPatch
 from scipy import fft, signal
 
 RATE = 2_400_000
@@ -62,10 +63,10 @@ def main():
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(args.decoder/'addon'))
-    from taggle_rx.receiver import iq, Detector, PERIOD, BLOCK
-    from taggle_rx.dsss import recover_dsss, predicted_template
-    from taggle_rx.protocol import lfsr, decode_frame
-    from taggle_rx.coding import convolution_decode_viterbi, crc_bits, convolution_encode
+    from taggle_rx.coding import convolution_decode_viterbi, convolution_encode, crc_bits
+    from taggle_rx.dsss import predicted_template, recover_dsss
+    from taggle_rx.protocol import decode_frame, lfsr
+    from taggle_rx.receiver import BLOCK, PERIOD, Detector, iq
 
     configure_style()
     frames = [json.loads(line) for line in (args.analysis/'live/full-frames.jsonl').open()]

@@ -5,9 +5,8 @@ Requires NumPy and the receiver source. This checks bits to fields only; it
 cannot establish RF acquisition, carrier/timing fits, or screenshot provenance.
 """
 import argparse
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 # Exact archive on-air bits, packed MSB-first; only these captures are approved.
 # The final byte may contain packing padding, excluded using the symbol count.

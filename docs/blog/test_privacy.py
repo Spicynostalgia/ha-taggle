@@ -5,13 +5,13 @@ Usage: python docs/blog/test_privacy.py --frames /private/full-frames.jsonl
 """
 import argparse
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
-from PIL import Image
 from check_privacy import APPROVED_FRAMES, approved
+from PIL import Image
 
 
 def main():

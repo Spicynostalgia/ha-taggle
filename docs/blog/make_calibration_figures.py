@@ -7,16 +7,15 @@ No hourly utility observations are supplied, so the failed hourly fit is a
 statistics panel, never a synthetic scatter plot. Source JSON is not published.
 """
 import argparse
-from datetime import datetime, time, timedelta
 import hashlib
 import json
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from make_figures import BLUE, GREEN, INK, configure_style, plt, save
 import matplotlib.dates as mdates
+from make_figures import BLUE, GREEN, INK, configure_style, plt, save
 from matplotlib.patches import Patch
-
 
 BRISBANE = ZoneInfo('Australia/Brisbane')
 

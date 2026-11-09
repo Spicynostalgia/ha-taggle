@@ -8,13 +8,11 @@ source and their embedded textual metadata, rather than compressed image bytes.
 """
 import argparse
 import json
-from pathlib import Path
-import re
 import subprocess
 import tempfile
+from pathlib import Path
 
 from PIL import Image
-
 
 # Permission is scoped to these exact captures, not every frame from either ID.
 APPROVED_FRAMES = {
